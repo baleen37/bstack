@@ -1,6 +1,6 @@
 {
   "name": "everything-agent",
-  "version": "5.25.0",
+  "version": "5.26.0",
   "description": "AI coding assistant toolkit - development automation, LSP, memory, project management, and workflow tools",
   "author": {
     "name": "baleen37",
