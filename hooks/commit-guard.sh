@@ -20,10 +20,10 @@ declare -a BLOCKED_PATTERNS=(
 
 # Check for blocked patterns
 for pattern in "${BLOCKED_PATTERNS[@]}"; do
-  if echo "$command" | grep -qE "$pattern"; then
+  if echo "$command" | grep -qE -- "$pattern"; then
     echo "[ERROR] '$pattern' is not allowed in this repository" >&2
     echo "[INFO] Please use git commands without bypassing hooks. All commits must pass quality checks." >&2
-    exit 1
+    exit 2
   fi
 done
 
