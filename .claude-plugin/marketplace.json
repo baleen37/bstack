@@ -27,20 +27,6 @@
       "version": "5.23.5"
     },
     {
-      "name": "git-guard",
-      "description": "Git workflow protection hooks - prevents commit and PR bypasses",
-      "source": "./plugins/git-guard",
-      "category": "development",
-      "tags": [
-        "git",
-        "hooks",
-        "pre-commit",
-        "pr",
-        "security"
-      ],
-      "version": "5.23.5"
-    },
-    {
       "name": "lsp-bash",
       "description": "Bash Language Server integration for Claude Code",
       "source": "./plugins/lsp-bash",
@@ -133,19 +119,6 @@
       "version": "5.23.5"
     },
     {
-      "name": "handoff",
-      "description": "Session handoff plugin for Claude Code - save and restore session context between sessions",
-      "source": "./plugins/handoff",
-      "category": "productivity",
-      "tags": [
-        "handoff",
-        "session",
-        "context",
-        "pickup"
-      ],
-      "version": "5.23.5"
-    },
-    {
       "name": "databricks-devtools",
       "description": "Databricks SQL schema explorer for Unity Catalog discovery",
       "source": "./plugins/databricks-devtools",
@@ -156,21 +129,6 @@
         "workspace",
         "mcp",
         "cli"
-      ],
-      "version": "5.23.5"
-    },
-    {
-      "name": "jira",
-      "description": "Jira integration for issue tracking and project management. Triage bugs, capture tasks from notes, generate status reports, and automate Jira workflows using Atlassian's MCP server.",
-      "source": "./plugins/jira",
-      "category": "productivity",
-      "tags": [
-        "jira",
-        "confluence",
-        "atlassian",
-        "issue-tracking",
-        "mcp",
-        "project-management"
       ],
       "version": "5.23.5"
     }

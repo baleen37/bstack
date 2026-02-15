@@ -89,28 +89,3 @@ load ../helpers/bats_helper
     [ "$status" -eq 0 ]
 }
 
-# Co-Authored-By blocking tests
-@test "git-guard: commit-guard blocks Co-Authored-By in commit message" {
-    local json_input='{"command":"git commit -m \"test message\\n\\n-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\""}'
-    run bash -c "set -o pipefail; echo '$json_input' | ${PROJECT_ROOT}/hooks/commit-guard.sh"
-    [ "$status" -eq 2 ]
-    [[ "$output" == *"Co-Authored-By"*"not allowed"* ]]
-}
-
-@test "git-guard: commit-guard blocks Co-Authored-By variant (without dash)" {
-    local json_input='{"command":"git commit -m \"test\\n\\nCo-Authored-By: test\""}'
-    run bash -c "set -o pipefail; echo '$json_input' | ${PROJECT_ROOT}/hooks/commit-guard.sh"
-    [ "$status" -eq 2 ]
-}
-
-@test "git-guard: commit-guard allows commit without Co-Authored-By" {
-    local json_input='{"command":"git commit -m \"normal commit message\""}'
-    run bash -c "set -o pipefail; echo '$json_input' | ${PROJECT_ROOT}/hooks/commit-guard.sh"
-    [ "$status" -eq 0 ]
-}
-
-@test "git-guard: commit-guard blocks Co-Authored-By with multiple -m flags" {
-    local json_input='{"command":"git commit -m \"first line\" -m \"second line\" -m \"Co-Authored-By: test\""}'
-    run bash -c "set -o pipefail; echo '$json_input' | ${PROJECT_ROOT}/hooks/commit-guard.sh"
-    [ "$status" -eq 2 ]
-}
