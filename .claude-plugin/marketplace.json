@@ -119,19 +119,6 @@
       "version": "5.23.5"
     },
     {
-      "name": "handoff",
-      "description": "Session handoff plugin for Claude Code - save and restore session context between sessions",
-      "source": "./plugins/handoff",
-      "category": "productivity",
-      "tags": [
-        "handoff",
-        "session",
-        "context",
-        "pickup"
-      ],
-      "version": "5.23.5"
-    },
-    {
       "name": "databricks-devtools",
       "description": "Databricks SQL schema explorer for Unity Catalog discovery",
       "source": "./plugins/databricks-devtools",
@@ -142,21 +129,6 @@
         "workspace",
         "mcp",
         "cli"
-      ],
-      "version": "5.23.5"
-    },
-    {
-      "name": "jira",
-      "description": "Jira integration for issue tracking and project management. Triage bugs, capture tasks from notes, generate status reports, and automate Jira workflows using Atlassian's MCP server.",
-      "source": "./plugins/jira",
-      "category": "productivity",
-      "tags": [
-        "jira",
-        "confluence",
-        "atlassian",
-        "issue-tracking",
-        "mcp",
-        "project-management"
       ],
       "version": "5.23.5"
     }
