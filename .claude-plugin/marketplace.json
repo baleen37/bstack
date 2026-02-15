@@ -131,6 +131,83 @@
         "cli"
       ],
       "version": "5.28.0"
+    },
+    {
+      "name": "git-guard",
+      "description": "Git workflow protection hooks - prevent dangerous git operations",
+      "source": "./plugins/git-guard",
+      "category": "development",
+      "tags": [
+        "git",
+        "hooks",
+        "protection",
+        "workflow"
+      ],
+      "version": "5.28.0"
+    },
+    {
+      "name": "handoff",
+      "description": "Session handoff system for smooth context transfer between Claude sessions",
+      "source": "./plugins/handoff",
+      "category": "workflow",
+      "tags": [
+        "handoff",
+        "session",
+        "context",
+        "transfer"
+      ],
+      "version": "5.28.0"
+    },
+    {
+      "name": "jira",
+      "description": "Jira integration for issue tracking and project management",
+      "source": "./plugins/jira",
+      "category": "project-management",
+      "tags": [
+        "jira",
+        "issues",
+        "project",
+        "mcp"
+      ],
+      "version": "5.28.0"
+    },
+    {
+      "name": "me",
+      "description": "Memory and context plugin for persistent conversation state",
+      "source": "./plugins/me",
+      "category": "memory",
+      "tags": [
+        "memory",
+        "context",
+        "persistence"
+      ],
+      "version": "5.28.0"
+    },
+    {
+      "name": "ralph-loop",
+      "description": "Self-referential AI development loop for autonomous iteration",
+      "source": "./plugins/ralph-loop",
+      "category": "automation",
+      "tags": [
+        "ralph",
+        "loop",
+        "automation",
+        "iteration"
+      ],
+      "version": "5.28.0"
+    },
+    {
+      "name": "suggest-compacting",
+      "description": "Intelligent context compaction suggestions for long conversations",
+      "source": "./plugins/suggest-compacting",
+      "category": "memory",
+      "tags": [
+        "compact",
+        "context",
+        "memory",
+        "optimization"
+      ],
+      "version": "5.28.0"
     }
   ]
 }
