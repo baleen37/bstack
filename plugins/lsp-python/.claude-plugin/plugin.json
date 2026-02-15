@@ -16,7 +16,7 @@
   ],
   "lspServers": {
     "python": {
-      "command": "pyright",
+      "command": "pyright-langserver",
       "args": [
         "--stdio"
       ],

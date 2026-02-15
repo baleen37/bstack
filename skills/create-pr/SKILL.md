@@ -15,7 +15,7 @@ Urgency is reason to follow rules MORE strictly, not to bypass them. The moment 
 
 Before any commit:
 
-1. Verify current branch is NOT main/master — STOP if it is
+1. Verify current branch is NOT main/master — if it is, create a new branch using `type/short-description` format (e.g., `feat/add-login`, `fix/null-pointer`) derived from the changes being committed, then switch to it
 2. Review uncommitted changes with `git status`
 3. Fetch remote: `git fetch origin`
 4. Detect conflicts proactively:
