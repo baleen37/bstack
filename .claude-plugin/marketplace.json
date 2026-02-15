@@ -27,20 +27,6 @@
       "version": "5.23.5"
     },
     {
-      "name": "git-guard",
-      "description": "Git workflow protection hooks - prevents commit and PR bypasses",
-      "source": "./plugins/git-guard",
-      "category": "development",
-      "tags": [
-        "git",
-        "hooks",
-        "pre-commit",
-        "pr",
-        "security"
-      ],
-      "version": "5.23.5"
-    },
-    {
       "name": "lsp-bash",
       "description": "Bash Language Server integration for Claude Code",
       "source": "./plugins/lsp-bash",
