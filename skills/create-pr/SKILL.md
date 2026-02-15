@@ -1,95 +1,52 @@
 ---
 name: create-pr
-description: Use when user requests "create PR", "make pull request", or you need to commit changes and open GitHub PR. Required before any git push for PR creation.
+description: This skill should be used when the user asks to "create a PR", "make a pull request", "open a PR", "submit PR", or requests complete git commit→push→PR workflow.
 ---
 
 # Create PR
 
 ## Overview
 
-**Commit → Push → PR workflow with mandatory safety checks.**
+Commit → Push → PR workflow with mandatory safety checks.
 
-Time pressure is NOT an excuse to skip checks. "Hurry" means do it right the first time.
+Urgency is reason to follow rules MORE strictly, not to bypass them. The moment the process feels "too slow" is exactly when skipping it causes the most delay.
 
 ## Pre-Flight Checks (MANDATORY)
 
+Before any commit:
+
+1. Verify current branch is NOT main/master — STOP if it is
+2. Review uncommitted changes with `git status`
+3. Fetch remote: `git fetch origin`
+4. Detect conflicts proactively:
+
 ```bash
-# 1. Current branch - STOP if main/master
-BRANCH=$(git branch --show-current)
-[[ "$BRANCH" =~ ^(main|master)$ ]] && echo "ERROR: Cannot PR from main/master" && exit 1
-
-# 2. Uncommitted changes
-git status --porcelain
-
-# 3. Fetch and check for conflicts BEFORE committing
-git fetch origin
 MAIN=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')
-
-# CRITICAL: Detect conflicts NOW, not after push fails
-if ! git merge-tree $(git merge-base HEAD origin/$MAIN) HEAD origin/$MAIN | grep -q '<<<<<<<'; then
-  echo "✓ No conflicts with $MAIN"
-else
-  echo "⚠ CONFLICTS DETECTED - must resolve before PR"
+if git merge-tree $(git merge-base HEAD "origin/$MAIN") HEAD "origin/$MAIN" | grep -q '<<<<<<<'; then
+  echo "CONFLICTS DETECTED - resolve before PR"
   exit 1
 fi
 ```
 
+Never skip conflict detection. Push failures waste more time than a 5-second check.
+
 ## Workflow
 
-```bash
-# 1. Stage and commit
-git add <specific-files>  # Never git add -A
-git commit -m "type(scope): description"
-
-# 2. Push
-git push -u origin HEAD
-
-# 3. Create PR
-gh pr create \
-  --title "$(git log -1 --pretty=%s)" \
-  --body "..." \
-  --web
-
-# 4. Enable auto-merge if CI exists
-gh pr merge --auto --squash  # After PR created
-```
-
-## Auto-merge Requirements
-
-**Before running `gh pr merge --auto`:**
-
-```bash
-# Check repo settings
-gh repo view --json autoMergeAllowed -q '.autoMergeAllowed'
-
-# Check branch protection
-gh api repos/{owner}/{repo}/branches/$MAIN/protection \
-  --jq '.required_status_checks.contexts'
-```
-
-If auto-merge disabled or no status checks: skip `--auto` flag.
+1. **Stage specific files** — never `git add -A` without prior `git status`
+2. **Commit** with Conventional Commits format: `type(scope): description`
+3. **Push** to remote: `git push -u origin HEAD`
+4. **Create PR** via `gh pr create --title "..." --body "..." --web`
+5. **Enable auto-merge** if the repo supports it: `gh pr merge --auto --squash` — skip if auto-merge is disabled or no status checks exist
 
 ## Conflict Resolution
 
-```bash
-# If conflict detected in pre-flight
-git rebase origin/$MAIN
-# Fix conflicts
-git add <resolved-files>
-git rebase --continue
+When conflicts are detected in pre-flight:
 
-# MANDATORY: Verify changes after conflict resolution
-# Run project's test/lint commands OR minimal smoke test
-# Rebase changes code - MUST verify it still works
-
-git push --force-with-lease origin HEAD
-```
-
-## Stop Conditions
-
-- Running from main/master branch
-- Conflicts with main (detected in pre-flight)
-- Auto-merge requested but repo doesn't support it
+1. Rebase onto main: `git rebase origin/$MAIN`
+2. Resolve conflicts and stage resolved files
+3. Continue rebase: `git rebase --continue`
+4. **MANDATORY: Run project tests after rebase** — rebase changes code, untested = broken PR
+5. Force-push safely: `git push --force-with-lease origin HEAD`
 
 ## Rationalizations Table
 
@@ -113,16 +70,3 @@ git push --force-with-lease origin HEAD
 - Thinking "small conflict, should be fine"
 
 **Any of these = STOP and run pre-flight checks.**
-
-## Pressure Is NOT Justification
-
-```
-Urgency ≠ Justification for rule bypass
-Urgency = Reason to follow rules MORE strictly
-
-Why:
-- Rule bypass → additional delay → more urgent
-- Rule compliance → done right once → actually faster
-```
-
-**Critical insight**: The moment you think "too urgent to follow process" is exactly when following process matters most.
