@@ -24,7 +24,7 @@
         "databricks",
         "mcp"
       ],
-      "version": "5.27.0"
+      "version": "5.28.0"
     },
     {
       "name": "lsp-bash",
@@ -37,7 +37,7 @@
         "autocomplete",
         "diagnostics"
       ],
-      "version": "5.27.0"
+      "version": "5.28.0"
     },
     {
       "name": "lsp-typescript",
@@ -51,7 +51,7 @@
         "autocomplete",
         "diagnostics"
       ],
-      "version": "5.27.0"
+      "version": "5.28.0"
     },
     {
       "name": "lsp-python",
@@ -64,7 +64,7 @@
         "autocomplete",
         "diagnostics"
       ],
-      "version": "5.27.0"
+      "version": "5.28.0"
     },
     {
       "name": "lsp-go",
@@ -77,7 +77,7 @@
         "autocomplete",
         "diagnostics"
       ],
-      "version": "5.27.0"
+      "version": "5.28.0"
     },
     {
       "name": "lsp-kotlin",
@@ -90,7 +90,7 @@
         "autocomplete",
         "diagnostics"
       ],
-      "version": "5.27.0"
+      "version": "5.28.0"
     },
     {
       "name": "lsp-lua",
@@ -103,7 +103,7 @@
         "autocomplete",
         "diagnostics"
       ],
-      "version": "5.27.0"
+      "version": "5.28.0"
     },
     {
       "name": "lsp-nix",
@@ -116,7 +116,7 @@
         "autocomplete",
         "diagnostics"
       ],
-      "version": "5.27.0"
+      "version": "5.28.0"
     },
     {
       "name": "databricks-devtools",
@@ -130,7 +130,7 @@
         "mcp",
         "cli"
       ],
-      "version": "5.27.0"
+      "version": "5.28.0"
     }
   ]
 }
