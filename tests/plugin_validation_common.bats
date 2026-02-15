@@ -73,42 +73,21 @@ _assert_valid_plugin_name() {
 ###############################################################################
 
 @test "common: plugin.json files exist in plugin directories" {
-    local manifest_files=""
-    local count=0
+    local manifest_files
+    manifest_files=$(find "$PROJECT_ROOT/plugins" -name "plugin.json" -type f 2>/dev/null)
 
-    # Check root canonical plugin
-    local root_manifest="$PROJECT_ROOT/.claude-plugin/plugin.json"
-    if [ -f "$root_manifest" ]; then
-        manifest_files="$root_manifest"$'\n'
-        count=$((count + 1))
-    fi
+    [ -n "$manifest_files" ] || skip "No plugin.json files found"
 
-    # Find all plugin manifests in plugins directory
-    local plugins_manifests
-    plugins_manifests=$(find "$PROJECT_ROOT/plugins" -name "plugin.json" -type f 2>/dev/null)
+    # Count manifests found - use file count instead of loop
+    local count
+    count=$(echo "$manifest_files" | grep -c '^')
 
-    if [ -n "$plugins_manifests" ]; then
-        manifest_files="${manifest_files}${plugins_manifests}"
-        local plugins_count
-        plugins_count=$(echo "$plugins_manifests" | grep -c '^')
-        count=$((count + plugins_count))
-    fi
-
-    [ "$count" -gt 0 ] || skip "No plugin.json files found"
+    [ "$count" -gt 0 ]
 }
 
 @test "common: all plugin.json files are valid JSON" {
     local failed=0
 
-    # Check root canonical plugin
-    local root_manifest="${PROJECT_ROOT}/.claude-plugin/plugin.json"
-    if [ -f "$root_manifest" ]; then
-        if ! validate_json "$root_manifest"; then
-            ((failed++))
-        fi
-    fi
-
-    # Check plugins directory
     for manifest in "${PROJECT_ROOT}"/plugins/*/.claude-plugin/plugin.json; do
         if [ -f "$manifest" ]; then
             if ! validate_json "$manifest"; then
@@ -123,15 +102,6 @@ _assert_valid_plugin_name() {
 @test "common: all plugin.json files have required fields" {
     local failed=0
 
-    # Check root canonical plugin
-    local root_manifest="${PROJECT_ROOT}/.claude-plugin/plugin.json"
-    if [ -f "$root_manifest" ]; then
-        if ! _assert_has_required_fields "$root_manifest"; then
-            ((failed++))
-        fi
-    fi
-
-    # Check plugins directory
     for manifest in "${PROJECT_ROOT}"/plugins/*/.claude-plugin/plugin.json; do
         if [ -f "$manifest" ]; then
             if ! _assert_has_required_fields "$manifest"; then
@@ -146,15 +116,6 @@ _assert_valid_plugin_name() {
 @test "common: all plugin.json files have non-empty required field values" {
     local failed=0
 
-    # Check root canonical plugin
-    local root_manifest="${PROJECT_ROOT}/.claude-plugin/plugin.json"
-    if [ -f "$root_manifest" ]; then
-        if ! _assert_field_values_not_empty "$root_manifest"; then
-            ((failed++))
-        fi
-    fi
-
-    # Check plugins directory
     for manifest in "${PROJECT_ROOT}"/plugins/*/.claude-plugin/plugin.json; do
         if [ -f "$manifest" ]; then
             if ! _assert_field_values_not_empty "$manifest"; then
@@ -169,15 +130,6 @@ _assert_valid_plugin_name() {
 @test "common: all plugin.json names follow naming convention" {
     local failed=0
 
-    # Check root canonical plugin
-    local root_manifest="${PROJECT_ROOT}/.claude-plugin/plugin.json"
-    if [ -f "$root_manifest" ]; then
-        if ! _assert_valid_plugin_name "$root_manifest"; then
-            ((failed++))
-        fi
-    fi
-
-    # Check plugins directory
     for manifest in "${PROJECT_ROOT}"/plugins/*/.claude-plugin/plugin.json; do
         if [ -f "$manifest" ]; then
             if ! _assert_valid_plugin_name "$manifest"; then
@@ -192,15 +144,6 @@ _assert_valid_plugin_name() {
 @test "common: all plugin.json files use only allowed fields" {
     local failed=0
 
-    # Check root canonical plugin
-    local root_manifest="${PROJECT_ROOT}/.claude-plugin/plugin.json"
-    if [ -f "$root_manifest" ]; then
-        if ! validate_plugin_manifest_fields "$root_manifest"; then
-            ((failed++))
-        fi
-    fi
-
-    # Check plugins directory
     for manifest in "${PROJECT_ROOT}"/plugins/*/.claude-plugin/plugin.json; do
         if [ -f "$manifest" ]; then
             if ! validate_plugin_manifest_fields "$manifest"; then

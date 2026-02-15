@@ -43,18 +43,6 @@ benchmark_end() {
     local total_time=0
     local plugin_count=0
 
-    # Check root canonical plugin
-    local root_plugin_dir="${PROJECT_ROOT}"
-    if [ -f "${root_plugin_dir}/.claude-plugin/plugin.json" ]; then
-        benchmark_start
-        parse_plugin_json "$root_plugin_dir" > /dev/null
-        local elapsed
-        elapsed=$(benchmark_end)
-        total_time=$((total_time + elapsed))
-        plugin_count=$((plugin_count + 1))
-    fi
-
-    # Check plugins directory
     for plugin_dir in "${PROJECT_ROOT}"/plugins/*/; do
         if [ -d "$plugin_dir" ]; then
             benchmark_start
@@ -65,8 +53,6 @@ benchmark_end() {
             plugin_count=$((plugin_count + 1))
         fi
     done
-
-    [ "$plugin_count" -gt 0 ] || skip "No plugins found"
 
     local avg_time=$((total_time / plugin_count))
     echo "Parsed $plugin_count plugins in ${total_time}ms (avg: ${avg_time}ms each)"
@@ -91,18 +77,6 @@ benchmark_end() {
     local total_time=0
     local file_count=0
 
-    # Check root canonical plugin
-    local root_manifest="${PROJECT_ROOT}/.claude-plugin/plugin.json"
-    if [ -f "$root_manifest" ]; then
-        benchmark_start
-        validate_json "$root_manifest" > /dev/null
-        local elapsed
-        elapsed=$(benchmark_end)
-        total_time=$((total_time + elapsed))
-        file_count=$((file_count + 1))
-    fi
-
-    # Check plugins directory
     for json_file in "${PROJECT_ROOT}"/plugins/*/.claude-plugin/plugin.json; do
         if [ -f "$json_file" ]; then
             benchmark_start
@@ -113,8 +87,6 @@ benchmark_end() {
             file_count=$((file_count + 1))
         fi
     done
-
-    [ "$file_count" -gt 0 ] || skip "No plugin.json files found"
 
     local avg_time=$((total_time / file_count))
     echo "Validated $file_count JSON files in ${total_time}ms (avg: ${avg_time}ms each)"
@@ -201,13 +173,6 @@ benchmark_end() {
     # Run a representative set of operations
     get_all_plugins > /dev/null
 
-    # Check root canonical plugin
-    local root_plugin_dir="${PROJECT_ROOT}"
-    if [ -f "${root_plugin_dir}/.claude-plugin/plugin.json" ]; then
-        parse_plugin_json "$root_plugin_dir" > /dev/null
-    fi
-
-    # Check plugins directory
     for plugin_dir in "${PROJECT_ROOT}"/plugins/*/; do
         if [ -d "$plugin_dir" ]; then
             parse_plugin_json "$plugin_dir" > /dev/null

@@ -43,18 +43,3 @@ setup() {
 @test "marketplace.json plugin sources point to existing directories" {
     marketplace_all_plugins_exist "$MARKETPLACE_JSON"
 }
-
-@test "marketplace.json includes root everything-agent plugin" {
-    # Check if root plugin exists
-    local root_plugin_json="${PROJECT_ROOT}/.claude-plugin/plugin.json"
-
-    if [ ! -f "$root_plugin_json" ]; then
-        skip "Root plugin manifest not found"
-    fi
-
-    local root_plugin_name
-    root_plugin_name=$(json_get "$root_plugin_json" "name")
-
-    # Verify root plugin is listed in marketplace.json
-    marketplace_plugin_exists "$root_plugin_name" "$MARKETPLACE_JSON"
-}

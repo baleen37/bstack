@@ -13,13 +13,6 @@ setup() {
 @test "plugin.json exists" {
     local found=0
 
-    # Check root canonical plugin
-    local root_manifest="${PROJECT_ROOT}/.claude-plugin/plugin.json"
-    if [ -f "$root_manifest" ]; then
-        found=$((found + 1))
-    fi
-
-    # Check plugins directory
     for manifest in "${PROJECT_ROOT}"/plugins/*/.claude-plugin/plugin.json; do
         if [ -f "$manifest" ]; then
             found=$((found + 1))
@@ -33,15 +26,6 @@ setup() {
 @test "plugin.json is valid JSON" {
     local failed=0
 
-    # Check root canonical plugin
-    local root_manifest="${PROJECT_ROOT}/.claude-plugin/plugin.json"
-    if [ -f "$root_manifest" ]; then
-        if ! validate_json "$root_manifest"; then
-            ((failed++))
-        fi
-    fi
-
-    # Check plugins directory
     for manifest in "${PROJECT_ROOT}"/plugins/*/.claude-plugin/plugin.json; do
         if [ -f "$manifest" ]; then
             if ! validate_json "$manifest"; then
@@ -58,18 +42,6 @@ setup() {
     local failed=0
     local required_fields=("name" "description" "author")
 
-    # Check root canonical plugin
-    local root_manifest="${PROJECT_ROOT}/.claude-plugin/plugin.json"
-    if [ -f "$root_manifest" ]; then
-        for field in "${required_fields[@]}"; do
-            if ! json_has_field "$root_manifest" "$field"; then
-                echo "Missing '$field' in $root_manifest" >&2
-                ((failed++))
-            fi
-        done
-    fi
-
-    # Check plugins directory
     for manifest in "${PROJECT_ROOT}"/plugins/*/.claude-plugin/plugin.json; do
         if [ -f "$manifest" ]; then
             for field in "${required_fields[@]}"; do
@@ -88,18 +60,6 @@ setup() {
 @test "plugin.json name follows naming convention" {
     local failed=0
 
-    # Check root canonical plugin
-    local root_manifest="${PROJECT_ROOT}/.claude-plugin/plugin.json"
-    if [ -f "$root_manifest" ]; then
-        local name
-        name=$(json_get "$root_manifest" "name")
-        if ! is_valid_plugin_name "$name"; then
-            echo "Invalid plugin name '$name' in $root_manifest" >&2
-            ((failed++))
-        fi
-    fi
-
-    # Check plugins directory
     for manifest in "${PROJECT_ROOT}"/plugins/*/.claude-plugin/plugin.json; do
         if [ -f "$manifest" ]; then
             local name
@@ -119,20 +79,6 @@ setup() {
     local failed=0
     local fields_to_check=("name" "description" "author")
 
-    # Check root canonical plugin
-    local root_manifest="${PROJECT_ROOT}/.claude-plugin/plugin.json"
-    if [ -f "$root_manifest" ]; then
-        for field in "${fields_to_check[@]}"; do
-            local value
-            value=$(json_get "$root_manifest" "$field")
-            if [ -z "$value" ]; then
-                echo "Field '$field' is empty in $root_manifest" >&2
-                ((failed++))
-            fi
-        done
-    fi
-
-    # Check plugins directory
     for manifest in "${PROJECT_ROOT}"/plugins/*/.claude-plugin/plugin.json; do
         if [ -f "$manifest" ]; then
             for field in "${fields_to_check[@]}"; do
@@ -153,15 +99,6 @@ setup() {
 @test "plugin.json uses only allowed fields" {
     local failed=0
 
-    # Check root canonical plugin
-    local root_manifest="${PROJECT_ROOT}/.claude-plugin/plugin.json"
-    if [ -f "$root_manifest" ]; then
-        if ! validate_plugin_manifest_fields "$root_manifest"; then
-            ((failed++))
-        fi
-    fi
-
-    # Check plugins directory
     for manifest in "${PROJECT_ROOT}"/plugins/*/.claude-plugin/plugin.json; do
         if [ -f "$manifest" ]; then
             if ! validate_plugin_manifest_fields "$manifest"; then

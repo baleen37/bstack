@@ -1,0 +1,7 @@
+# Ralph Configuration File
+# Copy this file to .agents/ralph/config.sh to customize Ralph's behavior
+
+# STALE_SECONDS: Number of seconds after which a PRD is considered "stale"
+# Default: 86400 (24 hours)
+# Example: Set to 43200 for 12 hours, or 172800 for 48 hours
+# STALE_SECONDS=86400

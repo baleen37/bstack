@@ -178,28 +178,11 @@ validate_plugin_manifest_fields() {
 }
 
 # Helper: Iterate over all plugin manifest files
-# Includes both root canonical plugin and plugins directory plugins.
 # Usage: for_each_plugin_manifest callback_function
 for_each_plugin_manifest() {
     local callback="$1"
-    local manifest_files=""
-
-    # Check for root canonical plugin
-    local root_manifest="$PROJECT_ROOT/.claude-plugin/plugin.json"
-    if [ -f "$root_manifest" ]; then
-        manifest_files="$root_manifest"$'\n'
-    fi
-
-    # Find all plugin manifests in plugins directory
-    local plugins_manifests
-    plugins_manifests=$(find "$PROJECT_ROOT/plugins" -name "plugin.json" -type f 2>/dev/null)
-
-    if [ -n "$plugins_manifests" ]; then
-        manifest_files="${manifest_files}${plugins_manifests}"
-    fi
-
-    # Trim trailing newline if manifest_files is not empty
-    manifest_files=$(echo "$manifest_files" | grep -v '^$')
+    local manifest_files
+    manifest_files=$(find "$PROJECT_ROOT/plugins" -name "plugin.json" -type f 2>/dev/null)
 
     [ -n "$manifest_files" ] || return 1
 

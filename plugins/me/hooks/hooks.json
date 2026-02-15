@@ -1,0 +1,7 @@
+{
+  "$schema": "../../schemas/hooks-schema.json",
+  "description": "Me plugin hooks",
+  "hooks": {
+    "PreToolUse": []
+  }
+}

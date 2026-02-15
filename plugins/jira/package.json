@@ -1,0 +1,17 @@
+{
+  "name": "@baleen/jira",
+  "version": "0.1.0",
+  "description": "Jira integration plugin for Claude Code",
+  "scripts": {
+    "test": "bats tests/"
+  },
+  "devDependencies": {
+    "bats": "^1.11.0"
+  },
+  "keywords": ["claude-code", "plugin", "jira", "atlassian"],
+  "author": {
+    "name": "baleen37",
+    "email": "git@baleen.me"
+  },
+  "license": "MIT"
+}

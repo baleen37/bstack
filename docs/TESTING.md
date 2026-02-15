@@ -13,7 +13,7 @@ bash tests/run-all-tests.sh
 This script runs:
 
 1. Root tests in `tests/`
-2. Plugin tests in `tests/{plugin-name}/`
+2. All plugin tests in `plugins/*/tests/`
 
 ### Root Tests Only
 
@@ -45,19 +45,21 @@ bats tests/performance/benchmarks.bats
 
 ### Test Count
 
-Tests run from both root `tests/` directory and individual plugin test directories:
-
-- Root Tests: Various unit, integration, and validation tests
-- Plugin Tests: Tests for git-guard, jira, databricks-devtools, handoff, lsp-*
-- **Total: 163 tests**
+- Unit Tests: 148 tests
+- Integration Tests: 20 tests (10 plugin loading + 10 cross-plugin interactions)
+- Performance Tests: 10 tests
+- Error Handling Tests: 23 tests
+- Edge Case Tests: 17 tests
+- Negative Tests: 17 tests
+- **Total: 178 tests**
 
 ### Individual Plugin Tests
 
 ```bash
-bats tests/git-guard/
-bats tests/jira/
-bats tests/databricks-devtools/
-bats tests/handoff/
+bats plugins/git-guard/tests/
+bats plugins/me/tests/
+bats plugins/ralph-loop/tests/
+bats plugins/strategic-compact/tests/
 ```
 
 ### Verbose Output
@@ -209,6 +211,13 @@ Tests for boundary conditions:
 - Unicode and special characters
 - Very long field values
 - Minimal/maximum valid configurations
+
+Performance benchmarks for critical operations:
+
+- Plugin list caching effectiveness
+- JSON parsing speed
+- File operation efficiency
+- Test execution timing
 
 ## Test Helpers
 

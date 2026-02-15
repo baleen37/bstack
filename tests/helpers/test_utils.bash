@@ -527,14 +527,11 @@ check_marketplace_plugins_exist() {
     sources=$(get_marketplace_plugins "$marketplace_file")
 
     while IFS= read -r source; do
-        [ -z "$source" ] && continue
-
         local full_path="${PROJECT_ROOT}/${source}"
 
         if [ ! -d "$full_path" ]; then
             echo "Error: Plugin source '$source' does not exist" >&2
             ((missing++))
-            continue
         fi
 
         if [ ! -f "${full_path}/.claude-plugin/plugin.json" ]; then
@@ -547,7 +544,6 @@ check_marketplace_plugins_exist() {
 }
 
 # Check if all plugins in plugins/ are listed in marketplace.json
-# Also checks for root canonical plugin if it exists.
 # Returns:
 #   0 if all listed, 1 otherwise (outputs missing plugins to stderr)
 # Usage:
@@ -564,30 +560,14 @@ check_all_plugins_in_marketplace() {
         return 1
     fi
 
-    # Get plugin names from marketplace using .name field
-    local marketplace_plugin_names
-    marketplace_plugin_names=$($JQ_BIN -r '.plugins[].name' "$marketplace_file" 2>/dev/null)
-
-    # Check for root canonical plugin
-    local root_plugin_json="${PROJECT_ROOT}/.claude-plugin/plugin.json"
-    if [ -f "$root_plugin_json" ]; then
-        local root_plugin_name
-        root_plugin_name=$($JQ_BIN -r '.name' "$root_plugin_json" 2>/dev/null)
-
-        if [ -n "$root_plugin_name" ] && [ "$root_plugin_name" != "null" ]; then
-            if ! echo "$marketplace_plugin_names" | grep -q "^${root_plugin_name}$"; then
-                echo "Error: Root plugin '$root_plugin_name' not listed in marketplace.json" >&2
-                ((missing++))
-            fi
-        fi
-    fi
+    # Get plugins from marketplace (extract just plugin name from source path)
+    local marketplace_plugins
+    marketplace_plugins=$($JQ_BIN -r '.plugins[].source' "$marketplace_file" 2>/dev/null | sed 's|^\./plugins/||')
 
     # Check each plugin directory
     plugin_dirs=$(find_all_plugins)
 
     while IFS= read -r plugin_dir; do
-        [ -z "$plugin_dir" ] && continue
-
         local plugin_name
         plugin_name=$(basename "$plugin_dir")
 
@@ -596,8 +576,8 @@ check_all_plugins_in_marketplace() {
             continue
         fi
 
-        # Check if plugin is in marketplace.json by name
-        if ! echo "$marketplace_plugin_names" | grep -q "^${plugin_name}$"; then
+        # Check if plugin is in marketplace.json
+        if ! echo "$marketplace_plugins" | grep -q "^${plugin_name}$"; then
             echo "Error: Plugin '$plugin_name' not listed in marketplace.json" >&2
             ((missing++))
         fi

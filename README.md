@@ -2,28 +2,22 @@
 
 AI coding assistant toolkit - Claude Code, OpenCode, and more.
 
-This is the **canonical plugin** that provides a unified toolkit for AI-assisted development.
-
 ## Available Plugins
 
 Plugins are automatically discovered from the `plugins/` directory. For detailed
 information about each plugin, see the respective plugin's README.md file.
 
+- **ralph-loop**: Implementation of the Ralph Wiggum technique for iterative,
+  self-referential AI development loops
 - **git-guard**: Git workflow protection hooks that prevent commit and PR
   bypasses (automatic, no commands needed)
+- **me**: Personal development workflow automation with 8 commands, 1 agent,
+  and 7 skills (TDD, debugging, git, code review, research, orchestration)
 - **jira**: Jira integration with 5 powerful skills - triage bugs, capture
   tasks from meeting notes, generate status reports, search company knowledge,
   and convert specs to backlogs. Uses Atlassian's MCP server with OAuth 2.1.
-- **databricks-devtools**: Databricks development tools with CLI commands,
-  workspace sync, and run management
-- **handoff**: Handoff workflow for seamless task transitions between agents
-- **lsp-bash**: Language Server Protocol integration for Bash
-- **lsp-go**: Language Server Protocol integration for Go
-- **lsp-kotlin**: Language Server Protocol integration for Kotlin
-- **lsp-lua**: Language Server Protocol integration for Lua
-- **lsp-nix**: Language Server Protocol integration for Nix
-- **lsp-python**: Language Server Protocol integration for Python
-- **lsp-typescript**: Language Server Protocol integration for TypeScript
+- **strategic-compact**: Strategic content compaction and organization tools
+  (automatic PreToolUse hook)
 
 ## Quick Start
 
@@ -34,8 +28,21 @@ information about each plugin, see the respective plugin's README.md file.
 claude plugin marketplace add https://github.com/baleen37/everything-agent
 
 # Install a plugin
+claude plugin install ralph-loop@everything-agent
 claude plugin install git-guard@everything-agent
-claude plugin install jira@everything-agent
+```
+
+### Using Ralph Loop
+
+```bash
+# Start Claude Code with ralph-loop
+claude
+
+# In Claude Code, start a loop
+/ralph-loop "Build a REST API for todos with tests" --max-iterations 20 --completion-promise "COMPLETE"
+
+# Cancel if needed
+/cancel-ralph
 ```
 
 ### Using Git Guard
@@ -46,27 +53,61 @@ Git Guard operates automatically via PreToolUse hooks - no commands needed:
 - Pre-commit validation is enforced
 - Works transparently in the background
 
-## Project Structure
+### Using "me" Plugin (Personal Workflow)
 
-This project uses a **hybrid structure** with both a root plugin (everything-agent)
-and individual plugins in the `plugins/` directory.
+The "me" plugin provides comprehensive development workflow automation:
+
+**Commands (8):**
+
+- `/brainstorm` - Brainstorming and feature planning
+- `/create-pr` - Full git workflow (commit → push → PR)
+- `/debug` - Systematic debugging process
+- `/orchestrate` - Sequential agent workflow execution
+- `/refactor-clean` - Code refactoring and cleanup
+- `/research` - Web research with citations
+- `/sdd` - Subagent-driven development approach
+- `/verify` - Comprehensive codebase verification
+
+**Agents (1):**
+
+- `code-reviewer` - Code review against plans and standards
+
+**Skills (7):**
+
+- `ci-troubleshooting` - Systematic CI debugging
+- `test-driven-development` - TDD methodology
+- `systematic-debugging` - Root cause analysis
+- `using-git-worktrees` - Isolated feature work
+- `setup-precommit-and-ci` - Pre-commit and CI setup
+- `nix-direnv-setup` - Nix flake direnv integration
+- `writing-claude-code` - Creating Claude Code components
+
+## Project Structure
 
 ```text
 everything-agent/
 ├── .claude-plugin/
 │   └── marketplace.json          # Marketplace configuration (everything-agent)
-├── plugins/                      # Individual plugins (auto-discovered)
+├── plugins/                      # Plugins (auto-discovered)
+│   ├── ralph-loop/              # Ralph Wiggum technique implementation
+│   │   ├── commands/             # Slash commands (/ralph-init, /ralph-loop, /cancel-ralph, /help)
+│   │   ├── scripts/              # Core loop script (ralph.sh) and prompt template
+│   │   └── tests/                # BATS tests
 │   ├── git-guard/               # Git workflow protection
 │   │   ├── hooks/                # PreToolUse hook
 │   │   └── tests/                # BATS tests
+│   ├── me/                      # Personal workflow automation
+│   │   ├── commands/             # 8 commands (brainstorm, create-pr, debug, etc.)
+│   │   ├── agents/               # Code reviewer agent
+│   │   ├── skills/               # 7 skills (ci-troubleshooting, tdd, etc.)
+│   │   └── tests/                # BATS tests
 │   ├── jira/                    # Jira integration
 │   │   └── agents/               # Jira MCP agents
-│   ├── databricks-devtools/     # Databricks development tools
-│   ├── handoff/                 # Task handoff workflow
-│   └── lsp-*/                   # Language Server Protocol integrations
+│   └── strategic-compact/       # Content compaction
+│       └── hooks/                # PreToolUse hook (suggests compaction)
 ├── .github/workflows/            # CI/CD workflows
 ├── docs/                         # Development and testing documentation
-├── tests/                        # BATS tests (root + plugin tests)
+├── tests/                        # BATS tests
 ├── schemas/                      # JSON schemas
 └── CLAUDE.md                     # Project instructions for Claude Code
 ```
@@ -123,14 +164,14 @@ git commit -m "type(scope): description"
 - `fix`: Bug fix (patch version bump)
 - `docs`, `style`, `refactor`, `test`, `build`, `ci`, `chore`: No version bump
 
-**Scope:** Plugin name (`git-guard`, `jira`, `databricks-devtools`, etc.)
+**Scope:** Plugin name (`ralph-loop`, `git-guard`, etc.)
 
 **Examples:**
 
 ```text
-feat(git-guard): add new pre-commit validation
-fix(jira): fix OAuth authentication flow
-docs(databricks-devtools): update CLI documentation
+feat(ralph-loop): add iteration progress tracking
+fix(git-guard): prevent --no-verify bypass
+docs(me): update skill documentation
 ```
 
 #### Release Process
@@ -157,6 +198,15 @@ See `plugins/jira/README.md` for detailed setup instructions.
 - **Agents** (`agents/*.md`): Autonomous experts that execute specific tasks
 - **Skills** (`skills/*/SKILL.md`): Context-aware guides that activate automatically
 - **Hooks** (`hooks/hooks.json` + `hooks/*.sh`): Event-driven automation (SessionStart, PreToolUse, etc.)
+
+## Ralph Loop Philosophy
+
+Ralph embodies several key principles:
+
+1. **Iteration > Perfection**: Don't aim for perfect on first try. Let the loop refine the work.
+2. **Failures Are Data**: "Deterministically bad" means failures are predictable and informative.
+3. **Operator Skill Matters**: Success depends on writing good prompts, not just having a good model.
+4. **Persistence Wins**: Keep trying until success.
 
 ## Pre-commit Hooks
 

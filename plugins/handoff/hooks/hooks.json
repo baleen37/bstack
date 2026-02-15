@@ -1,0 +1,17 @@
+{
+  "description": "Handoff plugin hooks - notify about recent handoffs on session start",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/session-start.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

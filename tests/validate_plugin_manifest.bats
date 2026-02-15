@@ -118,31 +118,14 @@ load helpers/fixture_factory
 }
 
 @test "all real plugin manifests are valid" {
-    local manifest_files=""
-    local found=0
+    # Find all plugin.json files in the project
+    local manifest_files
+    manifest_files=$(find "$PROJECT_ROOT/plugins" -name "plugin.json" -type f 2>/dev/null)
 
-    # Check root canonical plugin
-    local root_manifest="$PROJECT_ROOT/.claude-plugin/plugin.json"
-    if [ -f "$root_manifest" ]; then
-        manifest_files="$root_manifest"$'\n'
-        found=$((found + 1))
-    fi
-
-    # Find all plugin.json files in plugins directory
-    local plugins_manifests
-    plugins_manifests=$(find "$PROJECT_ROOT/plugins" -name "plugin.json" -type f 2>/dev/null)
-
-    if [ -n "$plugins_manifests" ]; then
-        manifest_files="${manifest_files}${plugins_manifests}"
-        found=1
-    fi
-
-    [ "$found" -gt 0 ] || skip "No plugin.json files found"
+    [ -n "$manifest_files" ] || skip "No plugin.json files found"
 
     # Validate each manifest
     while IFS= read -r manifest_file; do
-        [ -z "$manifest_file" ] && continue
-
         # Check if JSON is valid
         run validate_json "$manifest_file"
         [ "$status" -eq 0 ]

@@ -31,6 +31,8 @@
 #   # Create plugin with custom fields
 #   create_plugin_with_custom_fields "$TEST_TEMP_DIR" "custom-plugin" '"version": "2.0.0", "custom": "field"'
 #
+#   # Create handoff JSON for testing
+#   create_handoff_json "$TEST_TEMP_DIR/handoff.json" "test-id" "2026-02-08T10:00:00Z" "/project/path" "Summary" "main" "project-name"
 #
 #   # Create GitHub Actions workflow YAML for testing
 #   create_workflow_yaml "$TEST_TEMP_DIR/workflow.yml" "Test Workflow" "on: push"
@@ -48,6 +50,7 @@
 #   - create_hooks_json(): Create a hooks.json file with hook configurations
 #   - create_skill_md(): Create a SKILL.md file with frontmatter
 #   - create_plugin_with_custom_fields(): Create a plugin.json with custom JSON fields
+#   - create_handoff_json(): Create a handoff JSON file with test data
 #   - create_workflow_yaml(): Create a GitHub Actions workflow YAML file
 #   - cleanup_fixtures(): Safely remove fixture directories
 
@@ -377,6 +380,84 @@ $custom_json_fields
 EOF
 
     echo "$plugin_path"
+}
+
+# Create a handoff JSON file with test data
+# Args: output_path, handoff_id, created_at, project_path, [summary], [branch], [project_name], [plan_path], [tasks_session_id], [loaded_at], [source_session_id]
+# Returns: Path to created handoff JSON
+create_handoff_json() {
+    local output_path="$1"
+    local handoff_id="$2"
+    local created_at="${3:-}"
+    local project_path="$4"
+    local summary="${5:-Test handoff summary}"
+    local branch="${6:-main}"
+    local project_name="${7:-test-project}"
+    local plan_path="${8:-null}"
+    local tasks_session_id="${9:-null}"
+    local loaded_at="${10:-null}"
+    local source_session_id="${11:-null}"
+
+    local handoff_dir
+    handoff_dir=$(dirname "$output_path")
+    mkdir -p "$handoff_dir"
+
+    # Use current time if created_at not provided
+    if [ -z "$created_at" ]; then
+        created_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    fi
+
+    # Determine plan_path JSON value (null or string)
+    local plan_path_json
+    if [ "$plan_path" = "null" ]; then
+        plan_path_json="null"
+    else
+        plan_path_json="\"$plan_path\""
+    fi
+
+    # Determine tasks_session_id JSON value (null or string)
+    local tasks_session_id_json
+    if [ "$tasks_session_id" = "null" ]; then
+        tasks_session_id_json="null"
+    else
+        tasks_session_id_json="\"$tasks_session_id\""
+    fi
+
+    # Determine loaded_at JSON value (null or string)
+    local loaded_at_json
+    if [ "$loaded_at" = "null" ]; then
+        loaded_at_json="null"
+    else
+        loaded_at_json="\"$loaded_at\""
+    fi
+
+    # Determine source_session_id JSON value (null or string)
+    local source_session_id_json
+    if [ "$source_session_id" = "null" ]; then
+        source_session_id_json="null"
+    else
+        source_session_id_json="\"$source_session_id\""
+    fi
+
+    # Create handoff JSON
+    cat > "$output_path" <<EOF
+{
+  "id": "$handoff_id",
+  "created_at": "$created_at",
+  "loaded_at": $loaded_at_json,
+  "project_name": "$project_name",
+  "project_path": "$project_path",
+  "branch": "$branch",
+  "summary": "$summary",
+  "references": {
+    "plan_path": $plan_path_json,
+    "tasks_session_id": $tasks_session_id_json
+  },
+  "source_session_id": $source_session_id_json
+}
+EOF
+
+    echo "$output_path"
 }
 
 # Create a GitHub Actions workflow YAML file
