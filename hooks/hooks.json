@@ -1,19 +1,7 @@
 {
   "$schema": "../schemas/hooks-schema.json",
-  "description": "Consolidated hooks for everything-agent - git-guard and handoff",
+  "description": "Git Guard hooks - prevents bypassing git hooks",
   "hooks": {
-    "SessionStart": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/session-start.sh",
-            "timeout": 10
-          }
-        ]
-      }
-    ],
     "PreToolUse": [
       {
         "matcher": "Bash:git",
