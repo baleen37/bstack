@@ -1,6 +1,6 @@
 {
   "name": "lsp-python",
-  "version": "5.23.3",
+  "version": "5.28.0",
   "description": "Python Language Server integration using Pyright for Claude Code",
   "author": {
     "name": "baleen37",
@@ -16,7 +16,7 @@
   ],
   "lspServers": {
     "python": {
-      "command": "pyright",
+      "command": "pyright-langserver",
       "args": [
         "--stdio"
       ],

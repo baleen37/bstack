@@ -8,30 +8,23 @@
   },
   "plugins": [
     {
-      "name": "suggest-compacting",
-      "description": "Automatically suggests when to manually compact context during long sessions",
-      "source": "./plugins/suggest-compacting",
+      "name": "everything-agent",
+      "description": "AI coding assistant toolkit - development automation, LSP, memory, project management, and workflow tools",
+      "source": "./",
       "category": "development",
       "tags": [
-        "workflow",
-        "context-management",
-        "hooks"
-      ],
-      "version": "5.23.3"
-    },
-    {
-      "name": "git-guard",
-      "description": "Git workflow protection hooks - prevents commit and PR bypasses",
-      "source": "./plugins/git-guard",
-      "category": "development",
-      "tags": [
+        "lsp",
         "git",
-        "hooks",
-        "pre-commit",
-        "pr",
-        "security"
+        "workflow",
+        "automation",
+        "tdd",
+        "debugging",
+        "memory",
+        "jira",
+        "databricks",
+        "mcp"
       ],
-      "version": "5.23.3"
+      "version": "5.28.0"
     },
     {
       "name": "lsp-bash",
@@ -44,7 +37,7 @@
         "autocomplete",
         "diagnostics"
       ],
-      "version": "5.23.3"
+      "version": "5.28.0"
     },
     {
       "name": "lsp-typescript",
@@ -58,7 +51,7 @@
         "autocomplete",
         "diagnostics"
       ],
-      "version": "5.23.3"
+      "version": "5.28.0"
     },
     {
       "name": "lsp-python",
@@ -71,7 +64,7 @@
         "autocomplete",
         "diagnostics"
       ],
-      "version": "5.23.3"
+      "version": "5.28.0"
     },
     {
       "name": "lsp-go",
@@ -84,7 +77,7 @@
         "autocomplete",
         "diagnostics"
       ],
-      "version": "5.23.3"
+      "version": "5.28.0"
     },
     {
       "name": "lsp-kotlin",
@@ -97,7 +90,7 @@
         "autocomplete",
         "diagnostics"
       ],
-      "version": "5.23.3"
+      "version": "5.28.0"
     },
     {
       "name": "lsp-lua",
@@ -110,7 +103,7 @@
         "autocomplete",
         "diagnostics"
       ],
-      "version": "5.23.3"
+      "version": "5.28.0"
     },
     {
       "name": "lsp-nix",
@@ -123,48 +116,7 @@
         "autocomplete",
         "diagnostics"
       ],
-      "version": "5.23.3"
-    },
-    {
-      "name": "me",
-      "description": "Personal Claude Code configuration - TDD, systematic debugging, git workflow, code review, development automation, and auto-installs all baleen-plugins",
-      "source": "./plugins/me",
-      "category": "development",
-      "tags": [
-        "workflow",
-        "automation",
-        "tdd",
-        "git",
-        "code-review",
-        "debugging"
-      ],
-      "version": "5.23.3"
-    },
-    {
-      "name": "ralph-loop",
-      "description": "Continuous self-referential AI loops for interactive iterative development, implementing the Ralph Wiggum technique. Run Claude in a while-true loop with the same prompt until task completion.",
-      "source": "./plugins/ralph-loop",
-      "category": "development",
-      "tags": [
-        "automation",
-        "iteration",
-        "loop",
-        "ai"
-      ],
-      "version": "5.23.3"
-    },
-    {
-      "name": "handoff",
-      "description": "Session handoff plugin for Claude Code - save and restore session context between sessions",
-      "source": "./plugins/handoff",
-      "category": "productivity",
-      "tags": [
-        "handoff",
-        "session",
-        "context",
-        "pickup"
-      ],
-      "version": "5.23.3"
+      "version": "5.28.0"
     },
     {
       "name": "databricks-devtools",
@@ -178,22 +130,7 @@
         "mcp",
         "cli"
       ],
-      "version": "5.23.3"
-    },
-    {
-      "name": "jira",
-      "description": "Jira integration for issue tracking and project management. Triage bugs, capture tasks from notes, generate status reports, and automate Jira workflows using Atlassian's MCP server.",
-      "source": "./plugins/jira",
-      "category": "productivity",
-      "tags": [
-        "jira",
-        "confluence",
-        "atlassian",
-        "issue-tracking",
-        "mcp",
-        "project-management"
-      ],
-      "version": "5.23.3"
+      "version": "5.28.0"
     }
   ]
 }
