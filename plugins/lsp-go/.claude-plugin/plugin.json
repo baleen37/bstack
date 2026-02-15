@@ -1,6 +1,6 @@
 {
   "name": "lsp-go",
-  "version": "5.26.0",
+  "version": "5.27.0",
   "description": "Language Server Protocol support for Go - provides gopls integration for Go code completion, diagnostics, and navigation",
   "author": {
     "name": "baleen37",
