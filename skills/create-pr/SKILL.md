@@ -20,10 +20,8 @@ Keep verification read-only. Run sync only when verify reports `BEHIND`.
 ## Minimal Workflow (/writing-skills)
 
 ```bash
-# 1) pre-flight
-git status
-git branch --show-current
-git log --oneline -5
+# 1) pre-flight (run in parallel: git status, git branch --show-current, git log --oneline -5)
+# Check: not on main/master, has changes to commit
 
 # 2) commit
 git add <specific-files>
@@ -36,14 +34,14 @@ git commit -m "type(scope): summary"
 git push -u origin HEAD
 
 # 5) create PR (do not hardcode --base main)
-gh pr create --title "$(git log -1 --pretty=%s)" --body "<summary, details, tests>"
+# Body: 1-2 sentence summary, bullet list of changes, test evidence
+PR_URL=$(gh pr create --title "$(git log -1 --pretty=%s)" --body "<short summary>")
 
-# 6) verify (read-only)
+# 6) verify (read-only, exit code only)
 "${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts/verify-pr-status.sh"
 
-# 7) auto-merge (optional)
-# Enable auto-merge if requested
-gh pr merge <pr-number> --auto --squash
+# 7) auto-merge (optional, if requested in arguments)
+gh pr merge "${PR_URL##*/}" --auto --squash
 ```
 
 ## Status Handling
@@ -67,9 +65,10 @@ When `BEHIND`:
 - Required CI failed
 - State-changing follow-up not approved by user
 
-## PR Body Minimum
+## PR Body Format
 
-- Summary
-- Technical details
-- Test evidence
-- Breaking changes (if any)
+Keep it short and scannable:
+- Summary: 1-2 sentences max
+- Changes: Bullet list
+- Tests: What you verified
+- Breaking: Only if applicable
