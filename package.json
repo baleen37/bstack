@@ -4,32 +4,22 @@
   "description": "Everything Agent - AI coding assistant toolkit (Claude Code, OpenCode, and more)",
   "private": true,
   "type": "module",
-  "workspaces": [
-    "packages/*"
-  ],
   "scripts": {
     "prepare": "husky",
     "commit": "git-cz",
     "build": "echo 'No modules to build'",
     "test": "vitest",
-    "test:run": "vitest run",
-    "test:ui": "vitest --ui",
-    "test:bats": "bash tests/run-all-tests.sh",
-    "test:coverage": "vitest run --coverage"
+    "test:bats": "bash tests/run-all-tests.sh"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.6.1",
     "@commitlint/config-conventional": "^19.6.0",
     "@semantic-release/git": "^10.0.1",
-    "@vitest/ui": "^2.0.0",
     "commitizen": "^4.3.1",
     "cz-conventional-changelog": "^3.3.0",
-    "esbuild": "^0.27.3",
-    "gray-matter": "^4.0.0",
     "husky": "^9.1.7",
     "semantic-release": "^21.0.7",
-    "vitest": "^2.0.0",
-    "yaml": "^2.0.0"
+    "vitest": "^2.0.0"
   },
   "config": {
     "commitizen": {
