@@ -7,7 +7,7 @@ description: Use when the user asks to "create a PR", "create pull request", "op
 
 ## Overview
 
-Use this for full PR flow: pre-flight → commit → conflict check → push → PR creation → verify.
+Use this for full PR flow: pre-flight → commit → conflict check → push → PR creation → verify → (optional) auto-merge.
 
 Keep verification read-only. Run sync only when verify reports `BEHIND`.
 
@@ -15,6 +15,7 @@ Keep verification read-only. Run sync only when verify reports `BEHIND`.
 
 - User asks to create/open/submit a PR
 - User asks for commit → push → PR workflow
+- User requests "auto merge" after PR creation
 
 ## Minimal Workflow (/writing-skills)
 
@@ -39,6 +40,10 @@ gh pr create --title "$(git log -1 --pretty=%s)" --body "<summary, details, test
 
 # 6) verify (read-only)
 "${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts/verify-pr-status.sh"
+
+# 7) auto-merge (optional)
+# Enable auto-merge if requested
+gh pr merge <pr-number> --auto --squash
 ```
 
 ## Status Handling
