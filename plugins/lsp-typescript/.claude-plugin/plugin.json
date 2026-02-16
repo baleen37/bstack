@@ -1,6 +1,6 @@
 {
   "name": "lsp-typescript",
-  "version": "5.29.0",
+  "version": "5.29.1",
   "description": "TypeScript/JavaScript Language Server integration for Claude Code",
   "author": {
     "name": "baleen37"

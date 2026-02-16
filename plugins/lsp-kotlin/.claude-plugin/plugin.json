@@ -1,6 +1,6 @@
 {
   "name": "lsp-kotlin",
-  "version": "5.29.0",
+  "version": "5.29.1",
   "description": "Language Server Protocol support for Kotlin - code completion, diagnostics, go-to-definition, and other IDE features",
   "author": {
     "name": "baleen37",
