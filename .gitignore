@@ -64,3 +64,6 @@ htmlcov/
 
 # oh-my-claudecode state (removed)
 .omc/
+
+# Cache directory
+.cache/

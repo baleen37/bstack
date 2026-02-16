@@ -38,7 +38,4 @@ curl -u username:password -X DELETE https://your-domain:9200/your-index
 
 ## Resources
 
-- **`references/`** - Detailed guides for index management, queries, troubleshooting
-- **`examples/`** - Common operation scripts
-- **`scripts/health-check.sh`** - Cluster diagnostics
 - [OpenSearch REST API](https://docs.opensearch.org/latest/api-reference/index.html)
