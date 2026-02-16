@@ -1,6 +1,6 @@
 {
   "name": "handoff",
-  "version": "5.29.3",
+  "version": "5.29.4",
   "description": "Session handoff plugin for Claude Code - save and restore session context between sessions",
   "author": {
     "name": "Jiho"
