@@ -1,6 +1,6 @@
 {
   "name": "databricks-devtools",
-  "version": "5.29.1",
+  "version": "5.29.2",
   "description": "Databricks SQL schema explorer for Unity Catalog discovery",
   "author": {
     "name": "Baleen"

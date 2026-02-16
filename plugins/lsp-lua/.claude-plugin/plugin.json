@@ -1,6 +1,6 @@
 {
   "name": "lsp-lua",
-  "version": "5.29.1",
+  "version": "5.29.2",
   "description": "Lua Language Server Protocol support - lua-language-server for .lua files",
   "author": {
     "name": "baleen37",
