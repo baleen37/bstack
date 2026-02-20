@@ -12,7 +12,7 @@
           },
           {
             "type": "command",
-            "command": "bun ${CLAUDE_PLUGIN_ROOT}/dist/session-start.js"
+            "command": "bun ${CLAUDE_PLUGIN_ROOT}/src/suggest-compacting/session-start.ts"
           },
           {
             "type": "command",
@@ -60,7 +60,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun ${CLAUDE_PLUGIN_ROOT}/dist/auto-compact.js"
+            "command": "bun ${CLAUDE_PLUGIN_ROOT}/src/suggest-compacting/auto-compact.ts"
           }
         ]
       }
