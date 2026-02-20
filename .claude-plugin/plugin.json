@@ -1,6 +1,6 @@
 {
   "name": "everything-agent",
-  "version": "5.29.4",
+  "version": "5.29.6",
   "description": "AI coding assistant toolkit - LSP servers, git workflow protection, session handoff, context management, and development automation",
   "author": {
     "name": "baleen37",
@@ -29,7 +29,9 @@
   "lspServers": {
     "bash": {
       "command": "bash-language-server",
-      "args": ["start"],
+      "args": [
+        "start"
+      ],
       "extensionToLanguage": {
         ".sh": "bash",
         ".bash": "bash",
@@ -38,7 +40,9 @@
     },
     "typescript": {
       "command": "typescript-language-server",
-      "args": ["--stdio"],
+      "args": [
+        "--stdio"
+      ],
       "extensionToLanguage": {
         ".ts": "typescript",
         ".tsx": "typescript",
@@ -50,7 +54,9 @@
     },
     "python": {
       "command": "pyright-langserver",
-      "args": ["--stdio"],
+      "args": [
+        "--stdio"
+      ],
       "extensionToLanguage": {
         ".py": "python",
         ".pyi": "python"
@@ -58,7 +64,9 @@
     },
     "go": {
       "command": "gopls",
-      "args": ["serve"],
+      "args": [
+        "serve"
+      ],
       "extensionToLanguage": {
         ".go": "go"
       }
