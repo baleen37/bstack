@@ -7,80 +7,98 @@ description: Use when a user asks to browse Databricks Unity Catalog or inspect 
 
 ## Overview
 
-Use Databricks SQL explorer MCP tools for Unity Catalog drill-down. Interpret the target shape, then call MCP tools directly.
+Explore Databricks Unity Catalog by running `databricks` CLI commands directly via Bash. Interpret the target shape, then execute the appropriate SQL using the Statements API.
+
+## Prerequisites
+
+- `databricks` CLI installed (`brew install databricks`)
+- `~/.databrickscfg` configured with at least one profile
 
 ## When to Use
-
-Use this skill when the user wants to:
 
 - list catalogs, schemas, or tables in Unity Catalog
 - inspect table columns and metadata
 - preview sample rows from a specific table
 
-Do not use this skill for:
+Do not use for write operations (`INSERT`, `UPDATE`, `DELETE`, `CREATE`, `DROP`) or bulk export.
 
-- write operations (`INSERT`, `UPDATE`, `DELETE`, `CREATE`, `DROP`)
-- bulk export requests
+## Target → SQL Mapping
 
-## Quick Reference
-
-| User target | Default MCP tool calls |
+| User target | SQL |
 | --- | --- |
-| *(no target)* | `list_catalogs` |
-| `<catalog>` | `list_schemas(catalog)` |
-| `<catalog>.<schema>` | `list_tables(catalog, schema)` |
-| `<catalog>.<schema>.<table>` | `describe_table(table)` → `table_metadata(table)` → `preview_data(table)` |
+| *(no target)* | `SHOW CATALOGS` |
+| `<catalog>` | `SHOW SCHEMAS IN \`catalog\`` |
+| `<catalog>.<schema>` | `SHOW TABLES IN \`catalog\`.\`schema\`` |
+| `<catalog>.<schema>.<table>` | `DESCRIBE TABLE c.s.t` → `DESCRIBE DETAIL c.s.t` → `SELECT * FROM c.s.t LIMIT 10` |
 
-If the user explicitly asks for only one output (for example, columns only), call only the relevant table-level tool.
+Always backtick-quote identifiers.
 
-### Tool signatures
+## Warehouse Resolution
 
-- `list_catalogs(profile?)`
-- `list_schemas(catalog, profile?)`
-- `list_tables(catalog, schema, profile?)`
-- `describe_table(table, profile?)`
-- `table_metadata(table, profile?)`
-- `preview_data(table, limit?, profile?)`
+1. If profile has `warehouse_id` → use it
+2. Otherwise: `databricks warehouses list --output json --profile <name>` → pick first `RUNNING` warehouse
 
-For `describe_table`, `table_metadata`, and `preview_data`, `table` must be fully qualified: `<catalog>.<schema>.<table>`.
+## Executing SQL
 
-## Parsing Rule
+```bash
+databricks api post /api/2.0/sql/statements \
+  --profile <profile> \
+  --json '{
+    "statement": "<SQL>",
+    "warehouse_id": "<warehouse_id>",
+    "wait_timeout": "30s"
+  }'
+```
 
-- Treat `/databricks:explore` as the command prefix only.
-- Parse the remaining token as target shape: *(none)*, `<catalog>`, `<catalog>.<schema>`, or `<catalog>.<schema>.<table>`.
-- Execute MCP tools directly from target shape; do not re-invoke slash command as a skill.
+Parse result from:
+- columns: `manifest.schema.columns[].name`, `manifest.schema.columns[].type_name`
+- rows: `result.data_array`
+- error: `status.error.message` when `status.state == "FAILED"`
+
+## Profile Selection
+
+Read `~/.databrickscfg` (INI format). Default profile is `DEFAULT`.
+
+If user specifies a profile (e.g. "use profile alpha"), pass `--profile alpha` to all commands.
+
+If profile does not exist, list available profiles:
+
+```bash
+grep '^\[' ~/.databrickscfg | tr -d '[]'
+```
 
 ## Limit Rules
 
-- `preview_data` default limit is `10`.
-- Valid `limit` is an integer from `1` to `1000`.
-- If the user requests more than `1000` rows, explain the limit and ask whether to proceed with `1000`.
+- `SELECT *` default limit: `10`
+- Maximum limit: `1000`
+- If user requests > 1000, explain the cap and ask whether to proceed with `1000`
 
 ## Common Mistakes
 
-- Treating `/databricks:explore` as a skill invocation instead of running MCP tools.
-- Guessing unsupported flags or argument formats.
-- Calling table-level tools with partial targets (for example, `<catalog>.<schema>`).
-- Sending `preview_data` with `limit > 1000`.
+- Calling table-level SQL with a partial target (e.g. `catalog.schema` instead of fully qualified)
+- Forgetting to backtick-quote identifiers with dots or special characters
+- Using `LIMIT > 1000`
+- Attempting write operations
 
-## Examples
+## Example
 
-User request:
+User: `/databricks:explore main.sales.orders`
 
-`/databricks:explore main.sales.orders`
+```bash
+# 1. Resolve warehouse
+databricks warehouses list --output json --profile default
 
-Tool sequence:
+# 2. DESCRIBE TABLE
+databricks api post /api/2.0/sql/statements --profile default \
+  --json '{"statement":"DESCRIBE TABLE `main`.`sales`.`orders`","warehouse_id":"wh-abc","wait_timeout":"30s"}'
 
-1. `describe_table(table: "main.sales.orders")`
-2. `table_metadata(table: "main.sales.orders")`
-3. `preview_data(table: "main.sales.orders")`
+# 3. DESCRIBE DETAIL
+databricks api post /api/2.0/sql/statements --profile default \
+  --json '{"statement":"DESCRIBE DETAIL `main`.`sales`.`orders`","warehouse_id":"wh-abc","wait_timeout":"30s"}'
 
-Then return a concise summary of columns, key metadata, and sample rows.
+# 4. Preview
+databricks api post /api/2.0/sql/statements --profile default \
+  --json '{"statement":"SELECT * FROM `main`.`sales`.`orders` LIMIT 10","warehouse_id":"wh-abc","wait_timeout":"30s"}'
+```
 
-User request with profile:
-
-`Show tables in main.sales using profile alpha`
-
-Tool sequence:
-
-1. `list_tables(catalog: "main", schema: "sales", profile: "alpha")`
+Return a concise summary of columns, key metadata, and sample rows.
