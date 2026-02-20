@@ -6,26 +6,11 @@ argument-hint: [<catalog|catalog.schema|catalog.schema.table>]
 
 # Databricks SQL Schema Explorer
 
-Use the databricks-devtools SQL explorer MCP tools:
+Use the `using-databricks-explorer` skill to handle this request.
 
-- `list_catalogs`
-- `list_schemas`
-- `list_tables`
-- `describe_table`
-- `table_metadata`
-- `preview_data`
+Parse the argument (if any) as a drill-down target:
 
-## Command behavior
-
-If no argument is provided:
-
-1. Call `list_catalogs`
-2. Show available catalogs
-
-If argument is provided, interpret it as drill-down target:
-
-- `<catalog>` → call `list_schemas`
-- `<catalog>.<schema>` → call `list_tables`
-- `<catalog>.<schema>.<table>` → call `describe_table`, `table_metadata`, then `preview_data`
-
-Use `preview_data` with default limit unless the user explicitly requests a different row count.
+- *(no argument)* → list catalogs
+- `<catalog>` → list schemas
+- `<catalog>.<schema>` → list tables
+- `<catalog>.<schema>.<table>` → describe table, show metadata, preview data
