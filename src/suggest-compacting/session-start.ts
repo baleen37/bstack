@@ -3,7 +3,6 @@ import { isValidSessionId } from './lib/state.js';
 
 interface SessionStartInput {
   session_id: string;
-  transcript_path: string;
 }
 
 async function main() {

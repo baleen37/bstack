@@ -311,6 +311,7 @@ for_each_skill_file() {
 }
 
 # Iterate over all command files (*.md in commands/ directories)
+# After consolidation: searches root plugin at .claude-plugin/commands/
 # Args:
 #   $1 - Callback function name (receives command file path as first arg)
 # Usage:
@@ -323,7 +324,8 @@ for_each_command_file() {
     local callback="$1"
     local cmd_files
 
-    cmd_files=$(find "$PROJECT_ROOT/plugins" -path "*/commands/*.md" -type f 2>/dev/null | grep -v CLAUDE.md | sort)
+    # Consolidated structure: single root-level plugin
+    cmd_files=$(find "$PROJECT_ROOT/.claude-plugin/commands" -name "*.md" -type f 2>/dev/null | grep -v CLAUDE.md | sort)
 
     [ -n "$cmd_files" ] || return 1
 
@@ -333,6 +335,7 @@ for_each_command_file() {
 }
 
 # Iterate over all agent files (*.md in agents/ directories)
+# After consolidation: searches root plugin at .claude-plugin/agents/
 # Args:
 #   $1 - Callback function name (receives agent file path as first arg)
 # Usage:
@@ -345,7 +348,8 @@ for_each_agent_file() {
     local callback="$1"
     local agent_files
 
-    agent_files=$(find "$PROJECT_ROOT/plugins" -path "*/agents/*.md" -type f 2>/dev/null | grep -v CLAUDE.md | sort)
+    # Consolidated structure: single root-level plugin
+    agent_files=$(find "$PROJECT_ROOT/.claude-plugin/agents" -name "*.md" -type f 2>/dev/null | grep -v CLAUDE.md | sort)
 
     [ -n "$agent_files" ] || return 1
 
@@ -355,6 +359,7 @@ for_each_agent_file() {
 }
 
 # Iterate over all hooks.json files
+# After consolidation: hooks.json is at hooks/hooks.json
 # Args:
 #   $1 - Callback function name (receives hooks.json path as first arg)
 # Usage:
@@ -365,15 +370,14 @@ for_each_agent_file() {
 #   }
 for_each_hooks_file() {
     local callback="$1"
-    local hooks_files
+    local hooks_file="${PROJECT_ROOT}/hooks/hooks.json"
 
-    hooks_files=$(find "$PROJECT_ROOT/plugins" -name "hooks.json" -path "*/hooks/hooks.json" -type f 2>/dev/null | sort)
-
-    [ -n "$hooks_files" ] || return 1
-
-    while IFS= read -r hooks_file; do
+    # Consolidated structure: single hooks.json at hooks/hooks.json
+    if [ -f "$hooks_file" ]; then
         $callback "$hooks_file"
-    done <<< "$hooks_files"
+    else
+        return 1
+    fi
 }
 
 ###############################################################################
