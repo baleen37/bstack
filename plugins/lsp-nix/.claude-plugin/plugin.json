@@ -1,6 +1,6 @@
 {
   "name": "lsp-nix",
-  "version": "5.29.4",
+  "version": "5.29.5",
   "description": "Language Server Protocol support for Nix - provides autocomplete, diagnostics, and code navigation for Nix files",
   "author": {
     "name": "baleen37",

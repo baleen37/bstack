@@ -1,6 +1,6 @@
 {
   "name": "jira",
-  "version": "5.29.4",
+  "version": "5.29.5",
   "description": "Jira integration for issue tracking and project management. Triage bugs, capture tasks from notes, generate status reports, and automate Jira workflows using Atlassian's MCP server.",
   "author": {
     "name": "baleen37",
