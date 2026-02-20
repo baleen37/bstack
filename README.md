@@ -53,13 +53,17 @@ everything-agent/
 │   ├── pickup.sh                 # Pickup script
 │   ├── handoff-list.sh           # List handoffs
 │   ├── check-conflicts.sh        # Conflict checker
-│   └── verify-pr-status.sh      # PR status verifier
-├── skills/
+│   ├── verify-pr-status.sh      # PR status verifier
+│   ├── sync-marketplace-version.sh # Version sync utility
+│   ├── ralph/                    # Ralph loop scripts
+│   └── databricks-devtools/      # Databricks CLI scripts
+├── skills/                       # All skills (18 total)
 │   ├── gha/                      # GitHub Actions debugging
 │   ├── handoff/                  # Handoff skill
 │   ├── reddit-fetch/             # Reddit content fetcher
 │   ├── remembering-conversations/ # Conversation memory
-│   └── review-claudemd/          # CLAUDE.md review
+│   ├── review-claudemd/          # CLAUDE.md review
+│   └── ...                       # Additional skills
 ├── dist/
 │   ├── auto-compact.js           # Auto-compaction (PreToolUse)
 │   └── session-start.js          # Session start compaction check
@@ -104,7 +108,7 @@ git commit -m "type(scope): description"
 
 - `feat`: New feature (minor version bump)
 - `fix`: Bug fix (patch version bump)
-- `docs`, `style`, `refactor`, `test`, `build`, `ci`, `chore`: No version bump
+- `docs`, `style`, `refactor`, `test`, `build`, `ci`, `chore`, `perf`: Patch version bump
 
 **Examples:**
 
