@@ -1,4 +1,4 @@
-# Everything Agent
+# Me
 
 AI coding assistant toolkit - Claude Code, OpenCode, and more.
 

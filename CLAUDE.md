@@ -1,6 +1,6 @@
 <!-- Generated: 2026-02-01 | Updated: 2026-02-20 -->
 
-# everything-agent
+# me
 
 ## Purpose
 
