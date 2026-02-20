@@ -119,20 +119,6 @@
       "version": "5.29.4"
     },
     {
-      "name": "databricks-devtools",
-      "description": "Databricks SQL schema explorer for Unity Catalog discovery",
-      "source": "./plugins/databricks-devtools",
-      "category": "development",
-      "tags": [
-        "databricks",
-        "sql",
-        "workspace",
-        "mcp",
-        "cli"
-      ],
-      "version": "5.29.4"
-    },
-    {
       "name": "git-guard",
       "description": "Git workflow protection hooks - prevent dangerous git operations",
       "source": "./plugins/git-guard",
