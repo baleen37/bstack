@@ -73,86 +73,44 @@ _assert_valid_plugin_name() {
 ###############################################################################
 
 @test "common: plugin.json files exist in plugin directories" {
-    local manifest_files
-    manifest_files=$(find "$PROJECT_ROOT/plugins" -name "plugin.json" -type f 2>/dev/null)
+    local manifest_file="${PROJECT_ROOT}/.claude-plugin/plugin.json"
 
-    [ -n "$manifest_files" ] || skip "No plugin.json files found"
-
-    # Count manifests found - use file count instead of loop
-    local count
-    count=$(echo "$manifest_files" | grep -c '^')
-
-    [ "$count" -gt 0 ]
+    [ -f "$manifest_file" ]
 }
 
 @test "common: all plugin.json files are valid JSON" {
-    local failed=0
+    local manifest="${PROJECT_ROOT}/.claude-plugin/plugin.json"
 
-    for manifest in "${PROJECT_ROOT}"/plugins/*/.claude-plugin/plugin.json; do
-        if [ -f "$manifest" ]; then
-            if ! validate_json "$manifest"; then
-                ((failed++))
-            fi
-        fi
-    done
-
-    [ "$failed" -eq 0 ]
+    [ -f "$manifest" ] || skip "No plugin.json found"
+    validate_json "$manifest"
 }
 
 @test "common: all plugin.json files have required fields" {
-    local failed=0
+    local manifest="${PROJECT_ROOT}/.claude-plugin/plugin.json"
 
-    for manifest in "${PROJECT_ROOT}"/plugins/*/.claude-plugin/plugin.json; do
-        if [ -f "$manifest" ]; then
-            if ! _assert_has_required_fields "$manifest"; then
-                ((failed++))
-            fi
-        fi
-    done
-
-    [ "$failed" -eq 0 ]
+    [ -f "$manifest" ] || skip "No plugin.json found"
+    _assert_has_required_fields "$manifest"
 }
 
 @test "common: all plugin.json files have non-empty required field values" {
-    local failed=0
+    local manifest="${PROJECT_ROOT}/.claude-plugin/plugin.json"
 
-    for manifest in "${PROJECT_ROOT}"/plugins/*/.claude-plugin/plugin.json; do
-        if [ -f "$manifest" ]; then
-            if ! _assert_field_values_not_empty "$manifest"; then
-                ((failed++))
-            fi
-        fi
-    done
-
-    [ "$failed" -eq 0 ]
+    [ -f "$manifest" ] || skip "No plugin.json found"
+    _assert_field_values_not_empty "$manifest"
 }
 
 @test "common: all plugin.json names follow naming convention" {
-    local failed=0
+    local manifest="${PROJECT_ROOT}/.claude-plugin/plugin.json"
 
-    for manifest in "${PROJECT_ROOT}"/plugins/*/.claude-plugin/plugin.json; do
-        if [ -f "$manifest" ]; then
-            if ! _assert_valid_plugin_name "$manifest"; then
-                ((failed++))
-            fi
-        fi
-    done
-
-    [ "$failed" -eq 0 ]
+    [ -f "$manifest" ] || skip "No plugin.json found"
+    _assert_valid_plugin_name "$manifest"
 }
 
 @test "common: all plugin.json files use only allowed fields" {
-    local failed=0
+    local manifest="${PROJECT_ROOT}/.claude-plugin/plugin.json"
 
-    for manifest in "${PROJECT_ROOT}"/plugins/*/.claude-plugin/plugin.json; do
-        if [ -f "$manifest" ]; then
-            if ! validate_plugin_manifest_fields "$manifest"; then
-                ((failed++))
-            fi
-        fi
-    done
-
-    [ "$failed" -eq 0 ]
+    [ -f "$manifest" ] || skip "No plugin.json found"
+    validate_plugin_manifest_fields "$manifest"
 }
 
 @test "common: validate all plugin manifests using comprehensive validation" {
@@ -166,22 +124,6 @@ _assert_valid_plugin_name() {
     count=$(count_valid_plugins)
 
     [ "$count" -gt 0 ] || skip "No valid plugins found"
-
-    # Also verify that get_invalid_plugins doesn't return all plugins
-    local invalid
-    invalid=$(get_invalid_plugins)
-
-    # If there are invalid plugins, count + invalid should be total
-    local total_plugins
-    total_plugins=$(find "$PROJECT_ROOT/plugins" -mindepth 1 -maxdepth 1 -type d ! -name ".*" 2>/dev/null | wc -l | tr -d ' ')
-
-    if [ -n "$invalid" ]; then
-        local invalid_count
-        invalid_count=$(echo "$invalid" | grep -c '^')
-        [ "$((count + invalid_count))" -eq "$total_plugins" ]
-    else
-        [ "$count" -eq "$total_plugins" ]
-    fi
 }
 
 @test "common: get_invalid_plugins returns empty list when all are valid" {

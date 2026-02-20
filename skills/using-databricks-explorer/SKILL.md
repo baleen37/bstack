@@ -7,7 +7,8 @@ description: Use when a user asks to browse Databricks Unity Catalog or inspect 
 
 ## Overview
 
-Explore Databricks Unity Catalog by running `databricks` CLI commands directly via Bash. Interpret the target shape, then execute the appropriate SQL using the Statements API.
+Explore Databricks Unity Catalog by running `databricks` CLI commands directly via Bash.
+Interpret the target shape, then execute the appropriate SQL using the Statements API.
 
 ## Prerequisites
 
@@ -51,6 +52,7 @@ databricks api post /api/2.0/sql/statements \
 ```
 
 Parse result from:
+
 - columns: `manifest.schema.columns[].name`, `manifest.schema.columns[].type_name`
 - rows: `result.data_array`
 - error: `status.error.message` when `status.state == "FAILED"`

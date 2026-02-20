@@ -100,7 +100,13 @@ marketplace_all_plugins_exist() {
     while IFS= read -r source; do
         [ -z "$source" ] && continue
 
-        local full_path="${PROJECT_ROOT}/${source}"
+        # Resolve source path: "./" maps to PROJECT_ROOT
+        local full_path
+        if [ "$source" = "./" ] || [ "$source" = "." ]; then
+            full_path="${PROJECT_ROOT}"
+        else
+            full_path="${PROJECT_ROOT}/${source}"
+        fi
 
         if [ ! -d "$full_path" ]; then
             echo "Error: Plugin source '$source' does not exist at $full_path" >&2
@@ -116,49 +122,32 @@ marketplace_all_plugins_exist() {
     return $missing
 }
 
-# Check if all plugins in plugins/ directory are listed in marketplace.json
+# Check if the root plugin is listed in marketplace.json
+# After consolidation, the single root plugin has source "./"
 # Args:
 #   $1 - (Optional) Path to marketplace.json (defaults to MARKETPLACE_JSON)
 # Returns:
-#   0 if all plugins are listed, 1 otherwise (outputs missing plugins to stderr)
+#   0 if root plugin is listed, 1 otherwise
 # Usage:
 #   if ! marketplace_all_plugins_listed; then
-#     echo "Some plugins are not listed"
+#     echo "Root plugin not listed"
 #   fi
 marketplace_all_plugins_listed() {
     local marketplace_file="${1:-${MARKETPLACE_JSON}}"
-    local plugin_dirs
-    local missing=0
 
     if [ ! -f "$marketplace_file" ]; then
         echo "Error: marketplace.json not found at $marketplace_file" >&2
         return 1
     fi
 
-    # Get plugins from marketplace (extract just plugin name from source path)
-    local marketplace_plugins
-    marketplace_plugins=$($JQ_BIN -r '.plugins[].source' "$marketplace_file" 2>/dev/null | sed 's|^\./plugins/||')
+    # Verify the root plugin (source "./") is listed
+    local root_plugin_source
+    root_plugin_source=$($JQ_BIN -r '.plugins[] | select(.source == "./") | .source' "$marketplace_file" 2>/dev/null)
 
-    # Check each plugin directory
-    plugin_dirs=$(find "${PROJECT_ROOT}/plugins" -mindepth 1 -maxdepth 1 -type d ! -name ".*" 2>/dev/null | sort)
+    if [ -z "$root_plugin_source" ]; then
+        echo "Error: Root plugin (source './') not found in marketplace.json" >&2
+        return 1
+    fi
 
-    while IFS= read -r plugin_dir; do
-        [ -z "$plugin_dir" ] && continue
-
-        local plugin_name
-        plugin_name=$(basename "$plugin_dir")
-
-        # Skip if no plugin.json
-        if [ ! -f "${plugin_dir}/.claude-plugin/plugin.json" ]; then
-            continue
-        fi
-
-        # Check if plugin is in marketplace.json
-        if ! echo "$marketplace_plugins" | grep -q "^${plugin_name}$"; then
-            echo "Error: Plugin '$plugin_name' not listed in marketplace.json" >&2
-            ((missing++))
-        fi
-    done <<< "$plugin_dirs"
-
-    return $missing
+    return 0
 }

@@ -1,113 +1,62 @@
 #!/usr/bin/env bats
 # Test: plugin.json validation
-# This test file validates plugin.json manifest files across all plugins
+# This test file validates the root-level plugin.json manifest
 
 load helpers/bats_helper
 load helpers/test_utils
+
+PLUGIN_JSON="${PROJECT_ROOT}/.claude-plugin/plugin.json"
 
 setup() {
     ensure_jq
 }
 
-# Test: Verify at least one plugin.json exists
+# Test: Verify plugin.json exists
 @test "plugin.json exists" {
-    local found=0
-
-    for manifest in "${PROJECT_ROOT}"/plugins/*/.claude-plugin/plugin.json; do
-        if [ -f "$manifest" ]; then
-            found=$((found + 1))
-        fi
-    done
-
-    [ "$found" -gt 0 ]
+    [ -f "$PLUGIN_JSON" ]
 }
 
-# Test: All plugin.json files are valid JSON
+# Test: plugin.json is valid JSON
 @test "plugin.json is valid JSON" {
-    local failed=0
-
-    for manifest in "${PROJECT_ROOT}"/plugins/*/.claude-plugin/plugin.json; do
-        if [ -f "$manifest" ]; then
-            if ! validate_json "$manifest"; then
-                ((failed++))
-            fi
-        fi
-    done
-
-    [ "$failed" -eq 0 ]
+    validate_json "$PLUGIN_JSON"
 }
 
-# Test: All plugin.json files have required fields
+# Test: plugin.json has required fields
 @test "plugin.json has required fields" {
-    local failed=0
     local required_fields=("name" "description" "author")
 
-    for manifest in "${PROJECT_ROOT}"/plugins/*/.claude-plugin/plugin.json; do
-        if [ -f "$manifest" ]; then
-            for field in "${required_fields[@]}"; do
-                if ! json_has_field "$manifest" "$field"; then
-                    echo "Missing '$field' in $manifest" >&2
-                    ((failed++))
-                fi
-            done
+    for field in "${required_fields[@]}"; do
+        if ! json_has_field "$PLUGIN_JSON" "$field"; then
+            echo "Missing '$field' in $PLUGIN_JSON" >&2
+            return 1
         fi
     done
-
-    [ "$failed" -eq 0 ]
 }
 
-# Test: All plugin names follow naming convention (lowercase, hyphens, numbers)
+# Test: Plugin name follows naming convention (lowercase, hyphens, numbers)
 @test "plugin.json name follows naming convention" {
-    local failed=0
-
-    for manifest in "${PROJECT_ROOT}"/plugins/*/.claude-plugin/plugin.json; do
-        if [ -f "$manifest" ]; then
-            local name
-            name=$(json_get "$manifest" "name")
-            if ! is_valid_plugin_name "$name"; then
-                echo "Invalid plugin name '$name' in $manifest" >&2
-                ((failed++))
-            fi
-        fi
-    done
-
-    [ "$failed" -eq 0 ]
+    local name
+    name=$(json_get "$PLUGIN_JSON" "name")
+    is_valid_plugin_name "$name"
 }
 
-# Test: All required field values are not empty
+# Test: Required field values are not empty
 @test "plugin.json fields are not empty" {
-    local failed=0
     local fields_to_check=("name" "description" "author")
 
-    for manifest in "${PROJECT_ROOT}"/plugins/*/.claude-plugin/plugin.json; do
-        if [ -f "$manifest" ]; then
-            for field in "${fields_to_check[@]}"; do
-                local value
-                value=$(json_get "$manifest" "$field")
-                if [ -z "$value" ]; then
-                    echo "Field '$field' is empty in $manifest" >&2
-                    ((failed++))
-                fi
-            done
+    for field in "${fields_to_check[@]}"; do
+        local value
+        value=$(json_get "$PLUGIN_JSON" "$field")
+        if [ -z "$value" ]; then
+            echo "Field '$field' is empty in $PLUGIN_JSON" >&2
+            return 1
         fi
     done
-
-    [ "$failed" -eq 0 ]
 }
 
-# Test: All plugin.json files use only allowed fields
+# Test: plugin.json uses only allowed fields
 @test "plugin.json uses only allowed fields" {
-    local failed=0
-
-    for manifest in "${PROJECT_ROOT}"/plugins/*/.claude-plugin/plugin.json; do
-        if [ -f "$manifest" ]; then
-            if ! validate_plugin_manifest_fields "$manifest"; then
-                ((failed++))
-            fi
-        fi
-    done
-
-    [ "$failed" -eq 0 ]
+    validate_plugin_manifest_fields "$PLUGIN_JSON"
 }
 
 # Test: Comprehensive validation of all plugin manifests

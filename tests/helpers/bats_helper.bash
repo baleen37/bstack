@@ -57,8 +57,9 @@ setup() {
     export TEST_TEMP_DIR=$(mktemp -d -t claude-plugins-test.XXXXXX)
 
     # Initialize plugin list cache on first setup
+    # plugins/ directory no longer exists (consolidated into root)
     if [ -z "$_CACHED_PLUGIN_LIST" ]; then
-        _CACHED_PLUGIN_LIST=$(find "$PROJECT_ROOT/plugins" -maxdepth 1 -type d ! -name "plugins" 2>/dev/null)
+        _CACHED_PLUGIN_LIST=""
     fi
 }
 
@@ -181,14 +182,11 @@ validate_plugin_manifest_fields() {
 # Usage: for_each_plugin_manifest callback_function
 for_each_plugin_manifest() {
     local callback="$1"
-    local manifest_files
-    manifest_files=$(find "$PROJECT_ROOT/plugins" -name "plugin.json" -type f 2>/dev/null)
+    local manifest_file="${PROJECT_ROOT}/.claude-plugin/plugin.json"
 
-    [ -n "$manifest_files" ] || return 1
+    [ -f "$manifest_file" ] || return 1
 
-    while IFS= read -r manifest_file; do
-        $callback "$manifest_file"
-    done <<< "$manifest_files"
+    $callback "$manifest_file"
 }
 
 # Helper: Check if JSON field has specific type
