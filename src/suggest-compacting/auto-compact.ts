@@ -1,7 +1,6 @@
 import { incrementState, isValidSessionId } from './lib/state.js';
 
 interface PreToolUseInput {
-  tool_name: string;
   session_id: string;
 }
 

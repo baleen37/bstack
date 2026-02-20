@@ -15,7 +15,7 @@ export function isValidSessionId(sessionId: string): boolean {
 }
 
 // Read state
-export async function readState(sessionId: string): Promise<ToolCountState | null> {
+async function readState(sessionId: string): Promise<ToolCountState | null> {
   const filepath = STATE_FILE(sessionId);
   try {
     const content = await fs.readFile(filepath, 'utf-8');
@@ -27,7 +27,7 @@ export async function readState(sessionId: string): Promise<ToolCountState | nul
 }
 
 // Write state
-export async function writeState(state: ToolCountState): Promise<void> {
+async function writeState(state: ToolCountState): Promise<void> {
   await fs.mkdir(STATE_DIR, { recursive: true });
   const filepath = STATE_FILE(state.sessionId);
   await fs.writeFile(filepath, state.count.toString(), 'utf-8');
