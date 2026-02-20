@@ -1,7 +1,7 @@
 {
   "name": "everything-agent",
-  "version": "5.28.0",
-  "description": "AI coding assistant toolkit - development automation, LSP, memory, project management, and workflow tools",
+  "version": "5.29.4",
+  "description": "AI coding assistant toolkit - LSP servers, git workflow protection, session handoff, context management, and development automation",
   "author": {
     "name": "baleen37",
     "email": "git@baleen.me"
@@ -14,17 +14,22 @@
     "automation",
     "tdd",
     "debugging",
+    "handoff",
     "memory",
-    "jira",
-    "databricks",
-    "mcp"
+    "context",
+    "compacting",
+    "bash",
+    "typescript",
+    "python",
+    "go",
+    "kotlin",
+    "lua",
+    "nix"
   ],
   "lspServers": {
     "bash": {
       "command": "bash-language-server",
-      "args": [
-        "start"
-      ],
+      "args": ["start"],
       "extensionToLanguage": {
         ".sh": "bash",
         ".bash": "bash",
@@ -33,9 +38,7 @@
     },
     "typescript": {
       "command": "typescript-language-server",
-      "args": [
-        "--stdio"
-      ],
+      "args": ["--stdio"],
       "extensionToLanguage": {
         ".ts": "typescript",
         ".tsx": "typescript",
@@ -46,10 +49,8 @@
       }
     },
     "python": {
-      "command": "pyright",
-      "args": [
-        "--stdio"
-      ],
+      "command": "pyright-langserver",
+      "args": ["--stdio"],
       "extensionToLanguage": {
         ".py": "python",
         ".pyi": "python"
@@ -57,9 +58,7 @@
     },
     "go": {
       "command": "gopls",
-      "args": [
-        "serve"
-      ],
+      "args": ["serve"],
       "extensionToLanguage": {
         ".go": "go"
       }
