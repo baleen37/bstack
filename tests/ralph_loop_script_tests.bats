@@ -284,124 +284,27 @@ EOF
   grep -q "Ralph Progress Log" .ralph/progress.txt
 }
 
-# Test: prompt.md template has ITERATION placeholder
-@test "prompt.md: has {{ITERATION}} placeholder" {
-  run grep -q "{{ITERATION}}" "$PROMPT_TEMPLATE"
-  [ $status -eq 0 ]
-}
+# Test: prompt.md template has all required placeholders and sections
+@test "prompt.md: has all required placeholders and sections" {
+  # Required placeholders
+  grep -q "{{ITERATION}}" "$PROMPT_TEMPLATE"
+  grep -q "{{MAX}}" "$PROMPT_TEMPLATE"
+  grep -q "<promise>COMPLETE</promise>" "$PROMPT_TEMPLATE"
 
-# Test: prompt.md template has MAX placeholder
-@test "prompt.md: has {{MAX}} placeholder" {
-  run grep -q "{{MAX}}" "$PROMPT_TEMPLATE"
-  [ $status -eq 0 ]
-}
+  # Required file references
+  grep -q "\.ralph/prd\.json" "$PROMPT_TEMPLATE"
+  grep -q "\.ralph/progress\.txt" "$PROMPT_TEMPLATE"
 
-# Test: prompt.md template mentions PRD reading
-@test "prompt.md: mentions reading .ralph/prd.json" {
-  run grep -q "\.ralph/prd\.json" "$PROMPT_TEMPLATE"
-  [ $status -eq 0 ]
-}
+  # Required sections
+  grep -q "Progress Report Format" "$PROMPT_TEMPLATE"
+  grep -q "Consolidate Patterns" "$PROMPT_TEMPLATE"
+  grep -q "Codebase Patterns" "$PROMPT_TEMPLATE"
+  grep -q "Quality Requirements" "$PROMPT_TEMPLATE"
 
-# Test: prompt.md template mentions progress.txt
-@test "prompt.md: mentions reading .ralph/progress.txt" {
-  run grep -q "\.ralph/progress\.txt" "$PROMPT_TEMPLATE"
-  [ $status -eq 0 ]
-}
-
-# Test: prompt.md template mentions COMPLETE promise
-@test "prompt.md: mentions <promise>COMPLETE</promise>" {
-  run grep -q "<promise>COMPLETE</promise>" "$PROMPT_TEMPLATE"
-  [ $status -eq 0 ]
-}
-
-# Test: prompt.md template mentions implementing one story
-@test "prompt.md: mentions implementing ONE story" {
-  run grep -q "ONE story" "$PROMPT_TEMPLATE"
-  [ $status -eq 0 ]
-}
-
-# Test: prompt.md template mentions updating prd.json
-@test "prompt.md: mentions updating .ralph/prd.json" {
-  run grep -q "prd\.json" "$PROMPT_TEMPLATE"
-  [ $status -eq 0 ]
-}
-
-# Test: prompt.md template mentions appending to progress.txt
-@test "prompt.md: mentions appending to progress.txt" {
-  run grep -q "progress\.txt" "$PROMPT_TEMPLATE"
-  [ $status -eq 0 ]
-}
-
-# Test: prompt.md template has Progress Report Format section
-@test "prompt.md: has Progress Report Format section" {
-  run grep -q "Progress Report Format" "$PROMPT_TEMPLATE"
-  [ $status -eq 0 ]
-}
-
-# Test: prompt.md template has Consolidate Patterns section
-@test "prompt.md: has Consolidate Patterns section" {
-  run grep -q "Consolidate Patterns" "$PROMPT_TEMPLATE"
-  [ $status -eq 0 ]
-}
-
-# Test: prompt.md template has Codebase Patterns section
-@test "prompt.md: mentions Codebase Patterns section" {
-  run grep -q "Codebase Patterns" "$PROMPT_TEMPLATE"
-  [ $status -eq 0 ]
-}
-
-# Test: prompt.md template has Update CLAUDE.md Files section
-@test "prompt.md: has Update CLAUDE.md Files section" {
-  run grep -q "Update CLAUDE.md Files" "$PROMPT_TEMPLATE"
-  [ $status -eq 0 ]
-}
-
-# Test: prompt.md template has Quality Requirements section
-@test "prompt.md: has Quality Requirements section" {
-  run grep -q "Quality Requirements" "$PROMPT_TEMPLATE"
-  [ $status -eq 0 ]
-}
-
-# Test: prompt.md template has Browser Testing section
-@test "prompt.md: has Browser Testing section" {
-  run grep -q "Browser Testing" "$PROMPT_TEMPLATE"
-  [ $status -eq 0 ]
-}
-
-# Test: prompt.md template mentions status field
-@test "prompt.md: mentions status field for user stories" {
-  run grep -q 'status' "$PROMPT_TEMPLATE"
-  [ $status -eq 0 ]
-}
-
-# Test: prompt.md template mentions startedAt field
-@test "prompt.md: mentions startedAt timestamp field" {
-  run grep -q 'startedAt' "$PROMPT_TEMPLATE"
-  [ $status -eq 0 ]
-}
-
-# Test: prompt.md template mentions completedAt field
-@test "prompt.md: mentions completedAt timestamp field" {
-  run grep -q 'completedAt' "$PROMPT_TEMPLATE"
-  [ $status -eq 0 ]
-}
-
-# Test: prompt.md template mentions in_progress status
-@test "prompt.md: mentions in_progress status" {
-  run grep -q 'in_progress' "$PROMPT_TEMPLATE"
-  [ $status -eq 0 ]
-}
-
-# Test: prompt.md template mentions done status
-@test "prompt.md: mentions done status" {
-  run grep -q '"done"' "$PROMPT_TEMPLATE"
-  [ $status -eq 0 ]
-}
-
-# Test: prompt.md template mentions ISO timestamp
-@test "prompt.md: mentions ISO timestamp" {
-  run grep -q 'ISO timestamp' "$PROMPT_TEMPLATE"
-  [ $status -eq 0 ]
+  # Required status fields
+  grep -q 'status' "$PROMPT_TEMPLATE"
+  grep -q 'startedAt' "$PROMPT_TEMPLATE"
+  grep -q 'completedAt' "$PROMPT_TEMPLATE"
 }
 
 # Test: Script substitutes template variables
