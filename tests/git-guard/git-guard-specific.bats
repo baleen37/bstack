@@ -8,20 +8,15 @@ load ../helpers/bats_helper
     [ -f "${PROJECT_ROOT}/hooks/commit-guard.sh" ]
 }
 
-@test "git-guard: pre-commit-guard.sh hook script exists" {
-    [ -f "${PROJECT_ROOT}/hooks/pre-commit-guard.sh" ]
-}
-
 @test "git-guard: hook scripts use proper error handling" {
     grep -q "set -euo pipefail" "${PROJECT_ROOT}/hooks/commit-guard.sh"
-    grep -q "set -euo pipefail" "${PROJECT_ROOT}/hooks/pre-commit-guard.sh"
 }
 
 @test "git-guard: hooks.json references hook scripts" {
     local hooks_json="${PROJECT_ROOT}/hooks/hooks.json"
     validate_json "$hooks_json"
     # Verify hook scripts are referenced
-    grep -q "commit-guard.sh" "$hooks_json" || grep -q "pre-commit-guard.sh" "$hooks_json"
+    grep -q "commit-guard.sh" "$hooks_json"
 }
 
 # commit-guard.sh functional tests

@@ -47,20 +47,11 @@ export WORKFLOW_DIR="${PROJECT_ROOT}/.github/workflows"
 # Path to jq binary
 JQ_BIN="${JQ_BIN:-jq}"
 
-# Cached plugin list (populated once per test file)
-_CACHED_PLUGIN_LIST=""
-
 # Setup function - runs before each test
 # shellcheck disable=SC2155
 setup() {
     # Create temp directory for test-specific files
     export TEST_TEMP_DIR=$(mktemp -d -t claude-plugins-test.XXXXXX)
-
-    # Initialize plugin list cache on first setup
-    # plugins/ directory no longer exists (consolidated into root)
-    if [ -z "$_CACHED_PLUGIN_LIST" ]; then
-        _CACHED_PLUGIN_LIST=""
-    fi
 }
 
 # Teardown function - runs after each test
@@ -319,12 +310,6 @@ assert_output() {
     fi
 }
 
-# Performance optimization: Get cached plugin list
-# Usage: get_all_plugins
-get_all_plugins() {
-    echo "$_CACHED_PLUGIN_LIST"
-}
-
 # Performance optimization: Get and cache plugin JSON data
 # Usage: parse_plugin_json <plugin_path>
 parse_plugin_json() {
@@ -338,13 +323,6 @@ parse_plugin_json() {
     fi
 
     return 1
-}
-
-# Performance optimization: Clear plugin JSON cache (no-op now)
-# Usage: clear_plugin_json_cache
-clear_plugin_json_cache() {
-    # No-op - caching removed for compatibility
-    return 0
 }
 
 # Helper: Assert file does NOT exist
