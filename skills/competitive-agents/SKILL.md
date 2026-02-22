@@ -1,31 +1,40 @@
 ---
 name: competitive-agents
-description: Use when two agents should compete on the same task with judge synthesis
+description: Use when designing systems, architectures, or APIs, when multiple valid approaches exist with no single obvious answer, or when user explicitly requests parallel/competing solutions
 ---
 
 # Competitive Agents
 
 ## Overview
 
-Dispatch two independent subagents to solve the same task in parallel. Both know
-they're competing. A third judge agent analyzes both solutions and synthesizes
-the best elements into a superior combined result.
+Dispatch two independent subagents to solve the same task from different angles.
+A third judge agent synthesizes the best elements into a superior combined result.
 
 ## When to Use
 
+- Designing systems, architectures, or APIs
+- Problems with multiple valid approaches (no single obvious answer)
 - User explicitly requests competitive/parallel approaches
-- A task could benefit from exploring multiple solutions simultaneously
-- You want to reduce bias from a single agent's perspective
+- You want to reduce single-agent bias
 
 ## When NOT to Use
 
-- Simple, well-defined tasks with one obvious approach
+- Purely mechanical tasks (rename variable, fix typo, add import)
 - Tasks requiring sequential steps (not parallelizable)
-- When speed matters more than solution quality (this uses 3x the compute)
+- Task is unclear — clarify with user first, then decide
+
+## Red Flags - Skill Still Applies
+
+Don't skip just because:
+
+- Task seems "simple" (simplicity ≠ obvious solution)
+- You think one approach is "best" (that's exactly the bias to avoid)
+
+If multiple valid approaches exist, use this skill.
 
 ## Workflow
 
-1. Extract the task from the user's request
+1. **Clarify if needed** — if the task is ambiguous, ask the user before dispatching
 2. Dispatch 2 subagents in parallel (single message, 2 Task tool calls)
 3. Wait for both results
 4. Dispatch judge agent with both results
@@ -33,11 +42,15 @@ the best elements into a superior combined result.
 
 ## Competitor Prompt Template
 
-Use this as the prompt for each of the two competing subagents:
+Each competitor gets the **same task** but a **different constraint** to force divergent solutions:
+
+**Competitor A:**
 
 ~~~text
 You are competing against another agent to solve the same task.
 The better solution will be selected. Give your absolute best effort.
+
+YOUR CONSTRAINT: Prioritize simplicity and minimalism. Fewer moving parts wins.
 
 ## Task
 {task content from user}
@@ -45,61 +58,78 @@ The better solution will be selected. Give your absolute best effort.
 ## Requirements
 - Provide a complete, well-reasoned solution
 - Explain your approach and key decisions
-- Consider trade-offs and alternatives you considered
+- Consider trade-offs and alternatives you rejected
 ~~~
 
-Both agents use `subagent_type: "general-purpose"`.
+**Competitor B:**
+
+~~~text
+You are competing against another agent to solve the same task.
+The better solution will be selected. Give your absolute best effort.
+
+YOUR CONSTRAINT: Prioritize completeness and extensibility. Cover more cases and future needs.
+
+## Task
+{task content from user}
+
+## Requirements
+- Provide a complete, well-reasoned solution
+- Explain your approach and key decisions
+- Consider trade-offs and alternatives you rejected
+~~~
+
+Both use `subagent_type: "general-purpose"`.
 
 ## Judge Prompt Template
 
-Use this as the prompt for the judge agent, after both competitors complete:
+After both competitors complete:
 
 ~~~text
 You are judging two competing solutions to the same task.
-Your job is to synthesize the best elements into a superior combined solution.
+Synthesize the best elements into a superior combined solution.
 
 ## Original Task
 {original task from user}
 
-## Solution A
-{result from first competitor}
+## Solution A (simplicity-focused)
+{result from competitor A}
 
-## Solution B
-{result from second competitor}
+## Solution B (completeness-focused)
+{result from competitor B}
 
 ## Instructions
-1. Analyze strengths and weaknesses of each solution
-2. Synthesize the best elements into a superior combined solution
+1. Analyze strengths and weaknesses of each
+2. Synthesize into a superior combined solution
 3. Explain what you took from each and why
 
-Format your response as:
+Format:
 
 ### Analysis
 **Solution A:** [strengths] / [weaknesses]
 **Solution B:** [strengths] / [weaknesses]
 
 ### Synthesized Solution
-[your combined best solution]
+[combined best solution]
 
 ### Rationale
-[what you took from each solution and why]
+[what you took from each and why]
 ~~~
 
-The judge also uses `subagent_type: "general-purpose"`.
+Judge also uses `subagent_type: "general-purpose"`.
 
-## Execution Example
+## Execution
 
-In a single message, dispatch both competitors:
+Dispatch both competitors in a **single message** (parallel):
 
 ~~~text
-Task call 1: description="Competitor A", subagent_type="general-purpose", prompt=<competitor template with task>
-Task call 2: description="Competitor B", subagent_type="general-purpose", prompt=<competitor template with task>
+Task call 1: description="Competitor A - simplicity", subagent_type="general-purpose"
+Task call 2: description="Competitor B - completeness", subagent_type="general-purpose"
 ~~~
 
 After both return, dispatch the judge:
 
 ~~~text
-Task call 3: description="Judge synthesis", subagent_type="general-purpose", prompt=<judge template with both results>
+Task call 3: description="Judge synthesis", subagent_type="general-purpose"
 ~~~
 
 Present the judge's synthesized result to the user.
@@ -108,7 +138,8 @@ Present the judge's synthesized result to the user.
 
 | Mistake | Fix |
 |---------|-----|
-| Running judge before both complete | Always wait for both competitors (foreground mode) |
-| Giving competitors different prompts | Both must receive identical task content |
-| Skipping the judge | Always synthesize - even if one solution seems clearly better, the other may have valuable elements |
-| Using background mode | Use foreground so you can pass results to judge |
+| Both competitors produce identical solutions | Use the constraint prompts above to force divergence |
+| Running judge before both complete | Use foreground mode, wait for both |
+| Skipping the judge | Always synthesize — even if one seems clearly better |
+| Dispatching on an unclear task | Clarify with user first (workflow step 1) |
+| Skipping because task seems "simple" | Simplicity of description ≠ obvious solution |
