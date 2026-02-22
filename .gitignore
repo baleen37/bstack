@@ -22,10 +22,6 @@ lib64/
 !plugins/*/hooks/lib/
 !skills/*/scripts/lib/
 
-# Exception: Include compiled/built output for specific plugins
-!plugins/conversation-memory/dist/
-!plugins/suggest-compacting/dist/
-
 parts/
 sdist/
 var/

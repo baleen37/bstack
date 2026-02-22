@@ -99,7 +99,6 @@ display_handoff() {
     echo ""
     echo "### Source Session"
     echo "Session ID: $source_session_id"
-    echo "(Note: Use conversation-memory plugin to search for this session)"
   fi
 }
 
