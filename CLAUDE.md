@@ -28,7 +28,7 @@ AI 보조 개발을 위한 도구들을 제공하며, 반복적 자기 참조 AI
 | `hooks/` | Hook scripts and unified hooks.json |
 | `scripts/` | Utility scripts (handoff, conflict checks, PR verification) |
 | `skills/` | Standalone skills (see `skills/AGENTS.md`) |
-| `dist/` | Compiled JavaScript files (suggest-compacting) |
+| `dist/` | Compiled JavaScript files |
 | `.claude-plugin/` | Marketplace configuration and root plugin.json |
 | `.github/` | GitHub Actions workflows and custom actions (see `.github/AGENTS.md`) |
 | `tests/` | BATS test suites (see `tests/AGENTS.md`) |
