@@ -1,6 +1,6 @@
 ---
 name: using-databricks-explorer
-description: Use when a user asks to browse Databricks Unity Catalog or inspect a table using targets like <catalog>, <catalog>.<schema>, or <catalog>.<schema>.<table>.
+description: Use when a user asks to browse Databricks Unity Catalog, list schemas or tables, or inspect table columns and sample data.
 ---
 
 # Using Databricks Explorer
@@ -59,7 +59,7 @@ Parse result from:
 
 ## Profile Selection
 
-Read `~/.databrickscfg` (INI format). Default profile is `DEFAULT`.
+Read `~/.databrickscfg` (INI format). Default profile is `default` (lowercase).
 
 If user specifies a profile (e.g. "use profile alpha"), pass `--profile alpha` to all commands.
 
@@ -84,7 +84,7 @@ grep '^\[' ~/.databrickscfg | tr -d '[]'
 
 ## Example
 
-User: `/databricks:explore main.sales.orders`
+User: `/me:databricks.explore main.sales.orders`
 
 ```bash
 # 1. Resolve warehouse
