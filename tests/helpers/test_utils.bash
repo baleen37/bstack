@@ -22,13 +22,13 @@ ensure_test_utils_deps() {
 ###############################################################################
 
 # Find all plugin directories in the project
-# After consolidation, the single root-level plugin is returned
+# Scans plugins/*/. claude-plugin/plugin.json under PROJECT_ROOT
 # Returns newline-separated list of absolute paths to plugin directories
 # Usage: local plugins; plugins=$(find_all_plugins)
 find_all_plugins() {
-    # Consolidated structure: single root-level plugin
-    if [ -f "$PROJECT_ROOT/.claude-plugin/plugin.json" ]; then
-        echo "$PROJECT_ROOT"
+    # Multi-plugin structure: scan plugins/ subdirectories
+    if [ -d "${PROJECT_ROOT}/plugins" ]; then
+        find "${PROJECT_ROOT}/plugins" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | sort
     fi
 }
 
