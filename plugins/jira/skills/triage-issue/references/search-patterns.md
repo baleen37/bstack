@@ -9,16 +9,19 @@ Effective JQL patterns for finding duplicate bugs and similar issues.
 ### Exception Searches
 
 **For Java/Backend exceptions:**
+
 ```jql
 project = "PROJ" AND text ~ "NullPointerException" AND type = Bug ORDER BY created DESC
 ```
 
 **For specific class/method:**
+
 ```jql
 project = "PROJ" AND text ~ "PaymentProcessor processRefund" AND type = Bug ORDER BY created DESC
 ```
 
 **For HTTP errors:**
+
 ```jql
 project = "PROJ" AND (text ~ "500 error" OR summary ~ "500") AND type = Bug ORDER BY updated DESC
 ```
@@ -26,11 +29,13 @@ project = "PROJ" AND (text ~ "500 error" OR summary ~ "500") AND type = Bug ORDE
 ### Timeout Searches
 
 **General timeout:**
+
 ```jql
 project = "PROJ" AND (text ~ "timeout" OR summary ~ "timeout") AND type = Bug ORDER BY priority DESC
 ```
 
 **Specific timeout type:**
+
 ```jql
 project = "PROJ" AND text ~ "connection timeout" AND component = "API" ORDER BY created DESC
 ```
@@ -42,16 +47,19 @@ project = "PROJ" AND text ~ "connection timeout" AND component = "API" ORDER BY 
 ### By System Component
 
 **Authentication:**
+
 ```jql
 project = "PROJ" AND text ~ "authentication login" AND type = Bug AND status != Done
 ```
 
 **Payment:**
+
 ```jql
 project = "PROJ" AND (component = "Payment" OR text ~ "payment checkout") AND type = Bug
 ```
 
 **Mobile:**
+
 ```jql
 project = "PROJ" AND (text ~ "mobile iOS" OR text ~ "mobile Android") AND type = Bug ORDER BY updated DESC
 ```
@@ -59,11 +67,13 @@ project = "PROJ" AND (text ~ "mobile iOS" OR text ~ "mobile Android") AND type =
 ### By Functionality
 
 **Upload/Download:**
+
 ```jql
 project = "PROJ" AND (text ~ "upload" OR text ~ "download") AND type = Bug
 ```
 
 **Database:**
+
 ```jql
 project = "PROJ" AND text ~ "database query SQL" AND type = Bug ORDER BY created DESC
 ```
@@ -75,16 +85,19 @@ project = "PROJ" AND text ~ "database query SQL" AND type = Bug ORDER BY created
 ### User-Facing Symptoms
 
 **Page/Screen issues:**
+
 ```jql
 project = "PROJ" AND (summary ~ "blank page" OR summary ~ "white screen") AND type = Bug
 ```
 
 **Loading issues:**
+
 ```jql
 project = "PROJ" AND (summary ~ "infinite loading" OR summary ~ "stuck loading") AND type = Bug
 ```
 
 **Data issues:**
+
 ```jql
 project = "PROJ" AND (summary ~ "data not saving" OR summary ~ "data lost") AND type = Bug
 ```
@@ -92,11 +105,13 @@ project = "PROJ" AND (summary ~ "data not saving" OR summary ~ "data lost") AND 
 ### Performance Symptoms
 
 **Slow performance:**
+
 ```jql
 project = "PROJ" AND (text ~ "slow" OR summary ~ "performance") AND type = Bug ORDER BY priority DESC
 ```
 
 **Crashes:**
+
 ```jql
 project = "PROJ" AND (summary ~ "crash" OR text ~ "application crash") AND type = Bug ORDER BY created DESC
 ```
@@ -174,21 +189,25 @@ project = "PROJ" AND text ~ "error keywords" AND type = Bug AND (status = Resolv
 For thorough duplicate detection, run searches in this order:
 
 **1. Exact error signature (narrow):**
+
 ```jql
 project = "PROJ" AND summary ~ "exact error text" AND type = Bug ORDER BY created DESC
 ```
 
 **2. Error type + component (medium):**
+
 ```jql
 project = "PROJ" AND text ~ "error type" AND component = "ComponentName" AND type = Bug ORDER BY updated DESC
 ```
 
 **3. Symptom-based (broad):**
+
 ```jql
 project = "PROJ" AND summary ~ "user symptom" AND type = Bug ORDER BY priority DESC
 ```
 
 **4. Historical (regression check):**
+
 ```jql
 project = "PROJ" AND text ~ "keywords" AND type = Bug AND status = Done ORDER BY resolved DESC
 ```
@@ -199,11 +218,12 @@ project = "PROJ" AND text ~ "keywords" AND type = Bug AND status = Done ORDER BY
 
 Always request these fields for effective analysis:
 
-```
+```text
 fields: ["summary", "description", "status", "resolution", "priority", "created", "updated", "resolved", "assignee", "reporter", "components"]
 ```
 
 **Why each field matters:**
+
 - `summary` - Quick identification of duplicate
 - `description` - Detailed error matching
 - `status` - Know if open/resolved
@@ -223,17 +243,20 @@ fields: ["summary", "description", "status", "resolution", "priority", "created"
 ### Use Key Terms Only
 
 ✅ Good:
+
 - "timeout login"
 - "NullPointerException PaymentProcessor"
 - "500 error API"
 
 ❌ Too Verbose:
+
 - "users are experiencing a timeout when trying to login"
 - "we got a NullPointerException in the PaymentProcessor class"
 
 ### Combine Searches
 
 Don't rely on a single search. Run 2-3 searches with different angles:
+
 1. Error-focused
 2. Component-focused
 3. Symptom-focused

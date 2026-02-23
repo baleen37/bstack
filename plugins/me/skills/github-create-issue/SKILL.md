@@ -38,10 +38,10 @@ If not in a git repo or no remote, ask the user.
 
 Infer labels from the description keywords.
 
-| Keywords | Label |
-|----------|-------|
-| bug, error, crash, broken, fix, fail, wrong | bug |
-| feature, add, new, implement, support | enhancement |
+| Keywords                                    | Label       |
+| ------------------------------------------- | ----------- |
+| bug, error, crash, broken, fix, fail, wrong | bug         |
+| feature, add, new, implement, support       | enhancement |
 
 If no keywords match, create without labels.
 

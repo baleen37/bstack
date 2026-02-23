@@ -16,8 +16,10 @@ Use the gh CLI to analyze this workflow run. Your investigation should:
    - If you see both "non-fatal" and "fatal" errors, focus on what actually caused the failure
 
 2. **Check flakiness**: Check the past 10-20 runs of THE EXACT SAME failing job:
-   - IMPORTANT: If a workflow has multiple jobs, you must check history for the SPECIFIC JOB that failed, not just the workflow
-   - Use `gh run list --workflow=<workflow-name>` to get run IDs, then `gh run view <run-id> --json jobs` to check the specific job's status
+   - IMPORTANT: If a workflow has multiple jobs, you must check history for the SPECIFIC JOB that failed,
+     not just the workflow
+   - Use `gh run list --workflow=<workflow-name>` to get run IDs, then `gh run view <run-id> --json jobs`
+     to check the specific job's status
    - Is this a one-time failure or recurring pattern for THIS SPECIFIC JOB?
    - What's the success rate for THIS JOB recently?
    - When did THIS JOB last pass?
@@ -38,6 +40,7 @@ Use the gh CLI to analyze this workflow run. Your investigation should:
    - If a fix PR exists, note it in your report and skip the recommendation section
 
 Write a final report with:
+
 - Summary of failure (what specifically triggered the exit code 1)
 - Flakiness assessment (one-time vs recurring, success rate)
 - Breaking commit (if identified and verified)

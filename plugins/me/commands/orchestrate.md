@@ -17,22 +17,27 @@ You are orchestrating a workflow of specialized agents to complete a complex dev
 Choose the appropriate workflow based on the task type:
 
 **Feature Workflow:**
+
 - Sequence: planner → tdd-guide → code-reviewer → security-reviewer
 - Use for: Full feature implementation from design to deployment
 
 **Bugfix Workflow:**
+
 - Sequence: explorer → tdd-guide → code-reviewer
 - Use for: Bug investigation and resolution
 
 **Refactor Workflow:**
+
 - Sequence: architect → code-reviewer → tdd-guide
 - Use for: Safe code restructuring and improvements
 
 **Security Workflow:**
+
 - Sequence: security-reviewer → code-reviewer → architect
 - Use for: Security-focused reviews and hardening
 
 **Custom Workflow:**
+
 - User-specified agent sequence
 - Use for: Non-standard task patterns
 
@@ -69,31 +74,37 @@ Between agents, maintain this structure:
 ### 4. Agent-Specific Guidelines
 
 **Planner Agent:**
+
 - Creates implementation roadmap
 - Identifies technical dependencies
 - Estimates complexity and risks
 
 **Explorer Agent:**
+
 - Investigates codebase for bug causes
 - Maps data flows and dependencies
 - Identifies root causes
 
 **TDD-Guide Agent:**
+
 - Designs test strategy
 - Implements tests before code
 - Verifies test coverage
 
 **Code-Reviewer Agent:**
+
 - Reviews code quality and patterns
 - Checks for best practices
 - Validates implementation correctness
 
 **Security-Reviewer Agent:**
+
 - Identifies security vulnerabilities
 - Reviews authentication/authorization
 - Checks for PII handling compliance
 
 **Architect Agent:**
+
 - Reviews system design decisions
 - Validates architectural patterns
 - Ensures scalability considerations
@@ -134,17 +145,20 @@ After all agents complete, create a comprehensive report:
 ### 6. Decision Rules
 
 **When to SHIP:**
+
 - All agents completed successfully
 - Tests pass with adequate coverage
 - No critical security issues
 - Code review approved
 
 **When to mark NEEDS WORK:**
+
 - Minor issues identified
 - Additional tests recommended
 - Non-critical refactoring suggested
 
 **When to mark BLOCKED:**
+
 - Critical bugs or security issues
 - Architectural concerns
 - Missing dependencies
@@ -161,27 +175,32 @@ After all agents complete, create a comprehensive report:
 ### 8. Example Invocations
 
 **Feature Implementation:**
-```
+
+```text
 /orchestrate feature "Add user authentication with JWT tokens"
 ```
 
 **Bug Investigation:**
-```
+
+```text
 /orchestrate bugfix "Memory leak in data processing pipeline"
 ```
 
 **Code Refactoring:**
-```
+
+```text
 /orchestrate refactor "Extract payment processing into separate service"
 ```
 
 **Security Review:**
-```
+
+```text
 /orchestrate security "Review API authentication and authorization"
 ```
 
 **Custom Workflow:**
-```
+
+```text
 /orchestrate custom "explorer,architect,tdd-guide" "Optimize database query performance"
 ```
 

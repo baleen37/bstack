@@ -7,22 +7,25 @@ High-quality bug report templates for different types of issues.
 ## Template 1: Backend Error
 
 **Summary Format:**
-```
+
+```text
 [Service/Component]: [Error Type] in [Functionality]
 ```
 
 **Examples:**
+
 - Payment API: NullPointerException in refund processing
 - Auth Service: TimeoutError during token validation
 - Database: Connection pool exhausted in user queries
 
 **Description Template:**
-```markdown
+
+````markdown
 ## Issue Description
 [Brief 1-2 sentence description]
 
 ## Error Details
-```
+```text
 [Error message or exception]
 Stack trace:
 [Stack trace if available]
@@ -51,7 +54,7 @@ Stack trace:
 - **User Impact:** [e.g., Refunds cannot be processed]
 
 ## Logs
-```
+```text
 [Relevant log excerpts]
 ```
 
@@ -59,25 +62,28 @@ Stack trace:
 [Any similar past issues]
 
 ---
-*Reported via automated triage*
-```
+Reported via automated triage
+````
 
 ---
 
 ## Template 2: Frontend/UI Issue
 
 **Summary Format:**
-```
+
+```text
 [Platform] [Component]: [Symptom]
 ```
 
 **Examples:**
+
 - iOS App Login: Screen remains blank after successful auth
 - Web Dashboard: Infinite loading spinner on reports
 - Android App: Crash when uploading photos
 
 **Description Template:**
-```markdown
+
+````markdown
 ## Issue Description
 [Brief description of the visible problem]
 
@@ -107,7 +113,7 @@ Stack trace:
 - **Severity:** [e.g., Cannot complete checkout, Minor visual glitch]
 
 ## Console Errors
-```
+```text
 [Browser console errors if applicable]
 ```
 
@@ -118,25 +124,28 @@ Stack trace:
 [Any similar past issues]
 
 ---
-*Reported via automated triage*
-```
+Reported via automated triage
+````
 
 ---
 
 ## Template 3: Performance Issue
 
 **Summary Format:**
-```
+
+```text
 [Component]: [Performance Problem] - [Context]
 ```
 
 **Examples:**
+
 - Dashboard: Slow page load (15+ seconds) on reports
 - API: Response time degradation under load
 - Database: Query timeout on user search
 
 **Description Template:**
-```markdown
+
+````markdown
 ## Issue Description
 [Brief description of the performance problem]
 
@@ -157,7 +166,7 @@ Stack trace:
 3. Observe slow response
 
 ## Performance Data
-```
+```text
 [Response times, profiling data, slow query logs]
 ```
 
@@ -173,25 +182,28 @@ Stack trace:
 [Any similar past performance issues]
 
 ---
-*Reported via automated triage*
-```
+Reported via automated triage
+````
 
 ---
 
 ## Template 4: Data Issue
 
 **Summary Format:**
-```
+
+```text
 [Component]: [Data Problem] - [Scope]
 ```
 
 **Examples:**
+
 - User Profile: Data not persisting after save
 - Orders: Missing order items in history
 - Reports: Incorrect calculations in revenue report
 
 **Description Template:**
-```markdown
+
+````markdown
 ## Issue Description
 [Brief description of the data problem]
 
@@ -230,25 +242,28 @@ Stack trace:
 [Any similar past data issues]
 
 ---
-*Reported via automated triage*
-```
+Reported via automated triage
+````
 
 ---
 
 ## Template 5: Integration Issue
 
 **Summary Format:**
-```
+
+```text
 [Integration]: [Error] - [External Service]
 ```
 
 **Examples:**
+
 - Stripe Integration: Payment processing fails
 - Auth0: Token validation timeout
 - Sendgrid: Email sending fails with 429 error
 
 **Description Template:**
-```markdown
+
+````markdown
 ## Issue Description
 [Brief description of the integration problem]
 
@@ -258,7 +273,7 @@ Stack trace:
 - **API Version:** [If known]
 
 ## Error Response
-```
+```text
 HTTP Status: [e.g., 429, 500]
 Response Body:
 [Error response from external service]
@@ -289,7 +304,7 @@ Response Body:
 [Check if external service has known issues]
 
 ## Logs
-```
+```text
 [Our logs showing the integration failure]
 ```
 
@@ -297,24 +312,27 @@ Response Body:
 [Any past integration issues with this service]
 
 ---
-*Reported via automated triage*
-```
+Reported via automated triage
+````
 
 ---
 
 ## Template 6: Regression (Previously Fixed)
 
 **Summary Format:**
-```
+
+```text
 [Component]: [Issue] - Regression of PROJ-XXX
 ```
 
 **Examples:**
+
 - Login: Session timeout after 15min - Regression of PROJ-234
 - Upload: File size limit error - Regression of PROJ-567
 
 **Description Template:**
-```markdown
+
+````markdown
 ## Issue Description
 [Brief description - note this was previously fixed]
 
@@ -364,8 +382,8 @@ Response Body:
 [Any other related issues]
 
 ---
-*Reported via automated triage - Possible Regression*
-```
+Reported via automated triage - Possible Regression
+````
 
 ---
 
@@ -374,29 +392,36 @@ Response Body:
 ### Good Summaries
 
 ✅ **Specific and actionable:**
+
 - "Payment API: NullPointerException in refund processing"
 - "iOS App: Crash when uploading photos >5MB"
 - "Dashboard: 15s load time on revenue report"
 
 ✅ **Includes component:**
+
 - Start with the affected component/system
 - Makes it easy to filter and assign
 
 ✅ **Describes the problem:**
+
 - Use clear, technical language
 - Avoid vague terms
 
 ### Bad Summaries
 
 ❌ **Too vague:**
+
 - "Error in production"
 - "App crashes sometimes"
 - "Something is slow"
 
 ❌ **Too long:**
-- "Users are reporting that when they try to login on the mobile app using their email and password, the app shows a connection timeout error and they cannot proceed"
+
+- "Users are reporting that when they try to login on the mobile app using their email and password, the app shows
+  a connection timeout error and they cannot proceed"
 
 ❌ **Missing component:**
+
 - "NullPointerException in refund" (what component?)
 - "Page won't load" (which page?)
 
@@ -437,6 +462,7 @@ Response Body:
 ### Component Selection
 
 Always specify the affected component if the project uses components:
+
 - Makes routing to correct team easier
 - Helps with duplicate detection
 - Improves searchability
@@ -444,6 +470,7 @@ Always specify the affected component if the project uses components:
 ### Labels (If Available)
 
 Consider adding labels:
+
 - `regression` - Previously fixed issue
 - `production` - Occurring in production
 - `data-loss` - Involves data loss/corruption

@@ -75,7 +75,7 @@ Infer the project key from the current context.
 Infer the issue type from the description keywords.
 
 | Keywords | Issue Type |
-|----------|-----------|
+| -------- | ---------- |
 | bug, error, crash, fix, broken, 404, 500, fail, exception, wrong | Bug |
 | everything else | Task |
 

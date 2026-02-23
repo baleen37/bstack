@@ -9,7 +9,8 @@ Analyze recent conversations to improve both global (~/.claude/CLAUDE.md) and lo
 
 ## Step 1: Find conversation history
 
-The project's conversation history is in `~/.claude/projects/`. The folder name is the project path with slashes replaced by dashes.
+The project's conversation history is in `~/.claude/projects/`.
+The folder name is the project path with slashes replaced by dashes.
 
 ```bash
 # Find the project folder (replace / with -)
@@ -46,13 +47,14 @@ ls -lhS "$SCRATCH"
 ## Step 3: Spin up Sonnet subagents
 
 Launch parallel Sonnet subagents to analyze conversations. Each agent should read:
+
 - Global CLAUDE.md: `~/.claude/CLAUDE.md`
 - Local CLAUDE.md: `./CLAUDE.md` (if exists)
 - Batch of conversation files
 
 Give each agent this prompt template:
 
-```
+```text
 Read:
 1. Global CLAUDE.md: ~/.claude/CLAUDE.md
 2. Local CLAUDE.md: [project]/CLAUDE.md
@@ -68,6 +70,7 @@ Be specific. Output bullet points only.
 ```
 
 Batch conversations by size:
+
 - Large (>100KB): 1-2 per agent
 - Medium (10-100KB): 3-5 per agent
 - Small (<10KB): 5-10 per agent

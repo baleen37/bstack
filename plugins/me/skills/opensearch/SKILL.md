@@ -13,7 +13,7 @@ Connect to, query, and manage OpenSearch using `curl`.
 ## Common APIs
 
 | API Path | Description |
-|----------|-------------|
+| -------- | ----------- |
 | `/_cluster/health` | Cluster health status |
 | `/_cat/indices?v` | List all indices |
 | `/<index>/_search` | Search in index |

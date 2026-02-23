@@ -7,7 +7,10 @@ description: "Automatically convert Confluence specification documents into stru
 
 ## Overview
 
-Transform Confluence specification documents into structured Jira backlogs automatically. This skill reads requirement documents from Confluence, intelligently breaks them down into logical implementation tasks, **creates an Epic first** to organize the work, then generates individual Jira tickets linked to that Epic - eliminating tedious manual copy-pasting.
+Transform Confluence specification documents into structured Jira backlogs automatically. This skill reads
+requirement documents from Confluence, intelligently breaks them down into logical implementation tasks,
+**creates an Epic first** to organize the work, then generates individual Jira tickets linked to that Epic -
+eliminating tedious manual copy-pasting.
 
 ## Core Workflow
 
@@ -21,7 +24,8 @@ Transform Confluence specification documents into structured Jira backlogs autom
 6. **Create Child Tickets** -> Generate tickets linked to the Epic
 7. **Provide Summary** -> Present all created items with links
 
-**Why Epic must be created first:** Child tickets need the Epic key to link properly during creation. Creating tickets first will result in orphaned tickets.
+**Why Epic must be created first:** Child tickets need the Epic key to link properly during creation.
+Creating tickets first will result in orphaned tickets.
 
 ---
 
@@ -29,17 +33,19 @@ Transform Confluence specification documents into structured Jira backlogs autom
 
 When triggered, obtain the Confluence page content:
 
-### If user provides a Confluence URL:
+### If user provides a Confluence URL
 
 Extract the cloud ID and page ID from the URL pattern:
+
 - Standard format: `https://[site].atlassian.net/wiki/spaces/[SPACE]/pages/[PAGE_ID]/[title]`
 - The cloud ID can be extracted from `[site].atlassian.net` or by calling `getAccessibleAtlassianResources`
 - The page ID is the numeric value in the URL path
 
-### If user provides only a page title or description:
+### If user provides only a page title or description
 
 Use the `search` tool to find the page:
-```
+
+```text
 search(
   cloudId="...",
   query="type=page AND title~'[search terms]'"
@@ -48,10 +54,11 @@ search(
 
 If multiple pages match, ask the user to clarify which one to use.
 
-### Fetch the page:
+### Fetch the page
 
 Call `getConfluencePage` with the cloudId and pageId:
-```
+
+```text
 getConfluencePage(
   cloudId="...",
   pageId="123456",
@@ -67,23 +74,29 @@ This returns the page content in Markdown format, which you'll analyze in Step 3
 
 **Before analyzing the spec**, determine the target Jira project:
 
-### Ask the user:
+### Ask the user
+
 "Which Jira project should I create these tickets in? Please provide the project key (e.g., PROJ, ENG, PRODUCT)."
 
-### If user is unsure:
+### If user is unsure
+
 Call `getVisibleJiraProjects` to show available projects:
-```
+
+```text
 getVisibleJiraProjects(
   cloudId="...",
   action="create"
 )
 ```
 
-Present the list: "I found these projects you can create issues in: PROJ (Project Alpha), ENG (Engineering), PRODUCT (Product Team)."
+Present the list: "I found these projects you can create issues in: PROJ (Project Alpha), ENG (Engineering),
+PRODUCT (Product Team)."
 
-### Once you have the project key:
+### Once you have the project key
+
 Call `getJiraProjectIssueTypesMetadata` to understand what issue types are available:
-```
+
+```text
 getJiraProjectIssueTypesMetadata(
   cloudId="...",
   projectIdOrKey="PROJ"
@@ -91,6 +104,7 @@ getJiraProjectIssueTypesMetadata(
 ```
 
 **Identify available issue types:**
+
 - Which issue type is "Epic" (or similar parent type like "Initiative")
 - What child issue types are available: "Story", "Task", "Bug", "Sub-task", etc.
 
@@ -99,6 +113,7 @@ getJiraProjectIssueTypesMetadata(
 The skill should intelligently choose issue types based on the specification content:
 
 **Use "Bug" when the spec describes:**
+
 - Fixing existing problems or defects
 - Resolving errors or incorrect behavior
 - Addressing performance issues
@@ -106,6 +121,7 @@ The skill should intelligently choose issue types based on the specification con
 - Keywords: "fix", "resolve", "bug", "issue", "problem", "error", "broken"
 
 **Use "Story" when the spec describes:**
+
 - New user-facing features or functionality
 - User experience improvements
 - Customer-requested capabilities
@@ -113,6 +129,7 @@ The skill should intelligently choose issue types based on the specification con
 - Keywords: "feature", "user can", "add ability to", "new", "enable users"
 
 **Use "Task" when the spec describes:**
+
 - Technical work without direct user impact
 - Infrastructure or DevOps work
 - Refactoring or optimization
@@ -121,12 +138,14 @@ The skill should intelligently choose issue types based on the specification con
 - Keywords: "implement", "setup", "configure", "optimize", "refactor", "infrastructure"
 
 **Fallback logic:**
+
 1. If "Story" is available and content suggests new features -> use "Story"
 2. If "Bug" is available and content suggests fixes -> use "Bug"
 3. If "Task" is available -> use "Task" for technical work
 4. If none of the above are available -> use the first available non-Epic, non-Subtask issue type
 
 **Store the selected issue types for use in Step 6:**
+
 - Epic issue type name (e.g., "Epic")
 - Default child issue type (e.g., "Story" or "Task")
 - Bug issue type name if available (e.g., "Bug")
@@ -138,18 +157,22 @@ The skill should intelligently choose issue types based on the specification con
 Read the specification content and **internally** decompose it into:
 
 ### Epic-Level Goal
+
 What is the overall objective or feature being implemented? This becomes your Epic.
 
 **Example Epic summaries:**
+
 - "User Authentication System"
 - "Payment Gateway Integration"
 - "Dashboard Performance Optimization"
 - "Mobile App Notifications Feature"
 
 ### Implementation Tasks
+
 Break the work into logical, independently implementable tasks.
 
 **Breakdown principles:**
+
 - **Size:** 3-10 tasks per spec typically (avoid over-granularity)
 - **Clarity:** Each task should be specific and actionable
 - **Independence:** Tasks can be worked on separately when possible
@@ -157,12 +180,14 @@ Break the work into logical, independently implementable tasks.
 - **Grouping:** Related functionality stays in the same ticket
 
 **Consider these dimensions:**
+
 - Technical layers: Backend API, Frontend UI, Database, Infrastructure
 - Work types: Implementation, Testing, Documentation, Deployment
 - Features: Break complex features into sub-features
 - Dependencies: Identify prerequisite work
 
 **Common task patterns:**
+
 - "Design [component] database schema"
 - "Implement [feature] API endpoints"
 - "Build [component] UI components"
@@ -171,6 +196,7 @@ Break the work into logical, independently implementable tasks.
 - "Update documentation for [feature]"
 
 **Use action verbs:**
+
 - Implement, Create, Build, Add, Design, Integrate, Update, Fix, Optimize, Configure, Deploy, Test, Document
 
 ---
@@ -180,7 +206,8 @@ Break the work into logical, independently implementable tasks.
 **Before creating anything**, show the user your planned breakdown:
 
 **Format:**
-```
+
+```text
 I've analyzed the spec and here's the backlog I'll create:
 
 **Epic:** [Epic Summary]
@@ -199,11 +226,13 @@ Shall I create these tickets in [PROJECT KEY]?
 ```
 
 **The issue type labels show what type each ticket will be created as:**
+
 - [Story] - New user-facing feature
 - [Task] - Technical implementation work
 - [Bug] - Fix or resolve an issue
 
 **Wait for user confirmation** before proceeding. This allows them to:
+
 - Request changes to the breakdown
 - Confirm the scope is correct
 - Adjust the number or focus of tickets
@@ -216,11 +245,11 @@ If user requests changes, adjust the breakdown and re-present.
 
 **CRITICAL:** The Epic must be created before any child tickets.
 
-### Create the Epic:
+### Create the Epic
 
 Call `createJiraIssue` with:
 
-```
+```text
 createJiraIssue(
   cloudId="...",
   projectKey="PROJ",
@@ -230,9 +259,9 @@ createJiraIssue(
 )
 ```
 
-### Epic Description Structure:
+### Epic Description Structure
 
-```markdown
+````markdown
 ## Overview
 [1-2 sentence summary of what this epic delivers]
 
@@ -254,13 +283,14 @@ Confluence Spec: [Link to Confluence page]
 
 ## Technical Notes
 [Any important technical context from the spec]
-```
+````
 
-### Capture the Epic Key:
+### Capture the Epic Key
 
 The response will include the Epic's key (e.g., "PROJ-123"). **Save this key** - you'll need it for every child ticket.
 
 **Example response:**
+
 ```json
 {
   "key": "PROJ-123",
@@ -278,9 +308,10 @@ The response will include the Epic's key (e.g., "PROJ-123"). **Save this key** -
 
 Now create each implementation task as a child ticket linked to the Epic.
 
-### For each task:
+### For each task
 
 **Determine the appropriate issue type for this specific task:**
+
 - If the task involves fixing/resolving an issue -> use "Bug" (if available)
 - If the task involves new user-facing features -> use "Story" (if available)
 - If the task involves technical/infrastructure work -> use "Task" (if available)
@@ -288,7 +319,7 @@ Now create each implementation task as a child ticket linked to the Epic.
 
 Call `createJiraIssue` with:
 
-```
+```text
 createJiraIssue(
   cloudId="...",
   projectKey="PROJ",
@@ -300,23 +331,25 @@ createJiraIssue(
 ```
 
 **Example issue type selection:**
+
 - "Fix authentication timeout bug" -> Use "Bug"
 - "Build user dashboard UI" -> Use "Story"
 - "Configure CI/CD pipeline" -> Use "Task"
 - "Implement password reset API" -> Use "Story" (new user feature)
 
-### Task Summary Format:
+### Task Summary Format
 
 Use action verbs and be specific:
+
 - "Implement user registration API endpoint"
 - "Design authentication database schema"
 - "Build login form UI components"
 - NOT "Do backend work" (too vague)
 - NOT "Frontend" (not actionable)
 
-### Task Description Structure:
+### Task Description Structure
 
-```markdown
+````markdown
 ## Context
 [Brief context for this task from the Confluence spec]
 
@@ -339,18 +372,19 @@ Use action verbs and be specific:
 ## Related
 - Confluence Spec: [Link to relevant section if possible]
 - Epic: PROJ-123
-```
+````
 
-### Acceptance Criteria Best Practices:
+### Acceptance Criteria Best Practices
 
 Make them **testable** and **specific**:
+
 - "API returns 201 status on successful user creation"
 - "Password must be at least 8 characters and hashed with bcrypt"
 - "Login form validates email format before submission"
 - NOT "User can log in" (too vague)
 - NOT "It works correctly" (not testable)
 
-### Create all tickets sequentially:
+### Create all tickets sequentially
 
 Track each created ticket key for the summary.
 
@@ -360,7 +394,7 @@ Track each created ticket key for the summary.
 
 After all tickets are created, present a comprehensive summary:
 
-```
+```text
 Backlog created successfully!
 
 **Epic:** PROJ-123 - User Authentication System
@@ -404,13 +438,16 @@ https://yoursite.atlassian.net/browse/PROJ-123
 ### Multiple Specs or Pages
 
 **If user references multiple documents:**
+
 - Process each separately, or ask which to prioritize
 - Consider creating separate Epics for distinct features
-- "I see you've provided 3 spec documents. Should I create separate Epics for each, or would you like me to focus on one first?"
+- "I see you've provided 3 spec documents. Should I create separate Epics for each, or would you like me to
+  focus on one first?"
 
 ### Existing Epic
 
 **If user wants to add tickets to an existing Epic:**
+
 - Skip Epic creation (Step 5)
 - Ask for the existing Epic key: "What's the Epic key you'd like to add tickets to? (e.g., PROJ-100)"
 - Proceed with Step 6 using the provided Epic key
@@ -418,8 +455,10 @@ https://yoursite.atlassian.net/browse/PROJ-123
 ### Custom Required Fields
 
 **If ticket creation fails due to required fields:**
+
 1. Use `getJiraIssueTypeMetaWithFields` to identify what fields are required:
-   ```
+
+   ```text
    getJiraIssueTypeMetaWithFields(
      cloudId="...",
      projectIdOrKey="PROJ",
@@ -430,7 +469,8 @@ https://yoursite.atlassian.net/browse/PROJ-123
 2. Ask user for values: "This project requires a 'Priority' field. What priority should I use? (e.g., High, Medium, Low)"
 
 3. Include in `additional_fields` when creating:
-   ```
+
+   ```text
    additional_fields={
      "priority": {"name": "High"}
    }
@@ -439,13 +479,16 @@ https://yoursite.atlassian.net/browse/PROJ-123
 ### Large Specifications
 
 **For specs that would generate 15+ tickets:**
+
 - Present the full breakdown to user
 - Ask: "This spec would create 18 tickets. Should I create all of them, or would you like to adjust the scope?"
-- Offer to create a subset first: "I can create the first 10 tickets now and wait for your feedback before creating the rest."
+- Offer to create a subset first: "I can create the first 10 tickets now and wait for your feedback before
+  creating the rest."
 
 ### Subtasks vs Tasks
 
 **Some projects use "Subtask" issue types:**
+
 - If metadata shows "Subtask" is available, you can use it for more granular work
 - Subtasks link to parent tasks (not Epics directly)
 - Structure: Epic -> Task -> Subtasks
@@ -453,6 +496,7 @@ https://yoursite.atlassian.net/browse/PROJ-123
 ### Ambiguous Specifications
 
 **If the specification lacks detail:**
+
 - Create fewer, broader tickets
 - Note in ticket descriptions: "Detailed requirements need to be defined during refinement"
 - Ask user: "The spec is light on implementation details. Should I create high-level tickets that can be refined later?"
@@ -460,41 +504,50 @@ https://yoursite.atlassian.net/browse/PROJ-123
 ### Failed API Calls
 
 **If `createJiraIssue` fails:**
+
 1. Check the error message for specific issues (permissions, required fields, invalid values)
 2. Use `getJiraProjectIssueTypesMetadata` to verify issue type availability
-3. Inform user: "I encountered an error creating tickets: [error message]. This might be due to project permissions or required fields."
+3. Inform user: "I encountered an error creating tickets: [error message]. This might be due to project
+   permissions or required fields."
 
 ---
 
 ## Tips for High-Quality Breakdowns
 
 ### Be Specific
+
 - NOT "Do frontend work"
 - "Create login form UI with email/password inputs and validation"
 
 ### Include Technical Context
+
 - Mention specific technologies when clear from spec
 - Reference components, services, or modules
 - Note integration points
 
 ### Logical Grouping
+
 - Related work stays in the same ticket
 - Don't split artificially: "Build user profile page" includes both UI and API integration
 - Do split when different specialties: Separate backend API task from frontend UI task if worked on by different people
 
 ### Avoid Duplication
+
 - Don't create redundant tickets for the same functionality
 - If multiple features need the same infrastructure, create one infrastructure ticket they all depend on
 
 ### Explicit Testing
+
 - Include testing as part of feature tasks ("Implement X with unit tests")
 - OR create separate testing tasks for complex features ("Write integration tests for authentication flow")
 
 ### Documentation Tasks
+
 - For user-facing features: Include "Update user documentation" or "Create help articles"
 - For developer tools: Include "Update API documentation" or "Write integration guide"
 
 ### Dependencies
+
 - Note prerequisites in ticket descriptions
 - Use "Depends on" or "Blocks" relationships in Jira if available
 - Sequence tickets logically (infrastructure -> implementation -> testing)
@@ -508,6 +561,7 @@ https://yoursite.atlassian.net/browse/PROJ-123
 **Epic:** Product Search and Filtering
 
 **Tickets:**
+
 1. [Task] Design search index schema and data structure
 2. [Task] Implement backend search API with Elasticsearch
 3. [Story] Build search input and results UI components
@@ -521,6 +575,7 @@ https://yoursite.atlassian.net/browse/PROJ-123
 **Epic:** Resolve Dashboard Load Time Issues
 
 **Tickets:**
+
 1. [Task] Profile and identify performance bottlenecks
 2. [Bug] Optimize database queries with indexes and caching
 3. [Bug] Implement lazy loading for dashboard widgets
@@ -532,6 +587,7 @@ https://yoursite.atlassian.net/browse/PROJ-123
 **Epic:** Automated Deployment Pipeline
 
 **Tickets:**
+
 1. [Task] Set up GitHub Actions workflow configuration
 2. [Task] Implement automated testing in CI pipeline
 3. [Task] Configure staging environment deployment
@@ -544,6 +600,7 @@ https://yoursite.atlassian.net/browse/PROJ-123
 ## Resources
 
 For detailed templates and examples, see the `references/` directory:
+
 - `epic-templates.md` - Epic description templates
 - `breakdown-examples.md` - Task breakdown examples
 - `ticket-writing-guide.md` - Guidelines for writing clear tickets

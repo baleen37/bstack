@@ -137,7 +137,7 @@ Present the judge's synthesized result to the user.
 ## Common Mistakes
 
 | Mistake | Fix |
-|---------|-----|
+| ------- | --- |
 | Both competitors produce identical solutions | Use the constraint prompts above to force divergence |
 | Running judge before both complete | Use foreground mode, wait for both |
 | Skipping the judge | Always synthesize — even if one seems clearly better |

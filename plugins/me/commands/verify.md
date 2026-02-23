@@ -60,19 +60,23 @@ Execute these checks in order:
 The `$ARGUMENTS` parameter can specify different verification levels:
 
 **`quick`** - Fast verification
+
 - Build check
 - Type check only
 
 **`full`** - Complete verification (default)
+
 - All checks listed above
 
 **`pre-commit`** - Commit-relevant checks
+
 - Build check
 - Type check
 - Lint check
 - Test suite
 
 **`pre-pr`** - Pull request readiness
+
 - All checks from `full`
 - Additional security scan (if available)
 - Check for TODO/FIXME comments
@@ -82,7 +86,7 @@ The `$ARGUMENTS` parameter can specify different verification levels:
 
 Produce a concise verification report in this format:
 
-```
+```text
 VERIFICATION: [PASS/FAIL]
 
 Build: [OK/FAIL]
@@ -112,6 +116,7 @@ If any critical issues exist:
 ### Decision Rules
 
 **PASS criteria:**
+
 - Build succeeds
 - No type errors
 - All tests pass
@@ -119,12 +124,14 @@ If any critical issues exist:
 - Test coverage meets threshold (if configured)
 
 **FAIL criteria:**
+
 - Build fails
 - Type errors present
 - Tests fail
 - Critical lint errors
 
 **Ready for PR:**
+
 - All PASS criteria met
 - No console.logs in source code (warnings allowed)
 - Git working directory clean or changes are intentional
@@ -133,26 +140,32 @@ If any critical issues exist:
 ### Example Invocations
 
 **Quick verification:**
-```
+
+```text
 /verify quick
 ```
 
 **Full verification:**
-```
+
+```text
 /verify full
 ```
+
 or simply:
-```
+
+```text
 /verify
 ```
 
 **Pre-commit check:**
-```
+
+```text
 /verify pre-commit
 ```
 
 **Pre-PR check:**
-```
+
+```text
 /verify pre-pr
 ```
 
@@ -161,6 +174,7 @@ or simply:
 ### Finding Build Commands
 
 Look for build commands in:
+
 - `package.json` scripts: `build`, `compile`
 - `Makefile`: `build` target
 - Project-specific build tools (Gradle, Maven, etc.)
@@ -168,6 +182,7 @@ Look for build commands in:
 ### Finding Type Checkers
 
 Common type check commands:
+
 - TypeScript: `tsc --noEmit`
 - Python: `mypy`
 - Package.json: `type-check` script
@@ -175,6 +190,7 @@ Common type check commands:
 ### Finding Linters
 
 Common lint commands:
+
 - JavaScript/TypeScript: `eslint`
 - Python: `pylint`, `flake8`, `ruff`
 - Package.json: `lint` script
@@ -182,6 +198,7 @@ Common lint commands:
 ### Finding Test Commands
 
 Common test commands:
+
 - JavaScript: `bun test`, `npm test`, `jest`, `vitest`
 - Python: `pytest`, `python -m unittest`
 - Package.json: `test` script
@@ -189,6 +206,7 @@ Common test commands:
 ### Console.log Detection
 
 Use grep or similar to find console.log:
+
 ```bash
 # Exclude test files and node_modules
 grep -r "console\.log" src/ --exclude-dir=node_modules
@@ -207,6 +225,7 @@ Note: In Bun projects, `node_modules` may be less relevant as Bun uses a differe
 ## Error Handling
 
 If verification fails:
+
 1. Report which check failed
 2. Provide actionable error messages
 3. Suggest next steps to fix

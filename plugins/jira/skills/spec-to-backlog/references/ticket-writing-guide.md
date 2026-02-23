@@ -8,7 +8,7 @@ The ticket summary should be a clear, concise action statement that immediately 
 
 ### Formula
 
-**[Action Verb] + [Component/Feature] + [Optional: Context]**
+`[Action Verb] + [Component/Feature] + [Optional: Context]`
 
 ### Good Examples
 
@@ -30,24 +30,31 @@ The ticket summary should be a clear, concise action statement that immediately 
 ### Action Verbs by Task Type
 
 **Development:**
+
 - Implement, Build, Create, Add, Develop
 
 **Bug Fixes:**
+
 - Fix, Resolve, Correct, Debug
 
 **Design/Planning:**
+
 - Design, Plan, Research, Investigate, Define
 
 **Infrastructure:**
+
 - Set up, Configure, Deploy, Migrate, Upgrade
 
 **Documentation:**
+
 - Write, Document, Update, Create
 
 **Improvement:**
+
 - Optimize, Refactor, Improve, Enhance
 
 **Testing:**
+
 - Test, Verify, Validate
 
 ---
@@ -58,7 +65,7 @@ A good ticket description provides context, requirements, and guidance without b
 
 ### Recommended Template
 
-```markdown
+````markdown
 ## Context
 [1-2 sentences: Why we're doing this, what problem it solves]
 
@@ -79,14 +86,15 @@ A good ticket description provides context, requirements, and guidance without b
 - [Link to design mockup if applicable]
 - [Link to API documentation]
 - [Link to related tickets]
-```
+````
 
 ### Example 1: Feature Implementation
 
 **Summary:** Implement user registration API endpoint
 
 **Description:**
-```markdown
+
+````markdown
 ## Context
 Users need to create accounts through our REST API. This endpoint will be used by our web app and future mobile apps.
 
@@ -113,14 +121,15 @@ Users need to create accounts through our REST API. This endpoint will be used b
 ## Resources
 - API Spec: [Link to specification]
 - Related: AUTH-123 (Login endpoint)
-```
+````
 
 ### Example 2: Bug Fix
 
 **Summary:** Fix pagination bug in search results
 
 **Description:**
-```markdown
+
+````markdown
 ## Context
 Users report that clicking "Next Page" in search results sometimes shows duplicate items from the previous page. This happens intermittently when search results are sorted by date.
 
@@ -147,14 +156,15 @@ The pagination offset calculation doesn't account for items with identical times
 ## Resources
 - Bug Report: [Link to bug report]
 - Related: SEARCH-789 (Original search implementation)
-```
+````
 
 ### Example 3: Infrastructure Task
 
 **Summary:** Set up PostgreSQL 15 staging environment
 
 **Description:**
-```markdown
+
+````markdown
 ## Context
 First step in database migration from PG12 to PG15. Need staging environment to validate migration process and test query compatibility.
 
@@ -182,14 +192,15 @@ First step in database migration from PG12 to PG15. Need staging environment to 
 - Migration RFC: [Link to RFC]
 - Infrastructure docs: [Link to docs]
 - Parent Epic: INFRA-100
-```
+````
 
 ### Example 4: Frontend Task
 
 **Summary:** Create notification bell UI component
 
 **Description:**
-```markdown
+
+````markdown
 ## Context
 Part of notification system. Need UI component showing unread notification count and opening notification panel.
 
@@ -219,7 +230,7 @@ Part of notification system. Need UI component showing unread notification count
 - Design mockup: [Figma link]
 - WebSocket docs: [Link to docs]
 - Related: NOTIF-123 (Notification panel component)
-```
+````
 
 ---
 
@@ -228,6 +239,7 @@ Part of notification system. Need UI component showing unread notification count
 ### Backend Development
 
 Focus on:
+
 - API contract (request/response format)
 - Data validation rules
 - Error handling requirements
@@ -237,6 +249,7 @@ Focus on:
 ### Frontend Development
 
 Focus on:
+
 - Visual design reference
 - User interactions
 - State management approach
@@ -246,6 +259,7 @@ Focus on:
 ### Bug Fixes
 
 Focus on:
+
 - Reproduction steps
 - Expected vs actual behavior
 - Root cause (if known)
@@ -255,6 +269,7 @@ Focus on:
 ### Testing
 
 Focus on:
+
 - What needs testing (features, edge cases)
 - Test coverage targets
 - Types of tests (unit, integration, e2e)
@@ -264,6 +279,7 @@ Focus on:
 ### Documentation
 
 Focus on:
+
 - Target audience
 - Required sections/topics
 - Examples to include
@@ -315,22 +331,27 @@ Keep it concise - detailed technical specs belong in separate documentation or c
 ## Common Mistakes to Avoid
 
 ### 1. Information Overload
+
 - NOT Pages of requirements copied from spec doc
 - Summary with link to full spec
 
 ### 2. Assuming Context
+
 - NOT "Fix the bug we discussed"
 - Clear description of the bug with reproduction steps
 
 ### 3. Implementation as Requirement
+
 - NOT "Use React hooks for state management"
 - "Component updates in real-time" (let developer choose approach unless there's a specific reason)
 
 ### 4. Vague Acceptance Criteria
+
 - NOT "Everything works correctly"
 - Specific, testable outcomes
 
 ### 5. Missing Links
+
 - NOT No reference to designs, specs, or related work
 - Links to all relevant documentation
 
@@ -339,15 +360,18 @@ Keep it concise - detailed technical specs belong in separate documentation or c
 ## Length Guidelines
 
 **Summary:**
+
 - Target: 3-8 words
 - Max: 12 words
 
 **Description:**
+
 - Target: 100-300 words
 - Min: Include at minimum context and acceptance criteria
 - Max: 500 words (link to docs for more detail)
 
 **Acceptance Criteria:**
+
 - Target: 3-7 items
 - Each item: 1 sentence
 

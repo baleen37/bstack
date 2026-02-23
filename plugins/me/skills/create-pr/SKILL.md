@@ -68,6 +68,7 @@ When `BEHIND`:
 ## PR Body Format
 
 Keep it short and scannable:
+
 - Summary: 1-2 sentences max
 - Changes: Bullet list
 - Tests: What you verified

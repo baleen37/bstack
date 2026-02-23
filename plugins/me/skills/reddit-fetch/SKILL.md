@@ -30,14 +30,16 @@ tmux capture-pane -t <session_name> -p -S -500  # capture output
 Look for YOUR QUERY TEXT specifically. Is it inside or outside the bordered box?
 
 **Enter NOT sent** - your query is INSIDE the box:
-```
+
+```text
 ╭─────────────────────────────────────╮
 │ > Your actual query text here       │
 ╰─────────────────────────────────────╯
 ```
 
 **Enter WAS sent** - your query is OUTSIDE the box, followed by activity:
-```
+
+```text
 > Your actual query text here
 
 ⠋ Our hamsters are working... (processing)
@@ -47,7 +49,8 @@ Look for YOUR QUERY TEXT specifically. Is it inside or outside the bordered box?
 ╰────────────────────────────────────────────╯
 ```
 
-Note: The empty prompt `Type your message or @path/to/file` always appears in the box - that's normal. What matters is whether YOUR query text is inside or outside the box.
+Note: The empty prompt `Type your message or @path/to/file` always appears in the box - that's normal.
+What matters is whether YOUR query text is inside or outside the box.
 
 If your query is inside the box, run `tmux send-keys -t <session_name> Enter` to submit.
 

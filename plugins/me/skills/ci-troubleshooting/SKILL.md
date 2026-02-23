@@ -9,7 +9,8 @@ description: Use when GitHub Actions CI is broken, failing, or needs fixing - sy
 
 Fix GitHub Actions failures systematically: **Observe → Cluster → Reproduce → Fix → Validate**.
 
-**Critical principle:** Always observe actual CI errors before guessing. 30 seconds of observation beats hours of wrong hypotheses.
+**Critical principle:** Always observe actual CI errors before guessing.
+30 seconds of observation beats hours of wrong hypotheses.
 
 **REQUIRED BACKGROUND:** You MUST understand superpowers:systematic-debugging before using this skill.
 
@@ -21,7 +22,7 @@ Fix GitHub Actions failures systematically: **Observe → Cluster → Reproduce 
 
 ## Core Workflow
 
-```
+```text
 1. OBSERVE: Get actual error from GitHub Actions (30 sec)
 2. CLUSTER: Find triggering commit (30 sec)
 3. REPRODUCE: Run exact failing command locally (2 min)
@@ -70,6 +71,7 @@ Apply minimal change that fixes the root cause.
 
 1. **Local:** Run specific test, then full suite
 2. **Branch CI:** Push to feature branch (NOT main), verify green before merging
+
    ```bash
    # Push to feature branch
    git push origin <branch-name>
@@ -91,7 +93,7 @@ Apply minimal change that fixes the root cause.
 ## Quick Reference
 
 | Symptom | First Action |
-|---------|-------------|
+| ------- | ----------- |
 | **Any failure** | `gh run view --log-failed` → See actual error |
 | Multiple failures | Check triggering commit → Fix commit, not each test |
 | Can't reproduce locally | Compare environments (env vars, versions) |
