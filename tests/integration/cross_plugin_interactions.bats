@@ -6,7 +6,7 @@ load ../helpers/bats_helper
 
 @test "plugins have unique hook event types" {
     # Check hooks.json in consolidated structure
-    local hooks_file="${PROJECT_ROOT}/hooks/hooks.json"
+    local hooks_file="${PROJECT_ROOT}/plugins/me/hooks/hooks.json"
 
     if [ -f "$hooks_file" ]; then
         # Just verify it's valid JSON with hooks structure
@@ -28,7 +28,7 @@ load ../helpers/bats_helper
 @test "plugins with skills have valid SKILL.md structure" {
     local found_skills=0
 
-    for skill_file in "${PROJECT_ROOT}"/skills/*/SKILL.md; do
+    for skill_file in "${PROJECT_ROOT}"/plugins/*/skills/*/SKILL.md; do
         if [ -f "$skill_file" ]; then
             found_skills=$((found_skills + 1))
 
@@ -70,7 +70,7 @@ load ../helpers/bats_helper
 }
 
 @test "hooks use portable paths consistently" {
-    local hooks_file="${PROJECT_ROOT}/hooks/hooks.json"
+    local hooks_file="${PROJECT_ROOT}/plugins/me/hooks/hooks.json"
     local found_hardcoded=0
 
     if [ -f "$hooks_file" ]; then
@@ -88,7 +88,7 @@ load ../helpers/bats_helper
 @test "plugin commands follow naming conventions" {
     local invalid_count=0
 
-    for command_file in "${PROJECT_ROOT}"/commands/*.md; do
+    for command_file in "${PROJECT_ROOT}"/plugins/me/commands/*.md; do
         if [ -f "$command_file" ]; then
             local filename
             filename=$(basename "$command_file")
@@ -107,8 +107,8 @@ load ../helpers/bats_helper
 @test "plugin agents have valid frontmatter" {
     local found_agents=0
 
-    # Check agents in the top-level agents/ directory
-    for agent_file in "${PROJECT_ROOT}"/agents/*.md; do
+    # Check agents in plugins/me/agents/ directory
+    for agent_file in "${PROJECT_ROOT}"/plugins/me/agents/*.md; do
         if [ -f "$agent_file" ]; then
             # Skip CLAUDE.md files
             [[ "$(basename "$agent_file")" == "CLAUDE.md" ]] && continue
@@ -125,8 +125,8 @@ load ../helpers/bats_helper
         fi
     done
 
-    # Also check subdirectories like agents/ralph/
-    for agent_file in "${PROJECT_ROOT}"/agents/*/*.md; do
+    # Also check subdirectories like plugins/me/agents/ralph/
+    for agent_file in "${PROJECT_ROOT}"/plugins/me/agents/*/*.md; do
         if [ -f "$agent_file" ]; then
             # Skip CLAUDE.md files and non-.md files
             [[ "$(basename "$agent_file")" == "CLAUDE.md" ]] && continue

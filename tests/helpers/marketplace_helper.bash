@@ -122,15 +122,14 @@ marketplace_all_plugins_exist() {
     return $missing
 }
 
-# Check if the root plugin is listed in marketplace.json
-# After consolidation, the single root plugin has source "./"
+# Check if all plugins under plugins/ directory are listed in marketplace.json
 # Args:
 #   $1 - (Optional) Path to marketplace.json (defaults to MARKETPLACE_JSON)
 # Returns:
-#   0 if root plugin is listed, 1 otherwise
+#   0 if all plugins are listed, non-zero otherwise (outputs missing plugins to stderr)
 # Usage:
 #   if ! marketplace_all_plugins_listed; then
-#     echo "Root plugin not listed"
+#     echo "Some plugins not listed"
 #   fi
 marketplace_all_plugins_listed() {
     local marketplace_file="${1:-${MARKETPLACE_JSON}}"
@@ -140,14 +139,21 @@ marketplace_all_plugins_listed() {
         return 1
     fi
 
-    # Verify the root plugin (source "./") is listed
-    local root_plugin_source
-    root_plugin_source=$($JQ_BIN -r '.plugins[] | select(.source == "./") | .source' "$marketplace_file" 2>/dev/null)
+    # Get all plugin directories under plugins/
+    local expected_plugins
+    expected_plugins=$(find "${PROJECT_ROOT}/plugins" -maxdepth 1 -mindepth 1 -type d -exec basename {} \; 2>/dev/null | sort)
 
-    if [ -z "$root_plugin_source" ]; then
-        echo "Error: Root plugin (source './') not found in marketplace.json" >&2
-        return 1
-    fi
+    local missing=0
+    while IFS= read -r plugin_name; do
+        [ -z "$plugin_name" ] && continue
+        local source="./plugins/${plugin_name}"
+        local found
+        found=$($JQ_BIN -r --arg src "$source" '.plugins[] | select(.source == $src) | .source' "$marketplace_file" 2>/dev/null)
+        if [ -z "$found" ]; then
+            echo "Error: Plugin '${plugin_name}' (source '${source}') not listed in marketplace.json" >&2
+            ((missing++))
+        fi
+    done <<< "$expected_plugins"
 
-    return 0
+    return $missing
 }

@@ -3,7 +3,7 @@
 
 load helpers/bats_helper
 
-HOOKS_JSON="${PROJECT_ROOT}/hooks/hooks.json"
+HOOKS_JSON="${PROJECT_ROOT}/plugins/me/hooks/hooks.json"
 
 setup() {
     ensure_jq

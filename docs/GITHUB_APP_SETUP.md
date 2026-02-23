@@ -26,7 +26,7 @@
 다음 정보를 입력합니다:
 
 | 필드 | 값 |
-|------|-----|
+| ---- | --- |
 | **GitHub App name** | `claude-plugins-ci` (또는 원하는 이름) |
 | **Homepage URL** | `https://github.com/[your-username]/claude-plugins` |
 | **Description** | `CI automation for claude-plugins` |
@@ -36,7 +36,7 @@
 **Repository permissions**:
 
 | Permission | Access |
-|------------|--------|
+| ---------- | ------ |
 | Contents | **Read and write** |
 | Pull requests | **Read and write** |
 | Workflows | **Read and write** (중요!) |
@@ -44,6 +44,7 @@
 ### 1.4 이벤트 설정 (Events)
 
 다음 이벤트를 체크:
+
 - [x] Push
 - [x] Pull request
 - [x] Workflow run
@@ -56,6 +57,7 @@
 4. **Generate a new private key** 클릭하여 `.pem` 파일 다운로드
 
 **중요**: 생성된 정보를 안전하게 보관하세요:
+
 - App ID
 - Client ID (App 페이지 상단에 표시)
 - Client secret
@@ -88,7 +90,7 @@
 2. Name: `GH_APP_PRIVATE_KEY`
 3. Value: `.pem` 파일의 전체 내용을 붙여넣기
 
-```
+```text
 -----BEGIN RSA PRIVATE KEY-----
 MIIEpAIBAAKCAQEA...
 (전체 내용)
@@ -137,6 +139,7 @@ Webhook을 사용하는 경우에만 필요합니다:
 ### 테스트 방법
 
 1. main 브랜치에 Conventional Commit 형식으로 커밋:
+
    ```bash
    git commit -m "feat: test GitHub App trigger"
    git push origin main
@@ -154,6 +157,7 @@ Webhook을 사용하는 경우에만 필요합니다:
 ### 문제: Tests workflow가 실행되지 않음
 
 **확인사항**:
+
 1. GitHub App의 **Workflow runs** 권한이 **Read and write**인지 확인
 2. App이 repository에 설치되어 있는지 확인
 3. Secrets가 올바르게 설정되어 있는지 확인
@@ -161,12 +165,14 @@ Webhook을 사용하는 경우에만 필요합니다:
 ### 문제: Permission denied 오류
 
 **해결방법**:
+
 1. GitHub App의 permissions을 다시 확인
 2. App을 재설치 (permissions 변경 후 필요)
 
 ### 문제: Invalid credentials 오류
 
 **해결방법**:
+
 1. Private key가 올바르게 복사되었는지 확인 (전체 내용)
 2. App ID가 올바른지 확인
 
@@ -177,10 +183,12 @@ Webhook을 사용하는 경우에만 필요합니다:
 GitHub App 설정이 복잡한 경우, `workflow_run` 트리거를 사용하는 방식도 있습니다. 이미 `.github/workflows/test.yml`에 구현되어 있습니다.
 
 **장점**:
+
 - 추가 설정 없음
 - 간단하고 직관적
 
 **단점**:
+
 - PR 생성 후 즉시 test가 실행되지 않음
 - Release workflow 완료 후 실행됨
 

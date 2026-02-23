@@ -4,8 +4,8 @@
 load '../helpers/bats_helper'
 
 setup() {
-  export VERIFY_SCRIPT="${BATS_TEST_DIRNAME}/../../skills/create-pr/scripts/verify-pr-status.sh"
-  export SYNC_SCRIPT="${BATS_TEST_DIRNAME}/../../skills/create-pr/scripts/sync-with-base.sh"
+  export VERIFY_SCRIPT="${BATS_TEST_DIRNAME}/../../plugins/me/skills/create-pr/scripts/verify-pr-status.sh"
+  export SYNC_SCRIPT="${BATS_TEST_DIRNAME}/../../plugins/me/skills/create-pr/scripts/sync-with-base.sh"
 }
 
 @test "verify-pr-status.sh is executable" {

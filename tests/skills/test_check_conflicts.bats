@@ -4,7 +4,7 @@
 
 setup() {
   # Get script path
-  SCRIPT="${BATS_TEST_DIRNAME}/../../skills/create-pr/scripts/check-conflicts.sh"
+  SCRIPT="${BATS_TEST_DIRNAME}/../../plugins/me/skills/create-pr/scripts/check-conflicts.sh"
 
   # Verify script exists
   if [[ ! -f "$SCRIPT" ]]; then

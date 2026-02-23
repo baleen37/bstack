@@ -73,41 +73,41 @@ _assert_valid_plugin_name() {
 ###############################################################################
 
 @test "common: plugin.json files exist in plugin directories" {
-    local manifest_file="${PROJECT_ROOT}/.claude-plugin/plugin.json"
+    local manifest_file="${PROJECT_ROOT}/plugins/me/.claude-plugin/plugin.json"
 
     [ -f "$manifest_file" ]
 }
 
 @test "common: all plugin.json files are valid JSON" {
-    local manifest="${PROJECT_ROOT}/.claude-plugin/plugin.json"
+    local manifest="${PROJECT_ROOT}/plugins/me/.claude-plugin/plugin.json"
 
     [ -f "$manifest" ] || skip "No plugin.json found"
     validate_json "$manifest"
 }
 
 @test "common: all plugin.json files have required fields" {
-    local manifest="${PROJECT_ROOT}/.claude-plugin/plugin.json"
+    local manifest="${PROJECT_ROOT}/plugins/me/.claude-plugin/plugin.json"
 
     [ -f "$manifest" ] || skip "No plugin.json found"
     _assert_has_required_fields "$manifest"
 }
 
 @test "common: all plugin.json files have non-empty required field values" {
-    local manifest="${PROJECT_ROOT}/.claude-plugin/plugin.json"
+    local manifest="${PROJECT_ROOT}/plugins/me/.claude-plugin/plugin.json"
 
     [ -f "$manifest" ] || skip "No plugin.json found"
     _assert_field_values_not_empty "$manifest"
 }
 
 @test "common: all plugin.json names follow naming convention" {
-    local manifest="${PROJECT_ROOT}/.claude-plugin/plugin.json"
+    local manifest="${PROJECT_ROOT}/plugins/me/.claude-plugin/plugin.json"
 
     [ -f "$manifest" ] || skip "No plugin.json found"
     _assert_valid_plugin_name "$manifest"
 }
 
 @test "common: all plugin.json files use only allowed fields" {
-    local manifest="${PROJECT_ROOT}/.claude-plugin/plugin.json"
+    local manifest="${PROJECT_ROOT}/plugins/me/.claude-plugin/plugin.json"
 
     [ -f "$manifest" ] || skip "No plugin.json found"
     validate_plugin_manifest_fields "$manifest"

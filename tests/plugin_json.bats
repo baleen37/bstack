@@ -5,7 +5,7 @@
 load helpers/bats_helper
 load helpers/test_utils
 
-PLUGIN_JSON="${PROJECT_ROOT}/.claude-plugin/plugin.json"
+PLUGIN_JSON="${PROJECT_ROOT}/plugins/me/.claude-plugin/plugin.json"
 
 setup() {
     ensure_jq

@@ -143,7 +143,7 @@ for (const manifest of manifests) {
 ### Helper Functions Mapping
 
 | BATS Helper | Vitest Helper | Notes |
-|------------|---------------|-------|
+| ----------- | ------------- | ----- |
 | `validate_json(file)` | `validateJson<T>(path)` | Returns typed data |
 | `json_has_field(file, field)` | `expect(data).toHaveProperty(field)` | Native Jest match |
 | `json_get(file, field)` | `data.field` | Direct property access |

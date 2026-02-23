@@ -1,0 +1,17 @@
+{
+  "name": "jira",
+  "version": "5.31.0",
+  "description": "Atlassian Jira integration skills for Claude Code - triage issues, capture tasks from meeting notes, generate status reports, and manage backlogs",
+  "author": {
+    "name": "baleen37",
+    "email": "git@baleen.me"
+  },
+  "license": "MIT",
+  "keywords": [
+    "jira",
+    "atlassian",
+    "confluence",
+    "project-management",
+    "workflow"
+  ]
+}

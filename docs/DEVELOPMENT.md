@@ -103,7 +103,7 @@ bats tests/directory_structure.bats
 ## Test Files
 
 | Test File | Purpose |
-|-----------|---------|
+| --------- | ------- |
 | `directory_structure.bats` | Validate plugin structure and required files |
 | `marketplace_json.bats` | Validate marketplace.json format and content |
 | `plugin_json.bats` | Validate individual plugin.json files |
@@ -114,6 +114,7 @@ bats tests/directory_structure.bats
 ## CI/CD
 
 Tests run automatically on:
+
 - Pull requests
 - Push to main branch
 - Releases
