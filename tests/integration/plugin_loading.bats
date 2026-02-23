@@ -46,8 +46,8 @@ load ../helpers/bats_helper
 
 @test "all required top-level directories exist" {
     assert_dir_exists "${PROJECT_ROOT}/.claude-plugin" ".claude-plugin directory should exist"
-    assert_dir_exists "${PROJECT_ROOT}/commands" "commands directory should exist"
-    assert_dir_exists "${PROJECT_ROOT}/skills" "skills directory should exist"
+    assert_dir_exists "${PROJECT_ROOT}/plugins/me/commands" "commands directory should exist"
+    assert_dir_exists "${PROJECT_ROOT}/plugins/me/skills" "skills directory should exist"
 }
 
 @test "github workflows are valid YAML" {
@@ -69,7 +69,7 @@ load ../helpers/bats_helper
 }
 
 @test "hooks.json file is valid" {
-    local hooks_file="${PROJECT_ROOT}/hooks/hooks.json"
+    local hooks_file="${PROJECT_ROOT}/plugins/me/hooks/hooks.json"
 
     if [ -f "$hooks_file" ]; then
         validate_json "$hooks_file"

@@ -324,8 +324,7 @@ for_each_command_file() {
     local callback="$1"
     local cmd_files
 
-    # Consolidated structure: single root-level plugin
-    cmd_files=$(find "$PROJECT_ROOT/.claude-plugin/commands" -name "*.md" -type f 2>/dev/null | grep -v CLAUDE.md | sort)
+    cmd_files=$(find "$PROJECT_ROOT/plugins/me/commands" -name "*.md" -type f 2>/dev/null | grep -v CLAUDE.md | sort)
 
     [ -n "$cmd_files" ] || return 1
 
@@ -348,8 +347,7 @@ for_each_agent_file() {
     local callback="$1"
     local agent_files
 
-    # Consolidated structure: single root-level plugin
-    agent_files=$(find "$PROJECT_ROOT/.claude-plugin/agents" -name "*.md" -type f 2>/dev/null | grep -v CLAUDE.md | sort)
+    agent_files=$(find "$PROJECT_ROOT/plugins/me/agents" -name "*.md" -type f 2>/dev/null | grep -v CLAUDE.md | sort)
 
     [ -n "$agent_files" ] || return 1
 
@@ -370,7 +368,7 @@ for_each_agent_file() {
 #   }
 for_each_hooks_file() {
     local callback="$1"
-    local hooks_file="${PROJECT_ROOT}/hooks/hooks.json"
+    local hooks_file="${PROJECT_ROOT}/plugins/me/hooks/hooks.json"
 
     # Consolidated structure: single hooks.json at hooks/hooks.json
     if [ -f "$hooks_file" ]; then

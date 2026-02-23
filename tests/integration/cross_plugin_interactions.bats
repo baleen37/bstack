@@ -6,7 +6,7 @@ load ../helpers/bats_helper
 
 @test "plugins have unique hook event types" {
     # Check hooks.json in consolidated structure
-    local hooks_file="${PROJECT_ROOT}/hooks/hooks.json"
+    local hooks_file="${PROJECT_ROOT}/plugins/me/hooks/hooks.json"
 
     if [ -f "$hooks_file" ]; then
         # Just verify it's valid JSON with hooks structure
@@ -70,7 +70,7 @@ load ../helpers/bats_helper
 }
 
 @test "hooks use portable paths consistently" {
-    local hooks_file="${PROJECT_ROOT}/hooks/hooks.json"
+    local hooks_file="${PROJECT_ROOT}/plugins/me/hooks/hooks.json"
     local found_hardcoded=0
 
     if [ -f "$hooks_file" ]; then

@@ -5,9 +5,9 @@ load helpers/bats_helper
 
 setup() {
   # Get command file paths
-  CANCEL_RALPH_CMD="${PROJECT_ROOT}/commands/cancel-ralph.md"
-  RALPH_INIT_CMD="${PROJECT_ROOT}/commands/ralph-init.md"
-  RALPH_LOOP_CMD="${PROJECT_ROOT}/commands/ralph-loop.md"
+  CANCEL_RALPH_CMD="${PROJECT_ROOT}/plugins/me/commands/cancel-ralph.md"
+  RALPH_INIT_CMD="${PROJECT_ROOT}/plugins/me/commands/ralph-init.md"
+  RALPH_LOOP_CMD="${PROJECT_ROOT}/plugins/me/commands/ralph-loop.md"
 
   # Verify command files exist
   if [[ ! -f "$CANCEL_RALPH_CMD" ]]; then
@@ -112,7 +112,7 @@ setup() {
 }
 
 # help.md command tests
-HELP_CMD="${PROJECT_ROOT}/commands/ralph-help.md"
+HELP_CMD="${PROJECT_ROOT}/plugins/me/commands/ralph-help.md"
 
 @test "help.md: exists" {
   [ -f "$HELP_CMD" ]
