@@ -1,10 +1,10 @@
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync, writeFileSync, readdirSync } from 'fs';
 import { resolve } from 'path';
 
 /**
- * Custom plugin to update version in plugin.json and marketplace.json.
+ * Custom plugin to update version in all plugin.json files and marketplace.json.
  *
- * Manages the single root-level plugin.json directly.
+ * Manages all plugin.json files under each plugins/[name]/.claude-plugin/plugin.json.
  */
 function updatePluginJsons() {
   return {
@@ -15,12 +15,18 @@ function updatePluginJsons() {
       }
 
       const lastVersion = lastRelease.version;
-      const pluginJsonPath = resolve(process.cwd(), '.claude-plugin/plugin.json');
-      const pluginJson = JSON.parse(readFileSync(pluginJsonPath, 'utf8'));
+      const pluginsDir = resolve(process.cwd(), 'plugins');
+      const pluginDirs = readdirSync(pluginsDir, { withFileTypes: true })
+        .filter((d) => d.isDirectory())
+        .map((d) => d.name);
 
-      if (pluginJson.version !== lastVersion) {
-        console.warn(`\n⚠️  plugin.json version mismatch: ${pluginJson.version} (expected ${lastVersion})`);
-        console.warn('This will be synchronized to the next version.\n');
+      for (const pluginName of pluginDirs) {
+        const pluginJsonPath = resolve(pluginsDir, pluginName, '.claude-plugin', 'plugin.json');
+        const pluginJson = JSON.parse(readFileSync(pluginJsonPath, 'utf8'));
+        if (pluginJson.version !== lastVersion) {
+          console.warn(`\n⚠️  plugins/${pluginName}/plugin.json version mismatch: ${pluginJson.version} (expected ${lastVersion})`);
+          console.warn('This will be synchronized to the next version.\n');
+        }
       }
 
       const marketplacePath = resolve(process.cwd(), '.claude-plugin/marketplace.json');
@@ -37,10 +43,17 @@ function updatePluginJsons() {
     },
 
     async prepare(_pluginContext, { nextRelease: { version } }) {
-      const pluginJsonPath = resolve(process.cwd(), '.claude-plugin/plugin.json');
-      const pluginJson = JSON.parse(readFileSync(pluginJsonPath, 'utf8'));
-      pluginJson.version = version;
-      writeFileSync(pluginJsonPath, JSON.stringify(pluginJson, null, 2) + '\n');
+      const pluginsDir = resolve(process.cwd(), 'plugins');
+      const pluginDirs = readdirSync(pluginsDir, { withFileTypes: true })
+        .filter((d) => d.isDirectory())
+        .map((d) => d.name);
+
+      for (const pluginName of pluginDirs) {
+        const pluginJsonPath = resolve(pluginsDir, pluginName, '.claude-plugin', 'plugin.json');
+        const pluginJson = JSON.parse(readFileSync(pluginJsonPath, 'utf8'));
+        pluginJson.version = version;
+        writeFileSync(pluginJsonPath, JSON.stringify(pluginJson, null, 2) + '\n');
+      }
 
       const marketplacePath = resolve(process.cwd(), '.claude-plugin/marketplace.json');
       const marketplace = JSON.parse(readFileSync(marketplacePath, 'utf8'));
@@ -73,7 +86,8 @@ const plugins = [
     '@semantic-release/git',
     {
       assets: [
-        '.claude-plugin/plugin.json',
+        'plugins/me/.claude-plugin/plugin.json',
+        'plugins/jira/.claude-plugin/plugin.json',
         '.claude-plugin/marketplace.json',
       ],
       message: 'chore(release): ${nextRelease.version}\n\n${nextRelease.notes}',
