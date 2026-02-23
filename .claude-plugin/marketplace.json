@@ -37,6 +37,79 @@
         "project-management"
       ],
       "version": "5.32.4"
+    },
+    {
+      "name": "lst-gopls",
+      "description": "Go language server plugin for Claude Code",
+      "source": "./plugins/lst-gopls",
+      "category": "development",
+      "tags": [
+        "lsp",
+        "go",
+        "gopls"
+      ],
+      "version": "5.32.4"
+    },
+    {
+      "name": "lst-typescript",
+      "description": "TypeScript language server plugin for Claude Code",
+      "source": "./plugins/lst-typescript",
+      "category": "development",
+      "tags": [
+        "lsp",
+        "typescript",
+        "javascript"
+      ],
+      "version": "5.32.4"
+    },
+    {
+      "name": "lst-csharp",
+      "description": "C# language server plugin for Claude Code",
+      "source": "./plugins/lst-csharp",
+      "category": "development",
+      "tags": [
+        "lsp",
+        "csharp",
+        "dotnet"
+      ],
+      "version": "5.32.4"
+    },
+    {
+      "name": "lst-clangd",
+      "description": "C/C++ language server plugin for Claude Code",
+      "source": "./plugins/lst-clangd",
+      "category": "development",
+      "tags": [
+        "lsp",
+        "c",
+        "cpp",
+        "clangd"
+      ],
+      "version": "5.32.4"
+    },
+    {
+      "name": "lst-lua",
+      "description": "Lua language server plugin for Claude Code",
+      "source": "./plugins/lst-lua",
+      "category": "development",
+      "tags": [
+        "lsp",
+        "lua",
+        "lua-language-server"
+      ],
+      "version": "5.32.4"
+    },
+    {
+      "name": "lst-pyright",
+      "description": "Python language server plugin for Claude Code",
+      "source": "./plugins/lst-pyright",
+      "category": "development",
+      "tags": [
+        "lsp",
+        "python",
+        "pyright"
+      ],
+      "version": "5.32.4"
     }
   ]
 }

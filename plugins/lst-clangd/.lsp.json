@@ -1,0 +1,15 @@
+{
+  "cpp": {
+    "command": "clangd",
+    "args": [
+      "--stdio"
+    ],
+    "extensionToLanguage": {
+      ".c": "c",
+      ".cc": "cpp",
+      ".cpp": "cpp",
+      ".h": "c",
+      ".hpp": "cpp"
+    }
+  }
+}
