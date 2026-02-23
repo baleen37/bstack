@@ -4,7 +4,7 @@
 load '../helpers/bats_helper'
 
 setup() {
-  export SKILL_MD="${BATS_TEST_DIRNAME}/../../skills/create-pr/SKILL.md"
+  export SKILL_MD="${BATS_TEST_DIRNAME}/../../plugins/me/skills/create-pr/SKILL.md"
 
   if [[ ! -f "$SKILL_MD" ]]; then
     skip "SKILL.md not found"
