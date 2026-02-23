@@ -57,6 +57,34 @@ Parse result from:
 - rows: `result.data_array` — **absent (not empty list) when zero rows returned**; always use `.get('data_array', [])`
 - error: `status.error.message` when `status.state == "FAILED"`
 
+## Token Efficiency Rules
+
+`--output text|json` CLI flags have **no effect** on `api post` — always returns JSON. Use jq post-processing.
+
+TSV is the most token-efficient output format (~90% smaller than raw JSON).
+
+### Default: TSV (best for LLM readability)
+
+```bash
+databricks api post /api/2.0/sql/statements --profile <profile> \
+  --json '{"statement":"<SQL>","warehouse_id":"<warehouse_id>","wait_timeout":"30s"}' \
+  | jq -r '([.manifest.schema.columns[].name] | @tsv), (.result.data_array[:10][] | @tsv)'
+```
+
+Output looks like:
+
+```text
+source          cnt
+products.image  634520
+products.text   282054
+```
+
+### Rules
+
+- Always slice rows: `[:10]` default, never load full array — row slicing is the biggest savings for large result sets
+- Never use raw JSON — `statement_id`, `chunk_index`, `type_text` metadata wastes 80%+ of tokens
+- For wide tables: `DESCRIBE TABLE` first, then `SELECT col1, col2` instead of `SELECT *`
+
 ## Profile Selection
 
 Read `~/.databrickscfg` (INI format). Default profile is `DEFAULT` (case-insensitive).
@@ -71,7 +99,7 @@ grep '^\[' ~/.databrickscfg | tr -d '[]'
 
 ## Limit Rules
 
-- `SELECT *` default limit: `10`
+- `SELECT *` default limit: `10` (matches row slice in jq output)
 - Maximum limit: `1000`
 - If user requests > 1000, explain the cap and ask whether to proceed with `1000`
 
@@ -100,11 +128,13 @@ for w in data.get('warehouses', []):
 
 # 2. DESCRIBE TABLE
 databricks api post /api/2.0/sql/statements --profile default \
-  --json '{"statement":"DESCRIBE TABLE `main`.`sales`.`orders`","warehouse_id":"wh-abc","wait_timeout":"30s"}'
+  --json '{"statement":"DESCRIBE TABLE `main`.`sales`.`orders`","warehouse_id":"wh-abc","wait_timeout":"30s"}' \
+  | jq -r '([.manifest.schema.columns[].name] | @tsv), (.result.data_array[:10][] | @tsv)'
 
 # 3. Preview
 databricks api post /api/2.0/sql/statements --profile default \
-  --json '{"statement":"SELECT * FROM `main`.`sales`.`orders` LIMIT 10","warehouse_id":"wh-abc","wait_timeout":"30s"}'
+  --json '{"statement":"SELECT * FROM `main`.`sales`.`orders` LIMIT 10","warehouse_id":"wh-abc","wait_timeout":"30s"}' \
+  | jq -r '([.manifest.schema.columns[].name] | @tsv), (.result.data_array[:10][] | @tsv)'
 ```
 
 Return a concise summary of columns, key metadata, and sample rows.
