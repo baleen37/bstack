@@ -1,0 +1,24 @@
+{
+  "name": "jira",
+  "version": "5.31.0",
+  "description": "Atlassian Jira integration skills for Claude Code - triage issues, capture tasks from meeting notes, generate status reports, and manage backlogs",
+  "author": {
+    "name": "baleen37",
+    "email": "git@baleen.me"
+  },
+  "license": "MIT",
+  "keywords": [
+    "jira",
+    "atlassian",
+    "confluence",
+    "project-management",
+    "workflow"
+  ],
+  "skills": [
+    { "name": "triage-issue", "path": "skills/triage-issue/SKILL.md" },
+    { "name": "capture-tasks-from-meeting-notes", "path": "skills/capture-tasks-from-meeting-notes/SKILL.md" },
+    { "name": "generate-status-report", "path": "skills/generate-status-report/SKILL.md" },
+    { "name": "search-company-knowledge", "path": "skills/search-company-knowledge/SKILL.md" },
+    { "name": "spec-to-backlog", "path": "skills/spec-to-backlog/SKILL.md" }
+  ]
+}
