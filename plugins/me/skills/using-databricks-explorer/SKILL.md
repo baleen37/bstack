@@ -30,14 +30,14 @@ Do not use for write operations (`INSERT`, `UPDATE`, `DELETE`, `CREATE`, `DROP`)
 | *(no target)* | `SHOW CATALOGS` |
 | `<catalog>` | `SHOW SCHEMAS IN \`catalog\`` |
 | `<catalog>.<schema>` | `SHOW TABLES IN \`catalog\`.\`schema\`` |
-| `<catalog>.<schema>.<table>` | `DESCRIBE TABLE c.s.t` → `DESCRIBE DETAIL c.s.t` → `SELECT * FROM c.s.t LIMIT 10` |
+| `<catalog>.<schema>.<table>` | `DESCRIBE TABLE c.s.t` → `SELECT * FROM c.s.t LIMIT 10` |
 
 Always backtick-quote identifiers.
 
 ## Warehouse Resolution
 
 1. If profile has `warehouse_id` → use it
-2. Otherwise: `databricks warehouses list --output json --profile <name>` → pick first `RUNNING` warehouse
+2. Otherwise: `databricks api get /api/2.0/sql/warehouses --profile <name>` → pick first `RUNNING` warehouse
 
 ## Executing SQL
 
@@ -54,12 +54,12 @@ databricks api post /api/2.0/sql/statements \
 Parse result from:
 
 - columns: `manifest.schema.columns[].name`, `manifest.schema.columns[].type_name`
-- rows: `result.data_array`
+- rows: `result.data_array` — **absent (not empty list) when zero rows returned**; always use `.get('data_array', [])`
 - error: `status.error.message` when `status.state == "FAILED"`
 
 ## Profile Selection
 
-Read `~/.databrickscfg` (INI format). Default profile is `default` (lowercase).
+Read `~/.databrickscfg` (INI format). Default profile is `DEFAULT` (case-insensitive).
 
 If user specifies a profile (e.g. "use profile alpha"), pass `--profile alpha` to all commands.
 
@@ -81,6 +81,7 @@ grep '^\[' ~/.databrickscfg | tr -d '[]'
 - Forgetting to backtick-quote identifiers with dots or special characters
 - Using `LIMIT > 1000`
 - Attempting write operations
+- Accessing `result.data_array` directly — key is absent when zero rows returned, not an empty list
 
 ## Example
 
@@ -88,17 +89,20 @@ User: `/me:databricks.explore main.sales.orders`
 
 ```bash
 # 1. Resolve warehouse
-databricks warehouses list --output json --profile default
+databricks api get /api/2.0/sql/warehouses --profile default | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for w in data.get('warehouses', []):
+    if w['state'] == 'RUNNING':
+        print(w['id'])
+        break
+"
 
 # 2. DESCRIBE TABLE
 databricks api post /api/2.0/sql/statements --profile default \
   --json '{"statement":"DESCRIBE TABLE `main`.`sales`.`orders`","warehouse_id":"wh-abc","wait_timeout":"30s"}'
 
-# 3. DESCRIBE DETAIL
-databricks api post /api/2.0/sql/statements --profile default \
-  --json '{"statement":"DESCRIBE DETAIL `main`.`sales`.`orders`","warehouse_id":"wh-abc","wait_timeout":"30s"}'
-
-# 4. Preview
+# 3. Preview
 databricks api post /api/2.0/sql/statements --profile default \
   --json '{"statement":"SELECT * FROM `main`.`sales`.`orders` LIMIT 10","warehouse_id":"wh-abc","wait_timeout":"30s"}'
 ```
