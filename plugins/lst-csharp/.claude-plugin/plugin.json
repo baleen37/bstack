@@ -1,0 +1,16 @@
+{
+  "name": "lst-csharp",
+  "version": "5.32.3",
+  "description": "C# language server plugin for Claude Code",
+  "author": {
+    "name": "baleen37",
+    "email": "git@baleen.me"
+  },
+  "license": "MIT",
+  "keywords": [
+    "lsp",
+    "csharp",
+    "dotnet"
+  ],
+  "lspServers": "./.lsp.json"
+}
