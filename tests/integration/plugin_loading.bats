@@ -5,14 +5,14 @@
 load ../helpers/bats_helper
 
 @test "main plugin.json file is valid" {
-    local plugin_json="${PROJECT_ROOT}/.claude-plugin/plugin.json"
+    local plugin_json="${PROJECT_ROOT}/plugins/me/.claude-plugin/plugin.json"
 
     assert_file_exists "$plugin_json" "Main plugin.json should exist"
     validate_json "$plugin_json"
 }
 
 @test "plugin name is unique and valid" {
-    local plugin_json="${PROJECT_ROOT}/.claude-plugin/plugin.json"
+    local plugin_json="${PROJECT_ROOT}/plugins/me/.claude-plugin/plugin.json"
 
     local name
     name=$(json_get "$plugin_json" "name")
@@ -32,7 +32,7 @@ load ../helpers/bats_helper
 }
 
 @test "no hardcoded absolute paths in plugin manifest" {
-    local plugin_json="${PROJECT_ROOT}/.claude-plugin/plugin.json"
+    local plugin_json="${PROJECT_ROOT}/plugins/me/.claude-plugin/plugin.json"
 
     if [ -f "$plugin_json" ]; then
         # Check for absolute paths (not starting with ${ or /Users that's not ${CLAUDE_PLUGIN_ROOT})
@@ -79,7 +79,7 @@ load ../helpers/bats_helper
 @test "skill files follow naming convention" {
     local invalid_count=0
 
-    for skill_file in "${PROJECT_ROOT}"/skills/*/SKILL.md; do
+    for skill_file in "${PROJECT_ROOT}"/plugins/*/skills/*/SKILL.md; do
         if [ -f "$skill_file" ]; then
             # Check for SKILL.md in skill directory
             local skill_dir
