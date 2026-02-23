@@ -10,7 +10,7 @@
     {
       "name": "me",
       "description": "AI coding assistant toolkit - LSP servers, git workflow protection, session handoff, context management, and development automation",
-      "source": "./",
+      "source": "./plugins/me",
       "category": "development",
       "tags": [
         "lsp",
@@ -22,6 +22,19 @@
         "handoff",
         "memory",
         "context"
+      ],
+      "version": "5.32.0"
+    },
+    {
+      "name": "jira",
+      "description": "Atlassian Jira integration skills for Claude Code",
+      "source": "./plugins/jira",
+      "category": "development",
+      "tags": [
+        "jira",
+        "atlassian",
+        "confluence",
+        "project-management"
       ],
       "version": "5.32.0"
     }
