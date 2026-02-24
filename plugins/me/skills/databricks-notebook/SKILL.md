@@ -57,10 +57,19 @@ echo "CLUSTER_ID: ${CLUSTER_ID}"
 
 If no RUNNING cluster is found, ask the user to start one from the Databricks UI.
 
+**IAM warning:** UI (all-purpose) clusters may not have an AWS IAM instance profile
+attached. If your script calls AWS services (OpenSearch, S3, etc.) via `boto3`,
+`boto3.Session().get_credentials()` will return `None` and fail with
+`AttributeError: 'NoneType' object has no attribute 'access_key'`.
+In that case, ask the user whether a job cluster with the correct instance profile
+should be used instead (see Error Handling Reference).
+
 Find the whl path from the bundle (after deploy, whl lands under `file_path/dist/`):
 
 ```bash
-FILE_PATH=$(databricks bundle validate --target <target> --profile <profile> --output json \
+# IMPORTANT: pipe stderr to /dev/null — bundle validate mixes warnings into stdout
+# before the JSON, which breaks json.load()
+FILE_PATH=$(databricks bundle validate --target <target> --profile <profile> --output json 2>/dev/null \
   | python3 -c "import json,sys; print(json.load(sys.stdin)['workspace']['file_path'])")
 
 WHL_PATH=$(databricks workspace list "${FILE_PATH}/dist" --profile <profile> --output json \
@@ -95,19 +104,20 @@ After deploy, re-run the `WHL_PATH` command from Step 1 to capture the path.
 
 ## Step 3: Upload Local File as Notebook
 
-Upload to a `tmp/` directory under the current user's personal workspace home.
-The home directory (`/Workspace/Users/{username}/`) is guaranteed to exist for every
-authenticated user. Subdirectories under it may not exist, so always call `mkdirs`
-first. `mkdirs` is idempotent — it succeeds even if the directory already exists.
+The `userName` field from `current-user me` is the full email address
+(e.g. `jito.hello@kakaostyle.com`), not a short username. Use it verbatim.
+
+Notebooks are uploaded under `tmp/` inside the user's home directory.
+`mkdirs` is safe to call — it is idempotent and the home dir is guaranteed to exist.
 
 ```bash
-TIMESTAMP=$(date +%s)
+DATESTAMP=$(date +%Y%m%d-%H%M%S)
 USERNAME=$(databricks current-user me --profile <profile> --output json \
   | python3 -c "import json,sys; print(json.load(sys.stdin)['userName'])")
-NOTEBOOK_DIR="/Workspace/Users/${USERNAME}/tmp"
-NOTEBOOK_PATH="${NOTEBOOK_DIR}/claude-nb-${TIMESTAMP}"
+NOTEBOOK_PATH="/Workspace/Users/${USERNAME}/tmp/${DATESTAMP}"
+echo "NOTEBOOK_PATH: ${NOTEBOOK_PATH}"
 
-databricks workspace mkdirs "${NOTEBOOK_DIR}" --profile <profile>
+databricks workspace mkdirs "/Workspace/Users/${USERNAME}/tmp" --profile <profile>
 
 databricks workspace import "${NOTEBOOK_PATH}" \
   --profile <profile> \
@@ -251,10 +261,11 @@ databricks workspace delete "${NOTEBOOK_PATH}" --profile <profile>
 | `ModuleNotFoundError` | whl not deployed or wrong path | Re-run `bundle deploy`, re-capture `WHL_PATH` |
 | No RUNNING cluster found | Cluster stopped | Start cluster from Databricks UI |
 | `bundle deploy` git branch error | Local branch ≠ bundle target branch | Add `--force` flag |
+| `bundle validate` JSON parse error | Warning text printed to stdout before the JSON | Add `2>/dev/null` to suppress warnings |
 | `notebook_output.result` empty | No `dbutils.notebook.exit()` call | Add exit call to the file |
 | Run not visible in Jobs UI | Expected — one-time submit runs are ephemeral | Use `jobs get-run` to check |
-| `workspace import` fails (any path error) | Parent dir missing or permission denied | Verify `mkdirs` ran successfully; check username was resolved correctly |
-| `current-user me` returns unexpected format | Non-standard SSO username with special chars | URL-encode or sanitize `USERNAME` before using in path |
+| `workspace import` "parent folder does not exist" | `userName` is email format but short name was used, or `mkdirs` was skipped | Use `current-user me` `userName` field verbatim; ensure `mkdirs` ran before `import` |
+| `AttributeError: 'NoneType' object has no attribute 'access_key'` | UI cluster has no IAM instance profile; `boto3` can't get AWS credentials | Use a job cluster that has the correct instance profile attached, or trigger the actual job task directly |
 
 ## Relationship to Other Skills
 
