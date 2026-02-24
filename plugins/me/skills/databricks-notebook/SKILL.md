@@ -1,6 +1,6 @@
 ---
 name: databricks-notebook
-description: Use when a user wants to run, test, or debug a local Python/PySpark file on Databricks without waiting for a full job run. Requires a databricks.yml (DAB project). Triggered by phrases like "run this file on Databricks", "debug on cluster", "test this script", or "run as notebook".
+description: Use when a user wants to run, test, or debug a local Python/PySpark file on Databricks without waiting for a full job run. Optionally uses a databricks.yml (DAB project) for whl dependencies. Triggered by phrases like "run this file on Databricks", "debug on cluster", "test this script", or "run as notebook".
 ---
 
 # Databricks Notebook
@@ -12,7 +12,9 @@ temporary notebook and submitting a one-time run via `databricks jobs submit`.
 Service code dependencies (`from search_data.xxx import ...`) are handled by
 deploying the project whl via `bundle deploy` first.
 
-**Requires a DAB project** (`databricks.yml` in the current directory).
+**DAB project** (`databricks.yml`) is only required when the script depends on a
+project whl. For standalone scripts with no project imports, skip Steps 1 and 2
+and omit the `libraries` field in Step 4.
 
 **Do not use** `databricks-search` for this — that skill runs SQL via the Statements
 API. This skill executes Python/PySpark code on a real cluster.
@@ -20,16 +22,16 @@ API. This skill executes Python/PySpark code on a real cluster.
 ## Prerequisites
 
 - `databricks` CLI installed (`brew install databricks`)
-- `databricks.yml` present in the current directory (DAB project)
 - `~/.databrickscfg` configured with the target profile
 - An all-purpose cluster in RUNNING state (reused via `existing_cluster_id`)
+- `databricks.yml` present (DAB project) — only if script imports from a project whl
 
 ## Workflow
 
 ```
-1. RESOLVE  — get cluster ID and whl path from the bundle
-2. DEPLOY   — bundle deploy to build and upload the whl
-3. UPLOAD   — import local .py file to workspace as a notebook
+1. RESOLVE  — get cluster ID and whl path from the bundle (skip if no DAB project)
+2. DEPLOY   — bundle deploy to build and upload the whl (skip if no DAB project)
+3. UPLOAD   — get current user, ensure tmp dir exists, import local .py as notebook
 4. SUBMIT   — one-time run via jobs submit
 5. POLL     — wait for TERMINATED or SKIPPED state
 6. OUTPUT   — fetch and display run output or error trace
@@ -93,13 +95,19 @@ After deploy, re-run the `WHL_PATH` command from Step 1 to capture the path.
 
 ## Step 3: Upload Local File as Notebook
 
-Upload the local `.py` file to a timestamped path in the workspace:
+Upload to a `tmp/` directory under the current user's personal workspace home.
+The home directory (`/Workspace/Users/{username}/`) is guaranteed to exist for every
+authenticated user. Subdirectories under it may not exist, so always call `mkdirs`
+first. `mkdirs` is idempotent — it succeeds even if the directory already exists.
 
 ```bash
 TIMESTAMP=$(date +%s)
-ROOT_PATH=$(databricks bundle validate --target <target> --profile <profile> --output json \
-  | python3 -c "import json,sys; print(json.load(sys.stdin)['workspace']['root_path'])")
-NOTEBOOK_PATH="${ROOT_PATH}/tmp/claude-nb-${TIMESTAMP}"
+USERNAME=$(databricks current-user me --profile <profile> --output json \
+  | python3 -c "import json,sys; print(json.load(sys.stdin)['userName'])")
+NOTEBOOK_DIR="/Workspace/Users/${USERNAME}/tmp"
+NOTEBOOK_PATH="${NOTEBOOK_DIR}/claude-nb-${TIMESTAMP}"
+
+databricks workspace mkdirs "${NOTEBOOK_DIR}" --profile <profile>
 
 databricks workspace import "${NOTEBOOK_PATH}" \
   --profile <profile> \
@@ -109,7 +117,13 @@ databricks workspace import "${NOTEBOOK_PATH}" \
   --overwrite
 ```
 
-**Rules:**
+**Why this path:**
+- Personal home always exists — no dependency on bundle structure or shared paths.
+- `tmp/` subdirectory keeps temp notebooks out of the user's home root.
+- `mkdirs` before `import` eliminates the "parent folder does not exist" error unconditionally.
+- Works with or without a DAB project.
+
+**Notebook rules:**
 - `spark` is already available in notebook context — do not add `SparkSession.builder`.
 - `notebook_output.result` only captures `dbutils.notebook.exit()` — `print()` is not captured on success.
 - If the file has no `dbutils.notebook.exit()` call, append a cell at the end:
@@ -121,12 +135,18 @@ dbutils.notebook.exit("done")
 
 ## Step 4: Submit One-Time Run
 
-Pass variables via environment to avoid shell quoting issues:
+Pass variables via environment to avoid shell quoting issues. Set `WHL_PATH` to an
+empty string if there is no whl dependency (no DAB project):
 
 ```bash
+# WHL_PATH is empty string if not using a project whl
+WHL_PATH="${WHL_PATH:-}"
+
 PAYLOAD=$(CLUSTER_ID="${CLUSTER_ID}" NOTEBOOK_PATH="${NOTEBOOK_PATH}" WHL_PATH="${WHL_PATH}" \
   python3 - <<'EOF'
 import json, os
+
+whl = os.environ.get("WHL_PATH", "").strip()
 
 task = {
     "task_key": "main",
@@ -135,8 +155,9 @@ task = {
         "source": "WORKSPACE",
     },
     "existing_cluster_id": os.environ["CLUSTER_ID"],
-    "libraries": [{"whl": os.environ["WHL_PATH"]}],
 }
+if whl:
+    task["libraries"] = [{"whl": whl}]
 
 print(json.dumps({"run_name": "claude-nb-run", "tasks": [task]}))
 EOF
@@ -156,6 +177,7 @@ echo "Run ID: ${RUN_ID}"
 - `tasks` array required by Jobs API v2.1, even for single-task runs.
 - `"source": "WORKSPACE"` required — omitting it causes Repos path resolution errors.
 - `existing_cluster_id` reuses the running cluster — no cluster startup wait.
+- `libraries` is omitted entirely when `WHL_PATH` is empty — an empty whl entry causes an API error.
 
 ## Step 5: Poll for Completion
 
@@ -234,6 +256,8 @@ databricks workspace delete "${NOTEBOOK_PATH}" --profile <profile>
 | `bundle deploy` git branch error | Local branch ≠ bundle target branch | Add `--force` flag |
 | `notebook_output.result` empty | No `dbutils.notebook.exit()` call | Add exit call to the file |
 | Run not visible in Jobs UI | Expected — one-time submit runs are ephemeral | Use `jobs get-run` to check |
+| `workspace import` fails (any path error) | Parent dir missing or permission denied | Verify `mkdirs` ran successfully; check username was resolved correctly |
+| `current-user me` returns unexpected format | Non-standard SSO username with special chars | URL-encode or sanitize `USERNAME` before using in path |
 
 ## Relationship to Other Skills
 
