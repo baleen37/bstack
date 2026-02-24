@@ -34,7 +34,7 @@ setup() {
 
   cd "$TEMP_DIR"
   # gh will fail in non-repo, script should error appropriately
-  run "$SCRIPT"
+  run env -u GIT_DIR -u GIT_WORK_TREE "$SCRIPT"
   [ "$status" -eq 2 ]
   [[ "$output" =~ "ERROR: Cannot determine default branch" || "$output" =~ "Not in a git repository" ]]
 
@@ -47,7 +47,7 @@ setup() {
   TEMP_DIR=$(mktemp -d)
 
   cd "$TEMP_DIR"
-  run "$SCRIPT"
+  run env -u GIT_DIR -u GIT_WORK_TREE "$SCRIPT"
   [ "$status" -eq 2 ]
   [[ "$output" =~ "Usage:" || "$output" =~ "ERROR" ]]
 
@@ -79,7 +79,7 @@ setup() {
   TEMP_DIR=$(mktemp -d)
 
   cd "$TEMP_DIR"
-  run "$SCRIPT" main
+  run env -u GIT_DIR -u GIT_WORK_TREE "$SCRIPT" main
 
   [ "$status" -eq 2 ]
   [[ "$output" =~ "Not in a git repository" ]]
