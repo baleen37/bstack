@@ -1,9 +1,9 @@
 ---
-name: using-databricks-explorer
+name: databricks-search
 description: Use when a user asks to browse Databricks Unity Catalog, list schemas or tables, or inspect table columns and sample data.
 ---
 
-# Using Databricks Explorer
+# Databricks Search
 
 ## Overview
 
