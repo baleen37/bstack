@@ -1,7 +1,7 @@
 {
-  "name": "lst-csharp",
+  "name": "lsp-lua",
   "version": "5.32.3",
-  "description": "C# language server plugin for Claude Code",
+  "description": "Lua language server plugin for Claude Code",
   "author": {
     "name": "baleen37",
     "email": "git@baleen.me"
@@ -9,8 +9,8 @@
   "license": "MIT",
   "keywords": [
     "lsp",
-    "csharp",
-    "dotnet"
+    "lua",
+    "lua-language-server"
   ],
   "lspServers": "./.lsp.json"
 }
