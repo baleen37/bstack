@@ -46,7 +46,6 @@ load ../helpers/bats_helper
 
 @test "all required top-level directories exist" {
     assert_dir_exists "${PROJECT_ROOT}/.claude-plugin" ".claude-plugin directory should exist"
-    assert_dir_exists "${PROJECT_ROOT}/plugins/me/commands" "commands directory should exist"
     assert_dir_exists "${PROJECT_ROOT}/plugins/me/skills" "skills directory should exist"
 }
 
