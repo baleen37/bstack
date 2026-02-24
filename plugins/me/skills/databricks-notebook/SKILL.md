@@ -37,24 +37,30 @@ API. This skill executes Python/PySpark code on a real cluster.
 
 ## Step 1: Validate Bundle
 
-Use `bundle validate` to resolve all variables without deploying. Extract cluster
-config from the JSON output:
+Extract cluster config and artifact path from the bundle. Run once before deploying:
 
 ```bash
-databricks bundle validate --target <target> --output json | python3 -c "
+VALIDATE=$(databricks bundle validate --target <target> --output json)
+
+# Cluster config — from first job's first cluster definition
+SPARK_VER=$(echo "$VALIDATE" | python3 -c "
 import json, sys
 b = json.load(sys.stdin)
+j = next(iter(b['resources']['jobs'].values()))
+print(j['job_clusters'][0]['new_cluster']['spark_version'])
+")
+NODE_TYPE=$(echo "$VALIDATE" | python3 -c "
+import json, sys
+b = json.load(sys.stdin)
+j = next(iter(b['resources']['jobs'].values()))
+print(j['job_clusters'][0]['new_cluster']['node_type_id'])
+")
 
-# Find first job's cluster definition
-resources = b.get('resources', {})
-jobs = resources.get('jobs', {})
-first_job = next(iter(jobs.values()), {})
-clusters = first_job.get('job_clusters', [])
-cluster = clusters[0].get('new_cluster', {}) if clusters else {}
-
-print('spark_version:', cluster.get('spark_version', ''))
-print('node_type_id:', cluster.get('node_type_id', ''))
-"
+# Artifact root path (whl will be placed here after deploy)
+ARTIFACT_PATH=$(echo "$VALIDATE" | python3 -c "
+import json, sys
+print(json.load(sys.stdin)['workspace']['artifact_path'])
+")
 ```
 
 If `spark_version` or `node_type_id` is empty, the bundle may use a shared cluster
@@ -62,35 +68,21 @@ policy — check the job YAML directly or ask the user.
 
 ## Step 2: Deploy Bundle
 
-Build the whl and upload it to the workspace:
+Build the whl and upload it to `ARTIFACT_PATH`:
 
 ```bash
 databricks bundle deploy --target <target>
 ```
 
-After deploy, the whl is available under the workspace artifacts path. Capture it:
+After deploy, find the whl under the artifact path:
 
 ```bash
-WHL_PATH=$(databricks bundle validate --target <target> --output json | python3 -c "
-import json, sys
-b = json.load(sys.stdin)
-ws_root = b.get('workspace', {}).get('artifact_path', '')
-artifacts = b.get('artifacts', {})
-for art in artifacts.values():
-    files = art.get('files', [])
-    for f in files:
-        remote = f.get('remote_path', '')
-        if remote.endswith('.whl'):
-            print(remote)
-            sys.exit(0)
-# fallback: print artifact root for user to inspect
-print(ws_root)
-")
+WHL_PATH=$(databricks fs ls "${ARTIFACT_PATH}" --profile <profile> \
+  | grep '\.whl$' | head -1 | awk '{print $NF}')
 echo "WHL_PATH: ${WHL_PATH}"
 ```
 
-If the path printed is a directory (not a `.whl` file), run `bundle deploy` first
-and re-run the above — artifact paths are only resolved after deploy.
+If `WHL_PATH` is empty, the bundle may not define a whl artifact — check `databricks.yml`.
 
 ## Step 3: Upload Local File as Notebook
 
