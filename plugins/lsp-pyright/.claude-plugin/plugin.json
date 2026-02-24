@@ -1,7 +1,7 @@
 {
-  "name": "lst-lua",
+  "name": "lsp-pyright",
   "version": "5.32.3",
-  "description": "Lua language server plugin for Claude Code",
+  "description": "Python language server plugin for Claude Code",
   "author": {
     "name": "baleen37",
     "email": "git@baleen.me"
@@ -9,8 +9,8 @@
   "license": "MIT",
   "keywords": [
     "lsp",
-    "lua",
-    "lua-language-server"
+    "python",
+    "pyright"
   ],
   "lspServers": "./.lsp.json"
 }

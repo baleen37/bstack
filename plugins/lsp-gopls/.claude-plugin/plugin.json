@@ -1,5 +1,5 @@
 {
-  "name": "lst-gopls",
+  "name": "lsp-gopls",
   "version": "5.32.3",
   "description": "Go language server plugin for Claude Code",
   "author": {
