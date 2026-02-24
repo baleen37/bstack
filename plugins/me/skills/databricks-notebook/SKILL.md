@@ -117,12 +117,6 @@ databricks workspace import "${NOTEBOOK_PATH}" \
   --overwrite
 ```
 
-**Why this path:**
-- Personal home always exists — no dependency on bundle structure or shared paths.
-- `tmp/` subdirectory keeps temp notebooks out of the user's home root.
-- `mkdirs` before `import` eliminates the "parent folder does not exist" error unconditionally.
-- Works with or without a DAB project.
-
 **Notebook rules:**
 - `spark` is already available in notebook context — do not add `SparkSession.builder`.
 - `notebook_output.result` only captures `dbutils.notebook.exit()` — `print()` is not captured on success.
