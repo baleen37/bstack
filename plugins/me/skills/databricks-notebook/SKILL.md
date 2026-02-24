@@ -7,12 +7,12 @@ description: Use when a user wants to run, test, or debug a local Python/PySpark
 
 ## Overview
 
-Run a local `.py` file on a Databricks job cluster by uploading it as a temporary
-notebook and submitting a one-time run via `databricks jobs submit`. Service code
-dependencies are handled by deploying the project whl via `bundle deploy` first.
+Run a local `.py` file on a Databricks all-purpose cluster by uploading it as a
+temporary notebook and submitting a one-time run via `databricks jobs submit`.
+Service code dependencies (`from search_data.xxx import ...`) are handled by
+deploying the project whl via `bundle deploy` first.
 
-**Requires a DAB project** (`databricks.yml` in the current directory). All cluster
-config and whl paths are read from the bundle — never hardcoded.
+**Requires a DAB project** (`databricks.yml` in the current directory).
 
 **Do not use** `databricks-search` for this — that skill runs SQL via the Statements
 API. This skill executes Python/PySpark code on a real cluster.
@@ -22,77 +22,85 @@ API. This skill executes Python/PySpark code on a real cluster.
 - `databricks` CLI installed (`brew install databricks`)
 - `databricks.yml` present in the current directory (DAB project)
 - `~/.databrickscfg` configured with the target profile
+- An all-purpose cluster in RUNNING state (reused via `existing_cluster_id`)
 
 ## Workflow
 
 ```
-1. VALIDATE — bundle validate to extract cluster config and whl path
-2. DEPLOY   — bundle deploy to build and upload the whl to workspace
+1. RESOLVE  — get cluster ID and whl path from the bundle
+2. DEPLOY   — bundle deploy to build and upload the whl
 3. UPLOAD   — import local .py file to workspace as a notebook
-4. SUBMIT   — one-time run via jobs submit (cluster config + whl from step 1-2)
+4. SUBMIT   — one-time run via jobs submit
 5. POLL     — wait for TERMINATED or SKIPPED state
 6. OUTPUT   — fetch and display run output or error trace
 7. CLEAN    — delete temporary notebook from workspace
 ```
 
-## Step 1: Validate Bundle
+## Step 1: Resolve Cluster ID and whl Path
 
-Extract cluster config and artifact path from the bundle. Run once before deploying:
+Find the RUNNING all-purpose cluster:
 
 ```bash
-VALIDATE=$(databricks bundle validate --target <target> --output json)
-
-# Cluster config — from first job's first cluster definition
-SPARK_VER=$(echo "$VALIDATE" | python3 -c "
+CLUSTER_ID=$(databricks clusters list --profile <profile> --output json \
+  | python3 -c "
 import json, sys
-b = json.load(sys.stdin)
-j = next(iter(b['resources']['jobs'].values()))
-print(j['job_clusters'][0]['new_cluster']['spark_version'])
+clusters = json.load(sys.stdin)
+for c in clusters:
+    if c.get('cluster_source') == 'UI' and c.get('state') == 'RUNNING':
+        print(c['cluster_id'])
+        break
 ")
-NODE_TYPE=$(echo "$VALIDATE" | python3 -c "
-import json, sys
-b = json.load(sys.stdin)
-j = next(iter(b['resources']['jobs'].values()))
-print(j['job_clusters'][0]['new_cluster']['node_type_id'])
-")
-
-# Artifact root path (whl will be placed here after deploy)
-ARTIFACT_PATH=$(echo "$VALIDATE" | python3 -c "
-import json, sys
-print(json.load(sys.stdin)['workspace']['artifact_path'])
-")
+echo "CLUSTER_ID: ${CLUSTER_ID}"
 ```
 
-If `spark_version` or `node_type_id` is empty, the bundle may use a shared cluster
-policy — check the job YAML directly or ask the user.
+If no RUNNING cluster is found, ask the user to start one from the Databricks UI.
 
-## Step 2: Deploy Bundle
-
-Build the whl and upload it to `ARTIFACT_PATH`:
+Find the whl path from the bundle (after deploy, whl lands under `file_path/dist/`):
 
 ```bash
-databricks bundle deploy --target <target>
-```
+FILE_PATH=$(databricks bundle validate --target <target> --profile <profile> --output json \
+  | python3 -c "import json,sys; print(json.load(sys.stdin)['workspace']['file_path'])")
 
-After deploy, find the whl under the artifact path:
-
-```bash
-WHL_PATH=$(databricks fs ls "${ARTIFACT_PATH}" --profile <profile> \
-  | grep '\.whl$' | head -1 | awk '{print $NF}')
+WHL_PATH=$(databricks workspace list "${FILE_PATH}/dist" --profile <profile> --output json \
+  | python3 -c "
+import json, sys
+files = json.load(sys.stdin)
+for f in files:
+    if f['path'].endswith('.whl'):
+        print(f['path'])
+        break
+")
 echo "WHL_PATH: ${WHL_PATH}"
 ```
 
-If `WHL_PATH` is empty, the bundle may not define a whl artifact — check `databricks.yml`.
+`WHL_PATH` will be empty before the first `bundle deploy` — that's expected. Proceed to Step 2.
+
+## Step 2: Deploy Bundle
+
+Build the whl and upload it to the workspace:
+
+```bash
+databricks bundle deploy --target <target> --profile <profile>
+```
+
+If the deploy fails due to a git branch mismatch, add `--force`:
+
+```bash
+databricks bundle deploy --target <target> --profile <profile> --force
+```
+
+After deploy, re-run the `WHL_PATH` command from Step 1 to capture the path.
 
 ## Step 3: Upload Local File as Notebook
 
-Upload the local `.py` file to a timestamped path under `/tmp/` in the workspace:
+Upload the local `.py` file to a timestamped path in the workspace:
 
 ```bash
 TIMESTAMP=$(date +%s)
-NOTEBOOK_PATH="/tmp/claude-nb-${TIMESTAMP}"
+ROOT_PATH=$(databricks bundle validate --target <target> --profile <profile> --output json \
+  | python3 -c "import json,sys; print(json.load(sys.stdin)['workspace']['root_path'])")
+NOTEBOOK_PATH="${ROOT_PATH}/tmp/claude-nb-${TIMESTAMP}"
 
-databricks workspace mkdirs /tmp --profile <profile>
 databricks workspace import "${NOTEBOOK_PATH}" \
   --profile <profile> \
   --file <local-file.py> \
@@ -101,33 +109,24 @@ databricks workspace import "${NOTEBOOK_PATH}" \
   --overwrite
 ```
 
-**Notebook output capture:** `notebook_output.result` only captures the value passed
-to `dbutils.notebook.exit()` — `print()` output is not captured on success.
-
-If the file has no `dbutils.notebook.exit()` call, append a cell:
+**Rules:**
+- `spark` is already available in notebook context — do not add `SparkSession.builder`.
+- `notebook_output.result` only captures `dbutils.notebook.exit()` — `print()` is not captured on success.
+- If the file has no `dbutils.notebook.exit()` call, append a cell at the end:
 
 ```python
 # COMMAND ----------
 dbutils.notebook.exit("done")
 ```
 
-`spark` is already available in notebook context — do not add `SparkSession.builder`.
-
 ## Step 4: Submit One-Time Run
 
-Build the payload in Python. Pass shell variables via environment to avoid quoting issues:
+Pass variables via environment to avoid shell quoting issues:
 
 ```bash
-PAYLOAD=$(SPARK_VER="${SPARK_VER}" NODE_TYPE="${NODE_TYPE}" \
-  NOTEBOOK_PATH="${NOTEBOOK_PATH}" WHL_PATH="${WHL_PATH}" \
+PAYLOAD=$(CLUSTER_ID="${CLUSTER_ID}" NOTEBOOK_PATH="${NOTEBOOK_PATH}" WHL_PATH="${WHL_PATH}" \
   python3 - <<'EOF'
 import json, os
-
-cluster = {
-    "spark_version": os.environ["SPARK_VER"],
-    "node_type_id": os.environ["NODE_TYPE"],
-    "num_workers": 1,
-}
 
 task = {
     "task_key": "main",
@@ -135,7 +134,7 @@ task = {
         "notebook_path": os.environ["NOTEBOOK_PATH"],
         "source": "WORKSPACE",
     },
-    "new_cluster": cluster,
+    "existing_cluster_id": os.environ["CLUSTER_ID"],
     "libraries": [{"whl": os.environ["WHL_PATH"]}],
 }
 
@@ -156,6 +155,7 @@ echo "Run ID: ${RUN_ID}"
 **API notes:**
 - `tasks` array required by Jobs API v2.1, even for single-task runs.
 - `"source": "WORKSPACE"` required — omitting it causes Repos path resolution errors.
+- `existing_cluster_id` reuses the running cluster — no cluster startup wait.
 
 ## Step 5: Poll for Completion
 
@@ -170,7 +170,7 @@ print(r['state']['life_cycle_state'], r['state'].get('result_state', ''))
   LC=$(echo "$POLL" | cut -d' ' -f1)
   RS=$(echo "$POLL" | cut -d' ' -f2)
   echo "  state: $LC $RS"
-  if [ "$LC" = "TERMINATED" ] || [ "$LC" = "SKIPPED" ]; then break; fi
+  if [ "$LC" = "TERMINATED" ] || [ "$LC" = "SKIPPED" ] || [ "$LC" = "INTERNAL_ERROR" ]; then break; fi
   sleep 10
 done
 ```
@@ -179,12 +179,17 @@ After the loop, check `RS`:
 - `SUCCESS` → proceed to Step 6
 - `FAILED` → proceed to Step 6 (error details in output)
 - `TIMEDOUT` → cancel with `databricks jobs cancel-run "${RUN_ID}" --profile <profile>`
-- `CANCELED` → inform user
+- `CANCELED` / `INTERNAL_ERROR` → inform user
 
 ## Step 6: Fetch and Display Output
 
+For multi-task runs, fetch output via the task's run_id (not the parent run_id):
+
 ```bash
-databricks jobs get-run-output "${RUN_ID}" --profile <profile> --output json \
+TASK_RUN_ID=$(databricks jobs get-run "${RUN_ID}" --profile <profile> --output json \
+  | python3 -c "import json,sys; print(json.load(sys.stdin)['tasks'][0]['run_id'])")
+
+databricks jobs get-run-output "${TASK_RUN_ID}" --profile <profile> --output json \
   | python3 -c "
 import json, sys
 d = json.load(sys.stdin)
@@ -224,9 +229,9 @@ databricks workspace delete "${NOTEBOOK_PATH}" --profile <profile>
 
 | Symptom | Likely cause | Action |
 | ------- | ------------ | ------ |
-| `ModuleNotFoundError` | whl not deployed or wrong path | Re-run `bundle deploy`, verify whl path |
-| `INVALID_PARAMETER_VALUE` on submit | Bad `spark_version` or `node_type_id` | Check `bundle validate` output |
-| Cluster launch error in `error_trace` | Node type unavailable in region | Check workspace cluster policies |
+| `ModuleNotFoundError` | whl not deployed or wrong path | Re-run `bundle deploy`, re-capture `WHL_PATH` |
+| No RUNNING cluster found | Cluster stopped | Start cluster from Databricks UI |
+| `bundle deploy` git branch error | Local branch ≠ bundle target branch | Add `--force` flag |
 | `notebook_output.result` empty | No `dbutils.notebook.exit()` call | Add exit call to the file |
 | Run not visible in Jobs UI | Expected — one-time submit runs are ephemeral | Use `jobs get-run` to check |
 
