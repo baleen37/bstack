@@ -7,7 +7,7 @@ load helpers/bats_helper
 # Agent file tests
 @test "Agent files exist in plugins" {
     local agent_count
-    agent_count=$(find "${PROJECT_ROOT}/plugins/me/agents" -name "*.md" -type f 2>/dev/null | wc -l | tr -d ' ')
+    agent_count=$(find "${PROJECT_ROOT}/plugins" -path "*/agents/*.md" -type f 2>/dev/null | wc -l | tr -d ' ')
     [ "$agent_count" -gt 0 ]
 }
 
@@ -16,30 +16,30 @@ load helpers/bats_helper
         # Skip CLAUDE.md files (documentation, not agents)
         [[ "$(basename "$file")" == "CLAUDE.md" ]] && continue
         has_frontmatter_delimiter "$file"
-    done < <(find "${PROJECT_ROOT}/plugins/me/agents" -name "*.md" -type f -print0 2>/dev/null)
+    done < <(find "${PROJECT_ROOT}/plugins" -path "*/agents/*.md" -type f -print0 2>/dev/null)
 }
 
 # SKILL.md file tests
 @test "SKILL.md files exist" {
     local skill_count
-    skill_count=$(count_files "SKILL.md" "${PROJECT_ROOT}")
+    skill_count=$(find "${PROJECT_ROOT}/plugins" -name "SKILL.md" -type f 2>/dev/null | wc -l | tr -d ' ')
     [ "$skill_count" -gt 0 ]
 }
 
 @test "SKILL.md files have valid frontmatter delimiter" {
     while IFS= read -r -d '' file; do
         has_frontmatter_delimiter "$file"
-    done < <(find "${PROJECT_ROOT}" -name "SKILL.md" -type f -print0 2>/dev/null)
+    done < <(find "${PROJECT_ROOT}/plugins" -name "SKILL.md" -type f -print0 2>/dev/null)
 }
 
 @test "SKILL.md files have name field" {
     while IFS= read -r -d '' file; do
         has_frontmatter_field "$file" "name"
-    done < <(find "${PROJECT_ROOT}" -name "SKILL.md" -type f -print0 2>/dev/null)
+    done < <(find "${PROJECT_ROOT}/plugins" -name "SKILL.md" -type f -print0 2>/dev/null)
 }
 
 @test "SKILL.md files have description field" {
     while IFS= read -r -d '' file; do
         has_frontmatter_field "$file" "description"
-    done < <(find "${PROJECT_ROOT}" -name "SKILL.md" -type f -print0 2>/dev/null)
+    done < <(find "${PROJECT_ROOT}/plugins" -name "SKILL.md" -type f -print0 2>/dev/null)
 }
