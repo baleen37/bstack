@@ -6,7 +6,7 @@ load ../helpers/bats_helper
 
 
 @test "me: code-reviewer agent exists with proper model" {
-    local agent_file="${PROJECT_ROOT}/plugins/me/agents/code-reviewer.md"
+    local agent_file="${PROJECT_ROOT}/plugins/core/agents/code-reviewer.md"
     [ -f "$agent_file" ]
     has_frontmatter_field "$agent_file" "model"
 }
