@@ -26,6 +26,20 @@
       "version": "5.34.0"
     },
     {
+      "name": "core",
+      "description": "Core development skills: TDD, debugging, brainstorming, collaboration patterns",
+      "source": "./plugins/core",
+      "category": "development",
+      "tags": [
+        "tdd",
+        "debugging",
+        "brainstorming",
+        "workflow",
+        "skills"
+      ],
+      "version": "1.0.0"
+    },
+    {
       "name": "jira",
       "description": "Atlassian Jira integration skills for Claude Code",
       "source": "./plugins/jira",
