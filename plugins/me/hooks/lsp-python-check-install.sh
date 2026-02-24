@@ -9,7 +9,7 @@ if command -v pyright &>/dev/null; then
 fi
 
 echo "[lsp-python] Installing pyright..."
-if npm install -g pyright &>/dev/null; then
+if bun add -g pyright &>/dev/null; then
   echo "[lsp-python] ✓ pyright installed"
   exit 0
 else

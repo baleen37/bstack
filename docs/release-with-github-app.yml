@@ -23,14 +23,14 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: '20'
+          bun-version: latest
 
       - name: Install dependencies
         run: |
-          npm ci
+          bun install
           sudo apt-get update
           sudo apt-get install -y jq python3
 
@@ -82,14 +82,14 @@ jobs:
           git diff --quiet || CURRENT_DIFF="changed"
 
           # Run semantic-release to update version files
-          npx semantic-release
+          bunx semantic-release
 
           # Check if files were modified (semantic-release updated version files)
           if ! git diff --quiet; then
             echo "Release changes detected, creating PR..."
 
             # Get the new version from marketplace.json (all plugins have the same version)
-            VERSION=$(node -p "require('./.claude-plugin/marketplace.json').plugins[0].version")
+            VERSION=$(jq -r '.plugins[0].version' ./.claude-plugin/marketplace.json)
 
             # Commit the changes
             git add .

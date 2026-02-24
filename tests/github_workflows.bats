@@ -111,6 +111,14 @@ job_has_if_condition() {
     validate_yaml_file "${WORKFLOW_DIR}/sync-marketplace.yml"
 }
 
+@test "Marketplace sync workflow calls sync script" {
+    ensure_yaml_validator
+    local sync_command
+    sync_command=$(yaml_get "${WORKFLOW_DIR}/sync-marketplace.yml" ".jobs.sync-marketplace.steps[] | select(.name == \"Sync marketplace.json version\") | .run")
+
+    [[ "$sync_command" == "bash scripts/sync-marketplace-version.sh" ]]
+}
+
 @test "Release workflow has infinite loop prevention" {
     ensure_yaml_validator
     # Verify that the workflow prevents infinite loops from bot release commits

@@ -131,6 +131,7 @@ Also re-run downstream dependents:
 ```
 
 **Constraints:**
+
 - `rerun_tasks` and `rerun_all_failed_tasks` are mutually exclusive
 - Run must be TERMINATED (not in-progress) before repair
 - Chaining repairs: pass `latest_repair_id` from previous repair response

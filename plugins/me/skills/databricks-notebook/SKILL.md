@@ -25,7 +25,7 @@ API. This skill executes Python/PySpark code on a real cluster.
 
 ## Workflow
 
-```
+```text
 1. VALIDATE — bundle validate to extract cluster config and whl path
 2. DEPLOY   — bundle deploy to build and upload the whl to workspace
 3. UPLOAD   — import local .py file to workspace as a notebook
@@ -162,6 +162,7 @@ echo "Run ID: ${RUN_ID}"
 ```
 
 **API notes:**
+
 - `tasks` array required by Jobs API v2.1, even for single-task runs.
 - `"source": "WORKSPACE"` required — omitting it causes Repos path resolution errors.
 
@@ -184,6 +185,7 @@ done
 ```
 
 After the loop, check `RS`:
+
 - `SUCCESS` → proceed to Step 6
 - `FAILED` → proceed to Step 6 (error details in output)
 - `TIMEDOUT` → cancel with `databricks jobs cancel-run "${RUN_ID}" --profile <profile>`
