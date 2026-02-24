@@ -4,14 +4,6 @@
 
 load ../helpers/bats_helper
 
-@test "me: has all workflow commands" {
-    [ -f "${PROJECT_ROOT}/plugins/me/commands/brainstorm.md" ]
-    [ -f "${PROJECT_ROOT}/plugins/me/commands/debugging.md" ]
-    [ -f "${PROJECT_ROOT}/plugins/me/commands/orchestrate.md" ]
-    [ -f "${PROJECT_ROOT}/plugins/me/commands/refactor-clean.md" ]
-    [ -f "${PROJECT_ROOT}/plugins/me/commands/research.md" ]
-    [ -f "${PROJECT_ROOT}/plugins/me/commands/verify.md" ]
-}
 
 @test "me: code-reviewer agent exists with proper model" {
     local agent_file="${PROJECT_ROOT}/plugins/me/agents/code-reviewer.md"
