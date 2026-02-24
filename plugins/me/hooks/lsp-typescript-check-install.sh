@@ -9,7 +9,7 @@ if command -v typescript-language-server &>/dev/null; then
 fi
 
 echo "[lsp-typescript] Installing typescript-language-server..."
-if npm install -g typescript-language-server typescript &>/dev/null; then
+if bun add -g typescript-language-server typescript &>/dev/null; then
   echo "[lsp-typescript] ✓ typescript-language-server installed"
   exit 0
 else

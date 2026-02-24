@@ -54,3 +54,30 @@ load ../helpers/bats_helper
     grep -q "isRequired" "$script"
     grep -q "BLOCKED|UNSTABLE" "$script"
 }
+
+@test "me: lsp install hooks use bun instead of npm" {
+    local bash_hook="${PROJECT_ROOT}/plugins/me/hooks/lsp-bash-check-install.sh"
+    local ts_hook="${PROJECT_ROOT}/plugins/me/hooks/lsp-typescript-check-install.sh"
+    local py_hook="${PROJECT_ROOT}/plugins/me/hooks/lsp-python-check-install.sh"
+
+    run ! grep -q "npm install -g" "$bash_hook"
+    run ! grep -q "npm install -g" "$ts_hook"
+    run ! grep -q "npm install -g" "$py_hook"
+
+    grep -q "bun add -g" "$bash_hook"
+    grep -q "bun add -g" "$ts_hook"
+    grep -q "bun add -g" "$py_hook"
+}
+
+@test "me: release-with-github-app doc uses bun release flow" {
+    local release_doc="${PROJECT_ROOT}/docs/release-with-github-app.yml"
+
+    run ! grep -q "actions/setup-node" "$release_doc"
+    run ! grep -q "npm ci" "$release_doc"
+    run ! grep -q "npx semantic-release" "$release_doc"
+    run ! grep -q "node -p" "$release_doc"
+
+    grep -q "oven-sh/setup-bun" "$release_doc"
+    grep -q "bun install" "$release_doc"
+    grep -q "bunx semantic-release" "$release_doc"
+}

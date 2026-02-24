@@ -9,7 +9,7 @@ if command -v bash-language-server &>/dev/null; then
 fi
 
 echo "[lsp-bash] Installing bash-language-server..."
-if npm install -g bash-language-server &>/dev/null; then
+if bun add -g bash-language-server &>/dev/null; then
   echo "[lsp-bash] ✓ bash-language-server installed"
   exit 0
 else
