@@ -107,30 +107,11 @@ load ../helpers/bats_helper
 @test "plugin agents have valid frontmatter" {
     local found_agents=0
 
-    # Check agents in plugins/me/agents/ directory
-    for agent_file in "${PROJECT_ROOT}"/plugins/me/agents/*.md; do
+    # Check agents in all plugins' agents/ directories
+    for agent_file in "${PROJECT_ROOT}"/plugins/*/agents/*.md "${PROJECT_ROOT}"/plugins/*/agents/*/*.md; do
         if [ -f "$agent_file" ]; then
             # Skip CLAUDE.md files
             [[ "$(basename "$agent_file")" == "CLAUDE.md" ]] && continue
-
-            found_agents=$((found_agents + 1))
-
-            # Verify frontmatter delimiter
-            has_frontmatter_delimiter "$agent_file"
-
-            # Verify required fields
-            has_frontmatter_field "$agent_file" "name"
-            has_frontmatter_field "$agent_file" "description"
-            has_frontmatter_field "$agent_file" "model"
-        fi
-    done
-
-    # Also check subdirectories like plugins/me/agents/ralph/
-    for agent_file in "${PROJECT_ROOT}"/plugins/me/agents/*/*.md; do
-        if [ -f "$agent_file" ]; then
-            # Skip CLAUDE.md files and non-.md files
-            [[ "$(basename "$agent_file")" == "CLAUDE.md" ]] && continue
-            [[ "$agent_file" == *.md ]] || continue
 
             found_agents=$((found_agents + 1))
 
