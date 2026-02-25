@@ -63,6 +63,12 @@ function updatePluginJsons() {
   };
 }
 
+const pluginsDir = resolve(process.cwd(), 'plugins');
+const pluginAssets = readdirSync(pluginsDir, { withFileTypes: true })
+  .filter((d) => d.isDirectory())
+  .sort((a, b) => a.name.localeCompare(b.name))
+  .map((d) => `plugins/${d.name}/.claude-plugin/plugin.json`);
+
 const plugins = [
   [
     '@semantic-release/commit-analyzer',
@@ -85,11 +91,7 @@ const plugins = [
   [
     '@semantic-release/git',
     {
-      assets: [
-        'plugins/me/.claude-plugin/plugin.json',
-        'plugins/jira/.claude-plugin/plugin.json',
-        '.claude-plugin/marketplace.json',
-      ],
+      assets: [...pluginAssets, '.claude-plugin/marketplace.json'],
       message: 'chore(release): ${nextRelease.version}\n\n${nextRelease.notes}',
     },
   ],
