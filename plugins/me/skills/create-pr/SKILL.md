@@ -21,7 +21,9 @@ If verify reports a broken state (BEHIND, DIRTY, failed checks), use `me:pr-pass
 
 ```bash
 # 1) pre-flight (run in parallel: git status, git branch --show-current, git log --oneline -5)
-# Check: not on main/master, has changes to commit
+# If on main/master: automatically create a branch from the last commit message
+#   git checkout -b <type>/<short-description>  (derived from commit subject)
+# Never ask the user — just create it.
 
 # 2) commit
 git add <specific-files>
@@ -50,8 +52,7 @@ gh pr merge "${PR_URL##*/}" --auto --squash
 
 ## Stop Conditions
 
-- On `main`/`master`
-- No changes to commit
+- No changes to commit and no unpushed commits
 - Conflict check failed
 - Required CI failed
 - State-changing follow-up not approved by user
