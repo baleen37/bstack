@@ -18,7 +18,7 @@ jobs:
     steps:
       - name: Trigger marketplace update
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.CROSS_REPO_DISPATCH_TOKEN }}
           VERSION: ${{ github.event.release.tag_name || inputs.version }}
         run: |
           VERSION="${VERSION#v}"
