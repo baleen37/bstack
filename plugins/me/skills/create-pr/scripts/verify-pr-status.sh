@@ -65,9 +65,7 @@ case "$STATE" in
     echo ""
     echo "✗ PR branch is behind $BASE"
     echo "  - Mergeable: $MERGEABLE"
-    echo "  - Sync required before merge"
-    echo "  - Run: ${CLAUDE_PLUGIN_ROOT:-<CLAUDE_PLUGIN_ROOT>}/skills/create-pr/scripts/sync-with-base.sh"
-    echo "  - Then re-run: ${CLAUDE_PLUGIN_ROOT:-<CLAUDE_PLUGIN_ROOT>}/skills/create-pr/scripts/verify-pr-status.sh"
+    echo "  - Sync required: git fetch origin && git merge origin/$BASE && git push"
     echo "  - URL: $PR_URL"
     exit 1
     ;;
