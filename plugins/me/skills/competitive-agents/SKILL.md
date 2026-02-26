@@ -8,7 +8,7 @@ description: Use when designing systems, architectures, or APIs, when multiple v
 ## Overview
 
 Dispatch two independent subagents to solve the same task from different angles.
-A third judge agent synthesizes the best elements into a superior combined result.
+The main agent then synthesizes the best elements into a superior combined result.
 
 ## When to Use
 
@@ -37,7 +37,7 @@ If multiple valid approaches exist, use this skill.
 1. **Clarify if needed** — if the task is ambiguous, ask the user before dispatching
 2. Dispatch 2 subagents in parallel (single message, 2 Task tool calls)
 3. Wait for both results
-4. Dispatch judge agent with both results
+4. **You (main agent) synthesize** the best elements directly — no third subagent
 5. Present synthesized result to user
 
 ## Competitor Prompt Template
@@ -80,29 +80,11 @@ YOUR CONSTRAINT: Prioritize completeness and extensibility. Cover more cases and
 
 Both use `subagent_type: "general-purpose"`.
 
-## Judge Prompt Template
+## Synthesis (Main Agent)
 
-After both competitors complete:
+After both competitors complete, **you** synthesize directly. No subagent needed — you already have both results in context.
 
-~~~text
-You are judging two competing solutions to the same task.
-Synthesize the best elements into a superior combined solution.
-
-## Original Task
-{original task from user}
-
-## Solution A (simplicity-focused)
-{result from competitor A}
-
-## Solution B (completeness-focused)
-{result from competitor B}
-
-## Instructions
-1. Analyze strengths and weaknesses of each
-2. Synthesize into a superior combined solution
-3. Explain what you took from each and why
-
-Format:
+Analyze and present in this format:
 
 ### Analysis
 **Solution A:** [strengths] / [weaknesses]
@@ -113,9 +95,6 @@ Format:
 
 ### Rationale
 [what you took from each and why]
-~~~
-
-Judge also uses `subagent_type: "general-purpose"`.
 
 ## Execution
 
@@ -126,20 +105,15 @@ Task call 1: description="Competitor A - simplicity", subagent_type="general-pur
 Task call 2: description="Competitor B - completeness", subagent_type="general-purpose"
 ~~~
 
-After both return, dispatch the judge:
-
-~~~text
-Task call 3: description="Judge synthesis", subagent_type="general-purpose"
-~~~
-
-Present the judge's synthesized result to the user.
+After both return, synthesize directly as the main agent (see Synthesis section above).
 
 ## Common Mistakes
 
 | Mistake | Fix |
 | ------- | --- |
 | Both competitors produce identical solutions | Use the constraint prompts above to force divergence |
-| Running judge before both complete | Use foreground mode, wait for both |
-| Skipping the judge | Always synthesize — even if one seems clearly better |
+| Synthesizing before both competitors complete | Use foreground mode, wait for both |
+| Skipping synthesis | Always synthesize — even if one seems clearly better |
+| Dispatching a judge subagent | Main agent synthesizes directly — no third Task call needed |
 | Dispatching on an unclear task | Clarify with user first (workflow step 1) |
 | Skipping because task seems "simple" | Simplicity of description ≠ obvious solution |
