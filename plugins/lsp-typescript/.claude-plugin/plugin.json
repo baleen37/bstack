@@ -1,6 +1,6 @@
 {
   "name": "lsp-typescript",
-  "version": "5.37.0",
+  "version": "5.37.1",
   "description": "TypeScript language server plugin for Claude Code",
   "author": {
     "name": "baleen37",
