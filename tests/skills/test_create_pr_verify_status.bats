@@ -35,7 +35,7 @@ setup() {
 @test "verify-pr-status.sh handles BEHIND status without auto-merge" {
   run grep -q "BEHIND)" "$VERIFY_SCRIPT"
   [ "$status" -eq 0 ]
-  run grep -q "sync-with-base.sh" "$VERIFY_SCRIPT"
+  run grep -Eq "git fetch|git merge" "$VERIFY_SCRIPT"
   [ "$status" -eq 0 ]
 }
 
