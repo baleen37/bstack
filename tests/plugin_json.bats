@@ -1,62 +1,97 @@
 #!/usr/bin/env bats
-# Test: plugin.json validation
-# This test file validates the root-level plugin.json manifest
+# Test: plugin.json validation for all plugins under plugins/
 
 load helpers/bats_helper
 load helpers/test_utils
-
-PLUGIN_JSON="${PROJECT_ROOT}/plugins/me/.claude-plugin/plugin.json"
 
 setup() {
     ensure_jq
 }
 
-# Test: Verify plugin.json exists
-@test "plugin.json exists" {
-    [ -f "$PLUGIN_JSON" ]
+# Test: all plugin.json files exist
+@test "all plugins have plugin.json" {
+    local plugin_dirs
+    plugin_dirs=$(find_all_plugins)
+    [ -n "$plugin_dirs" ]
+
+    while IFS= read -r plugin_dir; do
+        local manifest="${plugin_dir}/.claude-plugin/plugin.json"
+        assert_file_exists "$manifest"
+    done <<< "$plugin_dirs"
 }
 
-# Test: plugin.json is valid JSON
-@test "plugin.json is valid JSON" {
-    validate_json "$PLUGIN_JSON"
+# Test: all plugin.json files are valid JSON
+@test "all plugin.json files are valid JSON" {
+    local plugin_dirs
+    plugin_dirs=$(find_all_plugins)
+
+    while IFS= read -r plugin_dir; do
+        local manifest="${plugin_dir}/.claude-plugin/plugin.json"
+        validate_json "$manifest"
+    done <<< "$plugin_dirs"
 }
 
-# Test: plugin.json has required fields
-@test "plugin.json has required fields" {
+# Test: all plugin.json files have required fields
+@test "all plugin.json files have required fields" {
     local required_fields=("name" "description" "author")
+    local plugin_dirs
+    plugin_dirs=$(find_all_plugins)
 
-    for field in "${required_fields[@]}"; do
-        if ! json_has_field "$PLUGIN_JSON" "$field"; then
-            echo "Missing '$field' in $PLUGIN_JSON" >&2
+    while IFS= read -r plugin_dir; do
+        local manifest="${plugin_dir}/.claude-plugin/plugin.json"
+        for field in "${required_fields[@]}"; do
+            if ! json_has_field "$manifest" "$field"; then
+                echo "Missing '$field' in $manifest" >&2
+                return 1
+            fi
+        done
+    done <<< "$plugin_dirs"
+}
+
+# Test: all plugin names follow naming convention (lowercase, hyphens, numbers)
+@test "all plugin.json names follow naming convention" {
+    local plugin_dirs
+    plugin_dirs=$(find_all_plugins)
+
+    while IFS= read -r plugin_dir; do
+        local manifest="${plugin_dir}/.claude-plugin/plugin.json"
+        local name
+        name=$(json_get "$manifest" "name")
+        if ! is_valid_plugin_name "$name"; then
+            echo "Invalid plugin name '$name' in $manifest" >&2
             return 1
         fi
-    done
+    done <<< "$plugin_dirs"
 }
 
-# Test: Plugin name follows naming convention (lowercase, hyphens, numbers)
-@test "plugin.json name follows naming convention" {
-    local name
-    name=$(json_get "$PLUGIN_JSON" "name")
-    is_valid_plugin_name "$name"
-}
-
-# Test: Required field values are not empty
-@test "plugin.json fields are not empty" {
+# Test: required field values are not empty in any plugin
+@test "all plugin.json required fields are not empty" {
     local fields_to_check=("name" "description" "author")
+    local plugin_dirs
+    plugin_dirs=$(find_all_plugins)
 
-    for field in "${fields_to_check[@]}"; do
-        local value
-        value=$(json_get "$PLUGIN_JSON" "$field")
-        if [ -z "$value" ]; then
-            echo "Field '$field' is empty in $PLUGIN_JSON" >&2
-            return 1
-        fi
-    done
+    while IFS= read -r plugin_dir; do
+        local manifest="${plugin_dir}/.claude-plugin/plugin.json"
+        for field in "${fields_to_check[@]}"; do
+            local value
+            value=$(json_get "$manifest" "$field")
+            if [ -z "$value" ]; then
+                echo "Field '$field' is empty in $manifest" >&2
+                return 1
+            fi
+        done
+    done <<< "$plugin_dirs"
 }
 
-# Test: plugin.json uses only allowed fields
-@test "plugin.json uses only allowed fields" {
-    validate_plugin_manifest_fields "$PLUGIN_JSON"
+# Test: all plugin.json files use only allowed fields
+@test "all plugin.json files use only allowed fields" {
+    local plugin_dirs
+    plugin_dirs=$(find_all_plugins)
+
+    while IFS= read -r plugin_dir; do
+        local manifest="${plugin_dir}/.claude-plugin/plugin.json"
+        validate_plugin_manifest_fields "$manifest"
+    done <<< "$plugin_dirs"
 }
 
 # Test: Comprehensive validation of all plugin manifests

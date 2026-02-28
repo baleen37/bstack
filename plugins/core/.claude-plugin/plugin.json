@@ -5,6 +5,14 @@
     "name": "baleen",
     "email": "git@baleen.me"
   },
-  "version": "1.0.0",
-  "keywords": ["skills", "tdd", "debugging", "brainstorming", "collaboration", "best-practices", "workflows"]
+  "version": "5.38.0",
+  "keywords": [
+    "skills",
+    "tdd",
+    "debugging",
+    "brainstorming",
+    "collaboration",
+    "best-practices",
+    "workflows"
+  ]
 }

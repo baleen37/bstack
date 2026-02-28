@@ -1,6 +1,6 @@
 {
   "name": "me",
-  "version": "5.35.2",
+  "version": "5.38.0",
   "description": "AI coding assistant toolkit - LSP servers, git workflow protection, session handoff, context management, and development automation",
   "author": {
     "name": "baleen37",
@@ -24,7 +24,8 @@
     "go",
     "kotlin",
     "lua",
-    "nix"
+    "nix",
+    "terraform"
   ],
   "lspServers": {
     "bash": {
@@ -88,6 +89,17 @@
       "command": "nil",
       "extensionToLanguage": {
         ".nix": "nix"
+      }
+    },
+    "terraform": {
+      "command": "terraform-ls",
+      "args": [
+        "serve"
+      ],
+      "extensionToLanguage": {
+        ".tf": "terraform",
+        ".tf.json": "terraform",
+        ".tfvars": "terraform"
       }
     }
   }

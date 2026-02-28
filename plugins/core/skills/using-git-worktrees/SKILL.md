@@ -82,14 +82,22 @@ project=$(basename "$(git rev-parse --show-toplevel)")
 
 ### 2. Create Worktree
 
+Worktree directory names include a zero-padded sequence number prefix: `00001-<branch-name>`.
+
 ```bash
+# Find next sequence number based on existing worktrees
+base_dir="$LOCATION"  # e.g. .worktrees
+last=$(ls "$base_dir" 2>/dev/null | grep -E '^[0-9]{5}-' | sort | tail -1 | grep -oE '^[0-9]{5}')
+next=$(printf '%05d' $(( ${last:-0} + 1 )))
+dir_name="$next-$BRANCH_NAME"
+
 # Determine full path
 case $LOCATION in
   .worktrees|worktrees)
-    path="$LOCATION/$BRANCH_NAME"
+    path="$LOCATION/$dir_name"
     ;;
   ~/.config/superpowers/worktrees/*)
-    path="~/.config/superpowers/worktrees/$project/$BRANCH_NAME"
+    path="~/.config/superpowers/worktrees/$project/$dir_name"
     ;;
 esac
 
@@ -182,11 +190,11 @@ You: I'm using the using-git-worktrees skill to set up an isolated workspace.
 
 [Check .worktrees/ - exists]
 [Verify ignored - git check-ignore confirms .worktrees/ is ignored]
-[Create worktree: git worktree add .worktrees/auth -b feature/auth]
+[Create worktree: git worktree add .worktrees/00001-auth -b feature/auth]
 [Run npm install]
 [Run npm test - 47 passing]
 
-Worktree ready at /Users/jesse/myproject/.worktrees/auth
+Worktree ready at /Users/jesse/myproject/.worktrees/00001-auth
 Tests passing (47 tests, 0 failures)
 Ready to implement auth feature
 ```

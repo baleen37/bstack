@@ -1,0 +1,16 @@
+{
+  "name": "lsp-pyright",
+  "version": "5.38.0",
+  "description": "Python language server plugin for Claude Code",
+  "author": {
+    "name": "baleen37",
+    "email": "git@baleen.me"
+  },
+  "license": "MIT",
+  "keywords": [
+    "lsp",
+    "python",
+    "pyright"
+  ],
+  "lspServers": "./.lsp.json"
+}

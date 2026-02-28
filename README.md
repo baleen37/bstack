@@ -6,7 +6,7 @@ AI coding assistant toolkit - Claude Code, OpenCode, and more.
 
 Everything Agent is a single consolidated plugin providing:
 
-- **LSP Servers**: Bash, TypeScript, Python, Go, Kotlin, Lua, Nix language server integration
+- **LSP Servers**: Bash, TypeScript, Python, Go, Kotlin, Lua, Nix, Terraform language server integration
 - **Git Guard**: Automatic git workflow protection (blocks `--no-verify`, etc.)
 - **Session Handoff**: Smooth context transfer between Claude sessions
 - **Context Management**: Intelligent compaction suggestions for long conversations
@@ -47,7 +47,7 @@ everything-agent/
 │   ├── hooks.json                # Unified hooks (SessionStart + PreToolUse)
 │   ├── commit-guard.sh           # Git workflow protection
 │   ├── handoff-session-start.sh  # Session handoff trigger
-│   └── lsp-*-check-install.sh   # LSP server install checks (7 languages)
+│   └── lsp-*-check-install.sh   # LSP server install checks (8 languages)
 ├── scripts/
 │   ├── handoff.sh                # Handoff script
 │   ├── pickup.sh                 # Pickup script

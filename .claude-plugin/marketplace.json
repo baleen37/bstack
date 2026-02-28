@@ -23,7 +23,7 @@
         "memory",
         "context"
       ],
-      "version": "5.35.2"
+      "version": "5.38.0"
     },
     {
       "name": "core",
@@ -37,7 +37,7 @@
         "workflow",
         "skills"
       ],
-      "version": "5.35.2"
+      "version": "5.38.0"
     },
     {
       "name": "jira",
@@ -50,48 +50,36 @@
         "confluence",
         "project-management"
       ],
-      "version": "5.35.2"
+      "version": "5.38.0"
     },
     {
-      "name": "lst-gopls",
+      "name": "lsp-gopls",
       "description": "Go language server plugin for Claude Code",
-      "source": "./plugins/lst-gopls",
+      "source": "./plugins/lsp-gopls",
       "category": "development",
       "tags": [
         "lsp",
         "go",
         "gopls"
       ],
-      "version": "5.35.2"
+      "version": "5.38.0"
     },
     {
-      "name": "lst-typescript",
+      "name": "lsp-typescript",
       "description": "TypeScript language server plugin for Claude Code",
-      "source": "./plugins/lst-typescript",
+      "source": "./plugins/lsp-typescript",
       "category": "development",
       "tags": [
         "lsp",
         "typescript",
         "javascript"
       ],
-      "version": "5.35.2"
+      "version": "5.38.0"
     },
     {
-      "name": "lst-csharp",
-      "description": "C# language server plugin for Claude Code",
-      "source": "./plugins/lst-csharp",
-      "category": "development",
-      "tags": [
-        "lsp",
-        "csharp",
-        "dotnet"
-      ],
-      "version": "5.35.2"
-    },
-    {
-      "name": "lst-clangd",
+      "name": "lsp-clangd",
       "description": "C/C++ language server plugin for Claude Code",
-      "source": "./plugins/lst-clangd",
+      "source": "./plugins/lsp-clangd",
       "category": "development",
       "tags": [
         "lsp",
@@ -99,31 +87,31 @@
         "cpp",
         "clangd"
       ],
-      "version": "5.35.2"
+      "version": "5.38.0"
     },
     {
-      "name": "lst-lua",
+      "name": "lsp-lua",
       "description": "Lua language server plugin for Claude Code",
-      "source": "./plugins/lst-lua",
+      "source": "./plugins/lsp-lua",
       "category": "development",
       "tags": [
         "lsp",
         "lua",
         "lua-language-server"
       ],
-      "version": "5.35.2"
+      "version": "5.38.0"
     },
     {
-      "name": "lst-pyright",
+      "name": "lsp-pyright",
       "description": "Python language server plugin for Claude Code",
-      "source": "./plugins/lst-pyright",
+      "source": "./plugins/lsp-pyright",
       "category": "development",
       "tags": [
         "lsp",
         "python",
         "pyright"
       ],
-      "version": "5.35.2"
+      "version": "5.38.0"
     }
   ]
 }

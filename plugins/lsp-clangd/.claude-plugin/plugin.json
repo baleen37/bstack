@@ -1,0 +1,17 @@
+{
+  "name": "lsp-clangd",
+  "version": "5.38.0",
+  "description": "C/C++ language server plugin for Claude Code",
+  "author": {
+    "name": "baleen37",
+    "email": "git@baleen.me"
+  },
+  "license": "MIT",
+  "keywords": [
+    "lsp",
+    "c",
+    "cpp",
+    "clangd"
+  ],
+  "lspServers": "./.lsp.json"
+}
