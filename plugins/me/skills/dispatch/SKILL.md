@@ -13,7 +13,6 @@ Dispatch a task to an AI CLI tool in a detached tmux session and block until com
 |------|------------------------|----------------|-------|
 | **Codex** | `codex exec --full-auto` | `-o FILE` flag | Saves final message only (clean text) |
 | **Gemini** | `gemini -p "..." --yolo` | `> FILE` redirect | Saves response text; use `-o json` for structured output with `response` field |
-| **OpenCode** | TBD | TBD | |
 
 ## Core Pattern
 
@@ -96,19 +95,25 @@ rm -f "$RESULT"
 
 **`-o json` 사용 시 결과 추출:**
 ```bash
-RESPONSE=$(cat "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin)['response'])")
+RESPONSE=$(jq -r '.response' "$RESULT")
 ```
 
 ## Rules
 
-- Use `&&` not `;` before `tmux wait-for -S` — on failure, no signal → `tmux wait-for` blocks forever.
+- Use `&&` not `;` before `tmux wait-for -S` — if the AI fails, no signal fires and `tmux wait-for` blocks forever.
 - Use unique IDs: `$(date +%s)-$$` prevents session name collisions.
-- `tmux wait-for` has no built-in timeout. Add a background killer if needed:
+- **Timeout:** `tmux wait-for` has no built-in timeout. Wrap the whole dispatch with `timeout(1)`:
   ```bash
-  (sleep 300 && tmux wait-for -S "$ID") &
-  tmux wait-for "$ID"
+  timeout 300 tmux wait-for "$ID" || { tmux kill-session -t "$SESSION" 2>/dev/null; echo "TIMEOUT" >&2; }
   ```
 - Always kill the session and remove the result file after reading.
+- **Quoting `$TASK`:** If the task contains quotes, newlines, or special characters, write it to a temp file first:
+  ```bash
+  TASK_FILE="/tmp/task-$ID.txt"
+  printf '%s' "$TASK" > "$TASK_FILE"
+  # Then pass the file path, e.g.: codex exec --full-auto -o "$RESULT" "$(cat $TASK_FILE)"
+  # Or for Gemini: gemini -p "$(cat $TASK_FILE)" --yolo > "$RESULT"
+  ```
 
 ## Working Directory
 
@@ -129,3 +134,4 @@ tmux send-keys -t "$SESSION" \
 | Reusing session names | Use unique ID per call |
 | Forgetting cleanup | Sessions accumulate; always `tmux kill-session` after reading |
 | Codex outside git repo | Add `--skip-git-repo-check` |
+| Unquoted `$TASK` with special chars | Write task to temp file first |
