@@ -9,11 +9,11 @@ Dispatch a task to an AI CLI tool in a detached tmux session and block until com
 
 ## Supported Tools
 
-| Tool | Non-interactive command | Result capture |
-|------|------------------------|----------------|
-| **Codex** | `codex exec --full-auto` | `-o FILE` flag |
-| **Gemini** | `gemini -p "..." --yolo` | `> FILE` redirect |
-| **OpenCode** | TBD | TBD |
+| Tool | Non-interactive command | Result capture | Notes |
+|------|------------------------|----------------|-------|
+| **Codex** | `codex exec --full-auto` | `-o FILE` flag | Saves final message only (clean text) |
+| **Gemini** | `gemini -p "..." --yolo` | `> FILE` redirect | Saves response text; use `-o json` for structured output with `response` field |
+| **OpenCode** | TBD | TBD | |
 
 ## Core Pattern
 
@@ -41,6 +41,8 @@ rm -f "$RESULT"
 
 ## Codex
 
+OpenAI Codex CLI. 코드 수정/생성 작업에 특화. `codex exec`은 작업 완료 후 자동 종료.
+
 ```bash
 ID="$(date +%s)-$$"
 SESSION="dispatch-$ID"
@@ -59,12 +61,15 @@ rm -f "$RESULT"
 
 | Flag | Purpose |
 |------|---------|
-| `codex exec` | Non-interactive mode (`codex` alone opens interactive TUI and hangs) |
-| `--full-auto` | Auto-approve all actions (`workspace-write` sandbox) |
-| `-o FILE` | Write final message to file |
-| `--skip-git-repo-check` | Required when running outside a git repository |
+| `codex exec` | Non-interactive mode — `codex` alone opens TUI and never exits |
+| `--full-auto` | Auto-approve all shell commands (`workspace-write` sandbox) |
+| `-o FILE` | Write final response text to file (clean, no ANSI codes) |
+| `--skip-git-repo-check` | Required outside a git repository |
+| `-C DIR` | Set working directory (alternative to `cd` in the command) |
 
 ## Gemini
+
+Google Gemini CLI. 코드 작업 외 리서치/분석 등 범용 작업에 적합. `-p` 플래그로 비대화형 실행.
 
 ```bash
 ID="$(date +%s)-$$"
@@ -84,9 +89,15 @@ rm -f "$RESULT"
 
 | Flag | Purpose |
 |------|---------|
-| `-p "PROMPT"` | Non-interactive mode with prompt |
+| `-p "PROMPT"` | Non-interactive (headless) mode with prompt |
 | `--yolo` | Auto-approve all tool actions |
-| `> FILE` | Redirect stdout to result file (no `-o` flag available) |
+| `> FILE` | Redirect response text to file |
+| `-o json > FILE` | Structured output — result in `.response` field, includes token stats |
+
+**`-o json` 사용 시 결과 추출:**
+```bash
+RESPONSE=$(cat "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin)['response'])")
+```
 
 ## Rules
 
