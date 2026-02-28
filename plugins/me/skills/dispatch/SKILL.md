@@ -1,11 +1,11 @@
 ---
-name: ai-delegate
+name: dispatch
 description: Use when delegating a subtask to an AI CLI tool (Codex, Gemini, OpenCode, etc.) via tmux - fire-and-wait pattern using tmux wait-for for non-polling completion detection
 ---
 
-# AI Delegate
+# Dispatch
 
-Delegate a task to an AI CLI tool in a detached tmux session and block until completion — no polling.
+Dispatch a task to an AI CLI tool in a detached tmux session and block until completion — no polling.
 
 ## Supported Tools
 
@@ -19,8 +19,8 @@ Delegate a task to an AI CLI tool in a detached tmux session and block until com
 
 ```bash
 ID="$(date +%s)-$$"
-SESSION="ai-$ID"
-RESULT="/tmp/ai-$ID.md"
+SESSION="dispatch-$ID"
+RESULT="/tmp/dispatch-$ID.md"
 
 # 1. Launch AI CLI in detached tmux session (pick command from table above)
 tmux new-session -d -s "$SESSION" -x 220 -y 50
@@ -43,8 +43,8 @@ rm -f "$RESULT"
 
 ```bash
 ID="$(date +%s)-$$"
-SESSION="ai-$ID"
-RESULT="/tmp/ai-$ID.md"
+SESSION="dispatch-$ID"
+RESULT="/tmp/dispatch-$ID.md"
 
 tmux new-session -d -s "$SESSION" -x 220 -y 50
 tmux send-keys -t "$SESSION" \
@@ -68,8 +68,8 @@ rm -f "$RESULT"
 
 ```bash
 ID="$(date +%s)-$$"
-SESSION="ai-$ID"
-RESULT="/tmp/ai-$ID.md"
+SESSION="dispatch-$ID"
+RESULT="/tmp/dispatch-$ID.md"
 
 tmux new-session -d -s "$SESSION" -x 220 -y 50
 tmux send-keys -t "$SESSION" \
@@ -101,7 +101,7 @@ rm -f "$RESULT"
 
 ## Working Directory
 
-AI CLI inherits the tmux session's cwd. To specify:
+Dispatched CLI inherits the tmux session's cwd. To specify:
 
 ```bash
 tmux send-keys -t "$SESSION" \
