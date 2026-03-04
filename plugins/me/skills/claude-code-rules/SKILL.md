@@ -9,12 +9,12 @@ Rules are markdown files Claude Code automatically loads as memory. Use them to 
 
 ## Where Rules Live
 
-| Scope | Path | Loaded when |
-|-------|------|-------------|
-| Project | `.claude/rules/*.md` | Working in that project |
-| User (global) | `~/.claude/rules/*.md` | Always |
+| Scope | Path | Priority |
+|-------|------|----------|
+| User (global) | `~/.claude/rules/*.md` | Lower (loaded first) |
+| Project | `.claude/rules/*.md` | Higher (overrides user rules) |
 
-All `.md` files in these directories are **automatically loaded** — same priority as CLAUDE.md.
+All `.md` files in these directories are **automatically loaded**. Project rules have the same priority as `.claude/CLAUDE.md`. More specific (project) instructions override broader (user) ones.
 
 ## File Structure
 
@@ -46,17 +46,17 @@ Rule content here.
 
 ```
 .claude/rules/
-  security.md        # no hardcoded secrets, input validation
-  testing.md         # TDD workflow, coverage requirements
-  git-workflow.md    # commit format, PR process
-  coding-style.md    # naming, file size limits
-  agents.md          # when to delegate to subagents
-frontend/
-  components.md      # React patterns, component structure
-  styling.md         # CSS/Tailwind conventions
-backend/
-  api.md             # REST conventions, error responses
-  database.md        # query patterns, migration rules
+  security.md           # no hardcoded secrets, input validation
+  testing.md            # TDD workflow, coverage requirements
+  git-workflow.md       # commit format, PR process
+  coding-style.md       # naming, file size limits
+  agents.md             # when to delegate to subagents
+  frontend/
+    components.md       # React patterns, component structure
+    styling.md          # CSS/Tailwind conventions
+  backend/
+    api.md              # REST conventions, error responses
+    database.md         # query patterns, migration rules
 ```
 
 ## Path-Scoped Rules
