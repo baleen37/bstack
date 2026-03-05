@@ -40,3 +40,78 @@ DISPATCH="${PROJECT_ROOT}/scripts/dispatch.sh"
     assert_success
     assert_output_contains "CWD=/tmp"
 }
+
+# --- resolve_binary tests ---
+
+@test "dispatch: resolve_binary rejects semicolon in name" {
+    run "$DISPATCH" --resolve-test "foo;bar"
+    assert_failure
+    assert_output_contains "forbidden characters"
+}
+
+@test "dispatch: resolve_binary rejects ampersand in name" {
+    run "$DISPATCH" --resolve-test "foo&bar"
+    assert_failure
+    assert_output_contains "forbidden characters"
+}
+
+@test "dispatch: resolve_binary rejects pipe in name" {
+    run "$DISPATCH" --resolve-test "foo|bar"
+    assert_failure
+    assert_output_contains "forbidden characters"
+}
+
+@test "dispatch: resolve_binary rejects dollar sign in name" {
+    run "$DISPATCH" --resolve-test 'foo$bar'
+    assert_failure
+    assert_output_contains "forbidden characters"
+}
+
+@test "dispatch: resolve_binary rejects backtick in name" {
+    run "$DISPATCH" --resolve-test 'foo`bar'
+    assert_failure
+    assert_output_contains "forbidden characters"
+}
+
+@test "dispatch: resolve_binary rejects backslash in name" {
+    run "$DISPATCH" --resolve-test 'foo\bar'
+    assert_failure
+    assert_output_contains "forbidden characters"
+}
+
+@test "dispatch: resolve_binary rejects parentheses in name" {
+    run "$DISPATCH" --resolve-test "foo(bar)"
+    assert_failure
+    assert_output_contains "forbidden characters"
+}
+
+@test "dispatch: resolve_binary rejects angle brackets in name" {
+    run "$DISPATCH" --resolve-test "foo<bar>"
+    assert_failure
+    assert_output_contains "forbidden characters"
+}
+
+@test "dispatch: resolve_binary rejects nonexistent binary" {
+    run "$DISPATCH" --resolve-test "totally_nonexistent_binary_xyz_999"
+    assert_failure
+    assert_output_contains "Binary not found"
+}
+
+@test "dispatch: resolve_binary resolves valid binary to absolute path" {
+    run "$DISPATCH" --resolve-test "bash"
+    assert_success
+    assert_output_matches "^/"
+}
+
+@test "dispatch: resolve_binary rejects binary in /tmp" {
+    local tmp_dir="/tmp/dispatch-test-$$"
+    mkdir -p "$tmp_dir"
+    local fake_bin="${tmp_dir}/fakecmd"
+    echo '#!/bin/sh' > "$fake_bin"
+    chmod +x "$fake_bin"
+
+    PATH="${tmp_dir}:${PATH}" run "$DISPATCH" --resolve-test "fakecmd"
+    rm -rf "$tmp_dir"
+    assert_failure
+    assert_output_contains "untrusted path"
+}

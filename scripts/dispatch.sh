@@ -3,6 +3,42 @@ set -euo pipefail
 
 VALID_TOOLS="claude codex gemini"
 
+# Untrusted path prefixes for binary resolution
+UNTRUSTED_PATHS="/tmp /var/tmp /dev/shm"
+
+# Resolve a binary name to an absolute path with safety checks.
+# Rejects names with shell metacharacters, unresolvable binaries,
+# and binaries in untrusted directories.
+# Usage: resolve_binary <name>
+# Prints the absolute path on success, exits with error on failure.
+resolve_binary() {
+    local name="$1"
+
+    # Reject shell metacharacters
+    if [[ "$name" =~ [\;\&\|\$\`\(\)\<\>\\] ]]; then
+        echo "Binary name contains forbidden characters: ${name}" >&2
+        return 1
+    fi
+
+    # Resolve to absolute path
+    local resolved
+    resolved="$(command -v "$name" 2>/dev/null)" || true
+    if [[ -z "$resolved" ]]; then
+        echo "Binary not found: ${name}" >&2
+        return 1
+    fi
+
+    # Reject untrusted paths
+    for prefix in $UNTRUSTED_PATHS; do
+        if [[ "$resolved" == "${prefix}"/* ]]; then
+            echo "Binary resolves to untrusted path: ${resolved}" >&2
+            return 1
+        fi
+    done
+
+    echo "$resolved"
+}
+
 usage() {
     cat >&2 <<EOF
 Usage: $(basename "$0") [OPTIONS] <tool> <task>
@@ -49,6 +85,10 @@ while [[ $# -gt 0 ]]; do
             DRY_RUN=true
             shift
             ;;
+        --resolve-test)
+            resolve_binary "$2"
+            exit $?
+            ;;
         -*)
             echo "Unknown option: $1" >&2
             usage
@@ -83,9 +123,13 @@ fi
 
 TASK="$1"
 
+# Resolve tool binary
+TOOL_PATH="$(resolve_binary "$TOOL")"
+
 # Dry-run mode: print parsed values and exit
 if [[ "${DRY_RUN}" == true ]]; then
     echo "TOOL=${TOOL}"
+    echo "TOOL_PATH=${TOOL_PATH}"
     echo "TASK=${TASK}"
     echo "MODEL=${MODEL}"
     echo "TIMEOUT=${TIMEOUT}"
