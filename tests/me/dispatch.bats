@@ -103,6 +103,32 @@ DISPATCH="${PROJECT_ROOT}/scripts/dispatch.sh"
     assert_output_matches "^/"
 }
 
+# --- build_command tests ---
+
+@test "dispatch: build_command claude includes dangerously-skip-permissions" {
+    run "$DISPATCH" --dry-run claude "test task"
+    assert_success
+    assert_output_contains "dangerously-skip-permissions"
+}
+
+@test "dispatch: build_command codex includes full-auto" {
+    run "$DISPATCH" --dry-run codex "test task"
+    assert_success
+    assert_output_contains "full-auto"
+}
+
+@test "dispatch: build_command gemini includes yolo" {
+    run "$DISPATCH" --dry-run gemini "test task"
+    assert_success
+    assert_output_contains "yolo"
+}
+
+@test "dispatch: build_command passes model flag" {
+    run "$DISPATCH" --dry-run --model gpt-4.1 codex "test task"
+    assert_success
+    assert_output_contains "gpt-4.1"
+}
+
 @test "dispatch: resolve_binary rejects binary in /tmp" {
     local tmp_dir="/tmp/dispatch-test-$$"
     mkdir -p "$tmp_dir"

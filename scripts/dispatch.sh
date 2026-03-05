@@ -123,11 +123,37 @@ fi
 
 TASK="$1"
 
-# Resolve tool binary (used in execution step below)
-# shellcheck disable=SC2034
+# Resolve tool binary
 TOOL_PATH="$(resolve_binary "$TOOL")"
 
-# Dry-run mode: print parsed values and exit
+# Build the full command string for a given tool.
+# Usage: build_command <tool> <tool_path> <model> <task_file> <result_file>
+build_command() {
+    local tool="$1" tool_path="$2" model="$3" task_file="$4" result_file="$5"
+    local model_flag=""
+
+    if [[ -n "$model" ]]; then
+        model_flag=" --model ${model}"
+    fi
+
+    case "$tool" in
+        claude)
+            echo "${tool_path} -p \"\$(cat \"${task_file}\")\" --dangerously-skip-permissions${model_flag} > \"${result_file}\""
+            ;;
+        codex)
+            echo "${tool_path} --full-auto -o \"${result_file}\"${model_flag} \"\$(cat \"${task_file}\")\""
+            ;;
+        gemini)
+            echo "${tool_path} -p \"\$(cat \"${task_file}\")\" --yolo${model_flag} > \"${result_file}\""
+            ;;
+        *)
+            echo "Unknown tool in build_command: ${tool}" >&2
+            return 1
+            ;;
+    esac
+}
+
+# Dry-run mode: show built command and exit
 if [[ "${DRY_RUN}" == true ]]; then
     echo "TOOL=${TOOL}"
     echo "TOOL_PATH=${TOOL_PATH}"
@@ -135,5 +161,7 @@ if [[ "${DRY_RUN}" == true ]]; then
     echo "MODEL=${MODEL}"
     echo "TIMEOUT=${TIMEOUT}"
     echo "CWD=${CWD}"
+    CMD="$(build_command "$TOOL" "$TOOL_PATH" "$MODEL" "/tmp/task.txt" "/tmp/result.txt")"
+    echo "CMD=${CMD}"
     exit 0
 fi
