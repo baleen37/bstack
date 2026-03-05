@@ -129,6 +129,11 @@ DISPATCH="${PROJECT_ROOT}/scripts/dispatch.sh"
     assert_output_contains "gpt-4.1"
 }
 
+@test "dispatch: fails when tmux not available" {
+    PATH="/usr/bin:/bin" run "$DISPATCH" codex "test task"
+    assert_failure
+}
+
 @test "dispatch: resolve_binary rejects binary in /tmp" {
     local tmp_dir="/tmp/dispatch-test-$$"
     mkdir -p "$tmp_dir"

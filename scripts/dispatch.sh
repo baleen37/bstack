@@ -165,3 +165,57 @@ if [[ "${DRY_RUN}" == true ]]; then
     echo "CMD=${CMD}"
     exit 0
 fi
+
+# Set defaults for execution
+TIMEOUT="${TIMEOUT:-300}"
+CWD="${CWD:-$PWD}"
+
+# Main execution via tmux
+main() {
+    # Check tmux availability
+    if ! command -v tmux &>/dev/null; then
+        echo "tmux is required but not found" >&2
+        exit 1
+    fi
+
+    local id
+    id="dispatch-$(date +%s)-$$"
+    local task_file result_file
+    task_file="$(mktemp "/tmp/${id}-task.XXXXXX")"
+    result_file="$(mktemp "/tmp/${id}-result.XXXXXX")"
+    local session="$id"
+
+    # Write task to temp file
+    echo "$TASK" > "$task_file"
+
+    # Build command
+    local cmd
+    cmd="$(build_command "$TOOL" "$TOOL_PATH" "$MODEL" "$task_file" "$result_file")"
+
+    # Cleanup trap
+    cleanup() {
+        tmux kill-session -t "$session" 2>/dev/null || true
+        rm -f "$task_file" "$result_file"
+    }
+    trap cleanup EXIT
+
+    # Create tmux session
+    tmux new-session -d -s "$session" -x 220 -y 50 -c "$CWD"
+
+    # Send command with literal mode
+    tmux send-keys -t "$session" -l -- "$cmd && tmux wait-for -S $id"
+    tmux send-keys -t "$session" Enter
+
+    # Wait with timeout
+    if ! timeout "$TIMEOUT" tmux wait-for "$id"; then
+        echo "Timed out after ${TIMEOUT}s" >&2
+        exit 124
+    fi
+
+    # Read and output result
+    if [[ -s "$result_file" ]]; then
+        cat "$result_file"
+    fi
+}
+
+main
