@@ -1,6 +1,6 @@
 ---
 name: dispatch
-description: Use when delegating a subtask to an AI CLI tool (Codex, Gemini, OpenCode, etc.) via tmux - fire-and-wait pattern using tmux wait-for for non-polling completion detection
+description: Use when delegating a subtask to an AI CLI tool (Codex, Gemini, etc.) via tmux - fire-and-wait pattern using tmux wait-for for non-polling completion detection
 ---
 
 # Dispatch
@@ -23,14 +23,14 @@ RESULT="/tmp/dispatch-$ID.md"
 
 # 1. Launch AI CLI in detached tmux session (pick command from table above)
 tmux new-session -d -s "$SESSION" -x 220 -y 50
-tmux send-keys -t "$SESSION" \
-  "<AI_COMMAND> && tmux wait-for -S $ID" \
-  Enter
+tmux send-keys -t "$SESSION" -l -- "<AI_COMMAND>; tmux wait-for -S $ID"
+tmux send-keys -t "$SESSION" Enter
 
 # 2. Block until AI signals completion (no polling)
 tmux wait-for "$ID"
 
-# 3. Read result
+# 3. Read result (check for failure first)
+[[ -s "$RESULT" ]] || { echo "Dispatch failed or produced no output" >&2; exit 1; }
 cat "$RESULT"
 
 # 4. Cleanup
@@ -48,11 +48,11 @@ SESSION="dispatch-$ID"
 RESULT="/tmp/dispatch-$ID.md"
 
 tmux new-session -d -s "$SESSION" -x 220 -y 50
-tmux send-keys -t "$SESSION" \
-  "codex exec --full-auto -o \"$RESULT\" \"$TASK\" && tmux wait-for -S $ID" \
-  Enter
+tmux send-keys -t "$SESSION" -l -- "codex exec --full-auto -o \"$RESULT\" \"$TASK\"; tmux wait-for -S $ID"
+tmux send-keys -t "$SESSION" Enter
 
 tmux wait-for "$ID"
+[[ -s "$RESULT" ]] || { echo "Codex failed" >&2; exit 1; }
 cat "$RESULT"
 tmux kill-session -t "$SESSION" 2>/dev/null
 rm -f "$RESULT"
@@ -76,11 +76,11 @@ SESSION="dispatch-$ID"
 RESULT="/tmp/dispatch-$ID.md"
 
 tmux new-session -d -s "$SESSION" -x 220 -y 50
-tmux send-keys -t "$SESSION" \
-  "gemini -p \"$TASK\" --yolo > \"$RESULT\" && tmux wait-for -S $ID" \
-  Enter
+tmux send-keys -t "$SESSION" -l -- "gemini -p \"$TASK\" --yolo > \"$RESULT\"; tmux wait-for -S $ID"
+tmux send-keys -t "$SESSION" Enter
 
 tmux wait-for "$ID"
+[[ -s "$RESULT" ]] || { echo "Gemini failed" >&2; exit 1; }
 cat "$RESULT"
 tmux kill-session -t "$SESSION" 2>/dev/null
 rm -f "$RESULT"
@@ -100,19 +100,18 @@ RESPONSE=$(jq -r '.response' "$RESULT")
 
 ## Rules
 
-- Use `&&` not `;` before `tmux wait-for -S` — if the AI fails, no signal fires and `tmux wait-for` blocks forever.
+- Use `;` not `&&` before `tmux wait-for -S` — `&&` causes permanent hang if the AI exits with non-zero. `;` always signals; detect failure via `[[ -s "$RESULT" ]]`.
+- Use `send-keys -l --` for literal input — prevents special characters (`"`, `$`, `>`) from being interpreted as tmux key bindings.
 - Use unique IDs: `$(date +%s)-$$` prevents session name collisions.
-- **Timeout:** `tmux wait-for` has no built-in timeout. Wrap the whole dispatch with `timeout(1)`:
-  ```bash
-  timeout 300 tmux wait-for "$ID" || { tmux kill-session -t "$SESSION" 2>/dev/null; echo "TIMEOUT" >&2; }
-  ```
+- Always check result file is non-empty before reading: `[[ -s "$RESULT" ]]`.
 - Always kill the session and remove the result file after reading.
 - **Quoting `$TASK`:** If the task contains quotes, newlines, or special characters, write it to a temp file first:
   ```bash
   TASK_FILE="/tmp/task-$ID.txt"
   printf '%s' "$TASK" > "$TASK_FILE"
-  # Then pass the file path, e.g.: codex exec --full-auto -o "$RESULT" "$(cat $TASK_FILE)"
-  # Or for Gemini: gemini -p "$(cat $TASK_FILE)" --yolo > "$RESULT"
+  # Codex: codex exec --full-auto -o "$RESULT" "$(cat "$TASK_FILE")"
+  # Gemini: gemini -p "$(cat "$TASK_FILE")" --yolo > "$RESULT"
+  # Cleanup: rm -f "$RESULT" "$TASK_FILE"
   ```
 
 ## Working Directory
@@ -120,9 +119,8 @@ RESPONSE=$(jq -r '.response' "$RESULT")
 Dispatched CLI inherits the tmux session's cwd. To specify:
 
 ```bash
-tmux send-keys -t "$SESSION" \
-  "cd /path/to/project && <AI_COMMAND> && tmux wait-for -S $ID" \
-  Enter
+tmux send-keys -t "$SESSION" -l -- "cd /path/to/project && <AI_COMMAND>; tmux wait-for -S $ID"
+tmux send-keys -t "$SESSION" Enter
 ```
 
 ## Common Mistakes
@@ -130,7 +128,9 @@ tmux send-keys -t "$SESSION" \
 | Mistake | Fix |
 |---------|-----|
 | `codex` instead of `codex exec` | Opens interactive TUI and hangs |
-| `;` instead of `&&` before signal | AI failure → signal still fires → false completion |
+| `&&` instead of `;` before signal | AI failure → no signal → hangs forever |
+| Missing `send-keys -l` flag | Special chars interpreted as tmux keybindings |
+| `cat "$RESULT"` without `-s` check | Silently outputs nothing on AI failure |
 | Reusing session names | Use unique ID per call |
 | Forgetting cleanup | Sessions accumulate; always `tmux kill-session` after reading |
 | Codex outside git repo | Add `--skip-git-repo-check` |
