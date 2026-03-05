@@ -123,7 +123,8 @@ fi
 
 TASK="$1"
 
-# Resolve tool binary
+# Resolve tool binary (used in execution step below)
+# shellcheck disable=SC2034
 TOOL_PATH="$(resolve_binary "$TOOL")"
 
 # Dry-run mode: print parsed values and exit
