@@ -3,18 +3,18 @@ set -euo pipefail
 
 # dispatch <tool> "task"
 # Dispatch a task to an AI CLI tool via tmux.
-# Tools: claude, codex, gemini
+# Tools: codex, gemini
 
 die() { echo "Error: $*" >&2; exit 1; }
 
-[[ $# -ge 2 ]] || die "Usage: dispatch <claude|codex|gemini> \"task\""
+[[ $# -ge 2 ]] || die "Usage: dispatch <codex|gemini> \"task\""
 
 TOOL="$1"
 TASK="$2"
 
 case "$TOOL" in
-    claude|codex|gemini) ;;
-    *) die "Unknown tool: $TOOL (supported: claude, codex, gemini)" ;;
+    codex|gemini) ;;
+    *) die "Unknown tool: $TOOL (supported: codex, gemini)" ;;
 esac
 
 BINARY="$(command -v "$TOOL" 2>/dev/null)" || die "$TOOL not found in PATH"
@@ -28,8 +28,7 @@ printf '%s' "$TASK" > "$TASK_FILE"
 
 # Build tool-specific command
 case "$TOOL" in
-    claude)  CMD="$BINARY -p \"\$(cat '$TASK_FILE')\" --dangerously-skip-permissions > '$RESULT'" ;;
-    codex)   CMD="$BINARY --full-auto -o '$RESULT' \"\$(cat '$TASK_FILE')\"" ;;
+    codex)   CMD="$BINARY exec --full-auto -o '$RESULT' \"\$(cat '$TASK_FILE')\"" ;;
     gemini)  CMD="$BINARY -p \"\$(cat '$TASK_FILE')\" --yolo > '$RESULT'" ;;
 esac
 
@@ -42,9 +41,9 @@ cleanup() {
 trap cleanup EXIT
 
 tmux new-session -d -s "$ID" -x 220 -y 50
-tmux send-keys -t "$ID" -l -- "$CMD && tmux wait-for -S $ID"
+tmux send-keys -t "$ID" -l -- "$CMD; tmux wait-for -S $ID"
 tmux send-keys -t "$ID" Enter
 
-timeout 300 tmux wait-for "$ID" || { echo "Timeout" >&2; exit 124; }
+tmux wait-for "$ID"
 
 [[ -s "$RESULT" ]] && cat "$RESULT"
