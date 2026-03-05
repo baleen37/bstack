@@ -23,7 +23,7 @@
         "memory",
         "context"
       ],
-      "version": "5.41.0"
+      "version": "5.41.1"
     },
     {
       "name": "core",
@@ -37,7 +37,7 @@
         "workflow",
         "skills"
       ],
-      "version": "5.41.0"
+      "version": "5.41.1"
     },
     {
       "name": "jira",
@@ -50,7 +50,7 @@
         "confluence",
         "project-management"
       ],
-      "version": "5.41.0"
+      "version": "5.41.1"
     },
     {
       "name": "lsp-gopls",
@@ -62,7 +62,7 @@
         "go",
         "gopls"
       ],
-      "version": "5.41.0"
+      "version": "5.41.1"
     },
     {
       "name": "lsp-typescript",
@@ -74,7 +74,7 @@
         "typescript",
         "javascript"
       ],
-      "version": "5.41.0"
+      "version": "5.41.1"
     },
     {
       "name": "lsp-clangd",
@@ -87,7 +87,7 @@
         "cpp",
         "clangd"
       ],
-      "version": "5.41.0"
+      "version": "5.41.1"
     },
     {
       "name": "lsp-lua",
@@ -99,7 +99,7 @@
         "lua",
         "lua-language-server"
       ],
-      "version": "5.41.0"
+      "version": "5.41.1"
     },
     {
       "name": "lsp-pyright",
@@ -111,7 +111,7 @@
         "python",
         "pyright"
       ],
-      "version": "5.41.0"
+      "version": "5.41.1"
     }
   ]
 }
