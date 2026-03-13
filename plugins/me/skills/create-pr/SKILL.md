@@ -35,18 +35,23 @@ git commit -m "type(scope): summary"
 # 4) push
 git push -u origin HEAD
 
-# 5) create PR (do not hardcode --base main)
-# Body: 1-2 sentence summary, bullet list of changes, test evidence
-PR_URL=$(gh pr create --title "$(git log -1 --pretty=%s)" --body "<short summary>")
+# 5) detect PR template (check in order)
+# .github/PULL_REQUEST_TEMPLATE.md → PULL_REQUEST_TEMPLATE.md → default format
+# If found: read it, fill each section with actual change details, preserve empty checkboxes (- [ ]) as-is
+# If not found: use default format (see PR Body Format below)
 
-# 6) verify
+# 6) create PR (do not hardcode --base main)
+# Body: filled template or default format
+PR_URL=$(gh pr create --title "$(git log -1 --pretty=%s)" --body "<filled body>")
+
+# 7) verify
 "${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts/verify-pr-status.sh"
 # exit 0: done
 # exit 1: broken — use me:pr-pass
 # exit 2: CI still running
 gh pr checks --watch
 
-# 7) auto-merge (optional, if requested in arguments)
+# 8) auto-merge (optional, if requested in arguments)
 gh pr merge "${PR_URL##*/}" --auto --squash
 ```
 
@@ -58,6 +63,12 @@ gh pr merge "${PR_URL##*/}" --auto --squash
 - State-changing follow-up not approved by user
 
 ## PR Body Format
+
+### If template found (`.github/PULL_REQUEST_TEMPLATE.md` or `PULL_REQUEST_TEMPLATE.md`)
+
+Read the template file and use its structure as the body skeleton. Fill each section with actual change details. Preserve empty checkboxes (`- [ ]`) exactly as-is — do not check them.
+
+### If no template found (default)
 
 - Summary: 1-2 sentences max
 - Changes: Bullet list
