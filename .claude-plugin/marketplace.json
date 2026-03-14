@@ -112,6 +112,20 @@
         "pyright"
       ],
       "version": "5.43.0"
+    },
+    {
+      "name": "pm",
+      "description": "Product discovery skills for PMs: ideation, experiments, assumption testing, and feature prioritization.",
+      "source": "./plugins/pm",
+      "category": "product-management",
+      "tags": [
+        "product-management",
+        "discovery",
+        "ideation",
+        "experiments",
+        "assumptions"
+      ],
+      "version": "1.0.0"
     }
   ]
 }
