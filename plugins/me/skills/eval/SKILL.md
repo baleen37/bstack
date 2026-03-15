@@ -96,5 +96,5 @@ Response summaries:
 - All subagents run via the `Agent` tool — each call is an isolated session with no shared context.
 - Phase 1 subagents MUST be launched in a single parallel message (not one by one).
 - The judge receives ONE consolidated call with all responses.
-- Never show the judge which option is A or B until after its verdict.
+- Never show the judge which option is A or B until after its verdict. (The prompt *contents* may be shared with the judge — what must stay hidden is the A/B label mapping, i.e. which letter corresponds to which option number.)
 - Always reverse-map before showing the user.
