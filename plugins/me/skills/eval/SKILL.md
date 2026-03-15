@@ -42,7 +42,7 @@ Runs: 3
 
 Parse PROMPT_A and PROMPT_B from the input. Validate they are not identical.
 
-Launch **2×Runs subagents in parallel** in a single message — all at once, not sequentially:
+Launch all subagents **in parallel in a single message** — for each of the N runs, that means one `Agent` (general-purpose) for Prompt A and one for Prompt B (total: 2×N calls, all at once):
 - For each run: one `Agent` (general-purpose) for Prompt A, one `Agent` (general-purpose) for Prompt B
 - Each subagent's prompt is exactly the prompt text provided (nothing added)
 - Collect all responses; note any failures (subagent error or empty response)
@@ -53,7 +53,7 @@ If all runs for one side fail, declare the other the winner immediately and note
 
 Build a single judge prompt:
 
-1. **Anonymize:** Present Prompt A as "Option 1" and Prompt B as "Option 2". Randomize which is listed first in the prompt.
+1. **Anonymize:** Assign Prompt A → "Option 1" and Prompt B → "Option 2" (fixed mapping — do not change). Randomize which option is presented *first* in the judge prompt, but keep the labels "Option 1" and "Option 2" as assigned. This way reverse-mapping is always: Option 1 = A, Option 2 = B.
 2. **Include all responses:** Show each run's response grouped by option (e.g., "Option 1 – Run 1", "Option 1 – Run 2").
 3. **Infer criteria:** Instruct the judge to read both prompts, understand their intent and domain, and derive the most relevant evaluation criteria before scoring.
 4. **Ask for:** Winner (Option 1, Option 2, or Tie), reasoning, and a per-criterion breakdown (each criterion: Option 1 wins / Option 2 wins / tie).
