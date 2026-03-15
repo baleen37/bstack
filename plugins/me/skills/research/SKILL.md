@@ -32,4 +32,3 @@ Use `model="haiku"` for simple Explore tasks.
 - "Found one good source" → need 3+
 - "Confident based on experience" → experience ≠ evidence
 - Listing "possible bugs" without testing → speculation
-
