@@ -18,7 +18,7 @@ Use this skill when you want to determine which of two prompt variants produces 
 Do NOT use this for:
 
 - Comparing more than two prompts at once (run multiple evals instead)
-- Evaluating non-prompt things (code quality, design decisions, etc.)
+- Evaluating non-prompt things (code quality, design decisions, etc.) — use `me:eval-harness` instead
 
 ## Input Format
 
