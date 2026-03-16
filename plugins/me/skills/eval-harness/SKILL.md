@@ -1,6 +1,6 @@
 ---
 name: eval-harness
-description: Use when you need to compare two code implementations against defined criteria — validating a refactoring doesn't break behavior, comparing two approaches, or measuring whether a code change improves things. Do NOT use for prompt comparison (use me:eval instead), or for changes that cannot be tested in isolation.
+description: Use when you need to compare two code implementations against defined criteria — validating a refactoring doesn't break behavior, comparing two approaches, or measuring whether a code change improves things. Do NOT use for prompt comparison, or for changes that cannot be tested in isolation.
 ---
 
 # eval-harness
@@ -15,7 +15,7 @@ Use when:
 - Measuring whether a code change improves things
 
 Do NOT use when:
-- Comparing prompts (use `me:eval` instead)
+- Comparing prompts
 - Changes cannot be tested in isolation
 
 ## Input Format
