@@ -1,6 +1,6 @@
 {
   "name": "lsp-pyright",
-  "version": "5.45.0",
+  "version": "5.45.1",
   "description": "Python language server plugin for Claude Code",
   "author": {
     "name": "baleen37",
