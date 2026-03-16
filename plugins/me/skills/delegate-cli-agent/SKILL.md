@@ -1,11 +1,11 @@
 ---
-name: dispatch
-description: Use when delegating a subtask to an AI CLI tool (Codex, Gemini, etc.) via tmux - fire-and-wait pattern using tmux wait-for for non-polling completion detection
+name: delegate-cli-agent
+description: Use when you need to run Codex or Gemini on a subtask and wait for the result — launches in a detached tmux session and blocks until completion
 ---
 
-# Dispatch
+# Delegate CLI Agent
 
-Dispatch a task to an AI CLI tool in a detached tmux session and block until completion — no polling.
+Delegate a task to an AI CLI tool in a detached tmux session and block until completion — no polling.
 
 ## Supported Tools
 
@@ -20,22 +20,26 @@ Dispatch a task to an AI CLI tool in a detached tmux session and block until com
 ID="$(date +%s)-$$"
 SESSION="dispatch-$ID"
 RESULT="/tmp/dispatch-$ID.md"
+TASK_FILE="/tmp/task-$ID.txt"
 
-# 1. Launch AI CLI in detached tmux session (pick command from table above)
+# 1. Write task to file (never inline — special chars break shell parsing)
+printf '%s' "$TASK" > "$TASK_FILE"
+
+# 2. Launch AI CLI in detached tmux session (pick command from Codex/Gemini sections)
 tmux new-session -d -s "$SESSION" -x 220 -y 50
-tmux send-keys -t "$SESSION" -l -- "<AI_COMMAND>; tmux wait-for -S $ID"
+tmux send-keys -t "$SESSION" -l -- "<AI_COMMAND using $TASK_FILE>; tmux wait-for -S $ID"
 tmux send-keys -t "$SESSION" Enter
 
-# 2. Block until AI signals completion (no polling)
+# 3. Block until AI signals completion (no polling)
 tmux wait-for "$ID"
 
-# 3. Read result (check for failure first)
-[[ -s "$RESULT" ]] || { echo "Dispatch failed or produced no output" >&2; exit 1; }
+# 4. Read result (check for failure first)
+[[ -s "$RESULT" ]] || { echo "Delegate failed or produced no output" >&2; exit 1; }
 cat "$RESULT"
 
-# 4. Cleanup
+# 5. Cleanup
 tmux kill-session -t "$SESSION" 2>/dev/null
-rm -f "$RESULT"
+rm -f "$RESULT" "$TASK_FILE"
 ```
 
 ## Codex
@@ -46,16 +50,19 @@ OpenAI Codex CLI. 코드 수정/생성 작업에 특화. `codex exec`은 작업 
 ID="$(date +%s)-$$"
 SESSION="dispatch-$ID"
 RESULT="/tmp/dispatch-$ID.md"
+TASK_FILE="/tmp/task-$ID.txt"
+
+printf '%s' "$TASK" > "$TASK_FILE"
 
 tmux new-session -d -s "$SESSION" -x 220 -y 50
-tmux send-keys -t "$SESSION" -l -- "codex exec --full-auto -o \"$RESULT\" \"$TASK\"; tmux wait-for -S $ID"
+tmux send-keys -t "$SESSION" -l -- "codex exec --full-auto -o \"$RESULT\" - < \"$TASK_FILE\"; tmux wait-for -S $ID"
 tmux send-keys -t "$SESSION" Enter
 
 tmux wait-for "$ID"
 [[ -s "$RESULT" ]] || { echo "Codex failed" >&2; exit 1; }
 cat "$RESULT"
 tmux kill-session -t "$SESSION" 2>/dev/null
-rm -f "$RESULT"
+rm -f "$RESULT" "$TASK_FILE"
 ```
 
 | Flag | Purpose |
@@ -74,16 +81,19 @@ Google Gemini CLI. 코드 작업 외 리서치/분석 등 범용 작업에 적�
 ID="$(date +%s)-$$"
 SESSION="dispatch-$ID"
 RESULT="/tmp/dispatch-$ID.md"
+TASK_FILE="/tmp/task-$ID.txt"
+
+printf '%s' "$TASK" > "$TASK_FILE"
 
 tmux new-session -d -s "$SESSION" -x 220 -y 50
-tmux send-keys -t "$SESSION" -l -- "gemini -p \"$TASK\" --yolo > \"$RESULT\"; tmux wait-for -S $ID"
+tmux send-keys -t "$SESSION" -l -- "gemini -p '' --yolo < \"$TASK_FILE\" > \"$RESULT\"; tmux wait-for -S $ID"
 tmux send-keys -t "$SESSION" Enter
 
 tmux wait-for "$ID"
 [[ -s "$RESULT" ]] || { echo "Gemini failed" >&2; exit 1; }
 cat "$RESULT"
 tmux kill-session -t "$SESSION" 2>/dev/null
-rm -f "$RESULT"
+rm -f "$RESULT" "$TASK_FILE"
 ```
 
 | Flag | Purpose |
@@ -105,12 +115,12 @@ RESPONSE=$(jq -r '.response' "$RESULT")
 - Use unique IDs: `$(date +%s)-$$` prevents session name collisions.
 - Always check result file is non-empty before reading: `[[ -s "$RESULT" ]]`.
 - Always kill the session and remove the result file after reading.
-- **Quoting `$TASK`:** If the task contains quotes, newlines, or special characters, write it to a temp file first:
+- **Always write `$TASK` to a temp file** — never inline it in the command. Special characters, quotes, and newlines will break shell parsing otherwise:
   ```bash
   TASK_FILE="/tmp/task-$ID.txt"
   printf '%s' "$TASK" > "$TASK_FILE"
-  # Codex: codex exec --full-auto -o "$RESULT" "$(cat "$TASK_FILE")"
-  # Gemini: gemini -p "$(cat "$TASK_FILE")" --yolo > "$RESULT"
+  # Codex: codex exec --full-auto -o "$RESULT" - < "$TASK_FILE"
+  # Gemini: gemini -p '' --yolo < "$TASK_FILE" > "$RESULT"
   # Cleanup: rm -f "$RESULT" "$TASK_FILE"
   ```
 
@@ -134,4 +144,4 @@ tmux send-keys -t "$SESSION" Enter
 | Reusing session names | Use unique ID per call |
 | Forgetting cleanup | Sessions accumulate; always `tmux kill-session` after reading |
 | Codex outside git repo | Add `--skip-git-repo-check` |
-| Unquoted `$TASK` with special chars | Write task to temp file first |
+| Inlining `$TASK` in the command string | Always write to temp file; use stdin (`-` or `< FILE`) |
