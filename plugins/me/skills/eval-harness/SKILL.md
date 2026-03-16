@@ -1,86 +1,102 @@
 ---
 name: eval-harness
-description: Use when you need to compare two code implementations against defined criteria — validating a refactoring doesn't break behavior, comparing two approaches, or measuring whether a code change improves things. Do NOT use for prompt comparison, or for changes that cannot be tested in isolation.
+description: Use when comparing two variants (code, LLM prompts, CLI commands, or any executable) against defined criteria with the same inputs. Do NOT use when variants cannot produce observable, comparable output.
 ---
 
 # eval-harness
 
-A structured harness for comparing two code variants using worktree isolation, parallel subagent execution, and optional model grader judgment.
+A structured harness for comparing two variants using parallel subagent execution and model grader judgment. Works for any comparison where both sides produce observable output.
 
 ## When to Use
 
-Use when:
-- Validating a refactoring doesn't break behavior
-- Comparing two implementations side-by-side
-- Measuring whether a code change improves things
+- Comparing two code implementations
+- Comparing two LLM prompts or model configs
+- Comparing CLI commands, API calls, or any executable
+- Any "same input → two approaches → compare output" scenario
 
-Do NOT use when:
-- Comparing prompts
-- Changes cannot be tested in isolation
+## Variant Types
+
+| Type | How it runs | Example |
+|------|-------------|---------|
+| `code` | Implement in isolated worktree, run tests | Refactoring, algorithm swap |
+| `llm` | Call LLM with given config against all INPUTS | Prompt A vs prompt B |
+| `command` | Run shell command against all INPUTS, capture stdout/stderr | CLI flag comparison |
+| `custom` | Freeform — subagent follows instructions literally | API call, config swap |
 
 ## Input Format
-
-Provide the following fields:
 
 | Field | Description | Default |
 |-------|-------------|---------|
 | TASK | What is being compared | (required) |
-| VARIANT_A | First implementation | `current code, unchanged` |
-| VARIANT_B | Second implementation | (required) |
-| Evals | Checklist of criteria to evaluate | (required) |
-| Grader | `code`, `model`, or `both` | `both` |
+| VARIANT_A | `type:` + config/instructions | `type: code, current code unchanged` |
+| VARIANT_B | `type:` + config/instructions | (required) |
+| INPUTS | Shared test inputs passed to both variants | (optional, but required for `llm`/`command`) |
+| Evals | Checklist of judgment criteria | (required) |
+| Grader | `auto` or `none` | `auto` |
 
-**Guard**: If VARIANT_A and VARIANT_B are identical, stop and report — do not proceed.
+**Grader `auto`**: model grader always runs. Also runs `bats tests/` if either variant is `code`.
+
+**Worktree rule**: Create worktrees only for variants of type `code`. A `code` variant always runs in its own worktree; non-`code` variants do not.
+
+**Guard**: If VARIANT_A and VARIANT_B are textually identical, stop — do not proceed.
 
 ## Process
 
 ### Phase 0: Setup
 
-1. Parse all input fields.
-2. Create two worktrees via Agent tool with `isolation: "worktree"`, both branched from current HEAD.
-   - One worktree for VARIANT_A
-   - One worktree for VARIANT_B
+1. Parse all fields and identify variant types.
+2. For each variant of type `code`: create a worktree via Agent tool with `isolation: "worktree"`.
+3. Non-`code` variants need no worktree.
 
-### Phase 1: Parallel Evaluation
+### Phase 1: Parallel Collection (output only — no scoring)
 
-Launch two subagents in a **single parallel message**. Each subagent independently:
+Launch two subagents in a **single parallel message**. Each subagent:
 
-1. Implements its variant (skip if variant is `current code, unchanged`)
-2. Runs each eval criterion, recording PASS/FAIL with reason
-3. Runs `bats tests/` if code grader is enabled
-4. Returns a report with:
+1. Executes its variant:
+   - `code`: implement changes in worktree, run `bats tests/`, capture full output
+   - `llm`: call the model with the prompt config against each input, collect all responses
+   - `command`: run the command against each input, capture stdout/stderr
+   - `custom`: follow freeform instructions, capture all observable output
+2. **Does NOT score or judge** — raw collection only
+3. Returns:
    - `VARIANT`: A or B
-   - `IMPL`: summary of changes made
-   - `EVALS`: per-criterion PASS/FAIL results
-   - `TEST_RESULTS`: output of bats run (if applicable)
-   - `NOTES`: any anomalies or observations
+   - `TYPE`: variant type
+   - `EXEC_SUMMARY`: what was run
+   - `OUTPUTS`: raw outputs per input (responses, stdout, test results)
+   - `NOTES`: errors, anomalies, or partial failures
 
-### Phase 2: Model Grader (when grader is `model` or `both`)
+**On failure**: if a variant cannot execute, record the error in NOTES and return what was collected. Do not fabricate output.
 
-Construct a judge prompt that includes:
-- The original task and eval criteria
-- Both subagent reports **anonymized**: VARIANT_A → "Option 1", VARIANT_B → "Option 2"
-- Randomize the order presented to avoid position bias
+### Phase 2: Model Grader (when grader is `auto`)
 
-Send to a single judge subagent. The judge:
-- Scores each criterion per option
-- Declares a **winner** or **tie** with reasoning
-- Returns a **Verdict**
+1. Anonymize before constructing the judge prompt:
+   - Count the second digit of the current minute (e.g. minute=47 → digit=7). If odd: A→Option 1, B→Option 2. If even: B→Option 1, A→Option 2.
+2. Judge prompt includes: TASK, INPUTS, Evals, both subagent raw outputs (anonymized)
+3. Judge evaluates each Eval criterion per option and returns:
+   - Per-criterion verdict: WIN / LOSE / TIE (with reasoning)
+   - Note if both options fail a criterion — do not force a winner for that criterion
+   - Overall winner or TIE
 
 ### Phase 3: Reverse-Map and Report
 
-1. Reverse-map "Option 1"/"Option 2" back to VARIANT_A/VARIANT_B.
-2. Output final report:
+1. Reverse-map Option 1/2 back to VARIANT_A/B.
+2. Clean up all worktrees before outputting the report.
+3. Output:
 
 ```
 ## Eval-Harness Report
 
 **Task**: <task>
-**Variant A**: <description>
-**Variant B**: <description>
+**Variant A**: <type + description>
+**Variant B**: <type + description>
 
-### Code Grader Results
-<PASS/FAIL per criterion, bats output if run>
+### Execution Summary
+<EXEC_SUMMARY per variant; errors if any>
+
+### Per-Criterion Breakdown
+| Criterion | Variant A | Variant B |
+|-----------|-----------|-----------|
+| ...       | WIN/LOSE/TIE | WIN/LOSE/TIE |
 
 ### Model Grader Verdict
 Winner: <Variant A | Variant B | Tie>
@@ -88,21 +104,17 @@ Winner: <Variant A | Variant B | Tie>
 ### Reasoning
 <Judge's reasoning>
 
-### Per-Criterion Breakdown
-| Criterion | Variant A | Variant B |
-|-----------|-----------|-----------|
-| ...       | PASS/FAIL | PASS/FAIL |
-
 ### Recommendation
-<Which variant to adopt and why>
+<Which variant to adopt and why; if a variant failed to execute, say so explicitly>
 ```
 
-3. **Clean up** all worktrees after reporting is complete.
+If grader is `none`: omit Model Grader Verdict and Reasoning sections; include only Execution Summary and raw outputs.
 
 ## Key Rules
 
-- Worktrees must remain isolated throughout evaluation
 - Phase 1 subagents MUST run in parallel (single message)
-- Always anonymize before sending to the judge; always reverse-map before showing the user
+- Phase 1 collects output only — all scoring happens in Phase 2
+- Always anonymize before judge; always reverse-map before showing the user
 - A tie is a valid outcome — do not force a winner
-- Cleanup of worktrees is mandatory, even on failure
+- Worktree cleanup happens before the report, not after
+- Never fabricate output — execution failure is a valid result
