@@ -48,11 +48,17 @@ PR_URL=$(gh pr create --title "$(git log -1 --pretty=%s)" --body "<filled body>"
 "${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts/verify-pr-status.sh"
 # exit 0: done
 # exit 1: broken — use me:pr-pass
-# exit 2: CI still running
-gh pr checks --watch
+# exit 2: CI still running — continue to step 8
 
 # 8) auto-merge (optional, if requested in arguments)
-gh pr merge "${PR_URL##*/}" --auto --squash
+# Try --auto first; if it fails, fall back to watch + direct merge
+gh pr merge --auto --squash || {
+  gh pr checks --watch
+  "${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts/verify-pr-status.sh"
+  # exit 0: safe to merge directly
+  # exit 1: broken — use me:pr-pass
+  gh pr merge --squash
+}
 ```
 
 ## Stop Conditions
