@@ -1,6 +1,6 @@
 {
   "name": "lsp-clangd",
-  "version": "5.46.3",
+  "version": "5.47.0",
   "description": "C/C++ language server plugin for Claude Code",
   "author": {
     "name": "baleen37",
