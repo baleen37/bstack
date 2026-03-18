@@ -1,6 +1,6 @@
 {
   "name": "lsp-lua",
-  "version": "5.47.0",
+  "version": "6.0.0",
   "description": "Lua language server plugin for Claude Code",
   "author": {
     "name": "baleen37",
