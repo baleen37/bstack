@@ -21,9 +21,25 @@ if [[ -z "$BASE" ]]; then
 fi
 
 PR_URL=$(gh pr view --json url -q .url)
-PR_STATUS=$(gh pr view --json mergeable,mergeStateStatus)
+PR_STATUS=$(gh pr view --json mergeable,mergeStateStatus,state)
 MERGEABLE=$(echo "$PR_STATUS" | jq -r .mergeable)
 STATE=$(echo "$PR_STATUS" | jq -r .mergeStateStatus)
+PR_STATE=$(echo "$PR_STATUS" | jq -r .state)
+
+# Already merged or closed — nothing to fix
+if [[ "$PR_STATE" == "MERGED" ]]; then
+  echo ""
+  echo "✓ PR already merged"
+  echo "  - URL: $PR_URL"
+  exit 0
+fi
+if [[ "$PR_STATE" == "CLOSED" ]]; then
+  echo ""
+  echo "✗ PR was closed without merging"
+  echo "  - Reopen if needed: gh pr reopen"
+  echo "  - URL: $PR_URL"
+  exit 1
+fi
 
 case "$STATE" in
   CLEAN)
@@ -79,7 +95,7 @@ case "$STATE" in
     exit 1
     ;;
 
-  BLOCKED|UNSTABLE)
+  BLOCKED|UNSTABLE|UNKNOWN)
     echo ""
     echo "⚠ PR status: $STATE"
     echo "  - Mergeable: $MERGEABLE"
@@ -91,7 +107,7 @@ case "$STATE" in
 
   *)
     echo ""
-    echo "⚠ Unknown status: $STATE"
+    echo "⚠ Unknown mergeStateStatus: $STATE"
     echo "  - Mergeable: $MERGEABLE"
     echo "  - Check manually: $PR_URL"
     exit 1

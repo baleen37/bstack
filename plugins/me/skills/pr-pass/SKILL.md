@@ -11,8 +11,13 @@ Diagnose and fix a broken PR.
 
 ```bash
 gh pr checks
-gh pr view --json mergeable,mergeStateStatus
+gh pr view --json mergeable,mergeStateStatus,state
 ```
+
+**Interpret `mergeStateStatus: UNKNOWN`** — GitHub returns UNKNOWN transiently. Check `state` first:
+- `state: MERGED` → already merged, nothing to fix
+- `state: CLOSED` → PR was closed without merging, reopen if needed
+- `state: OPEN` + UNKNOWN → CI still settling, wait a few seconds and re-check
 
 ## Fix by Symptom
 
