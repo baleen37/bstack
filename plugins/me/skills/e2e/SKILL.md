@@ -1,5 +1,5 @@
 ---
-name: e2e-verification
+name: e2e
 description: Use when changes span multiple components, services, or layers and unit/integration tests alone cannot confirm the full flow works correctly
 ---
 
