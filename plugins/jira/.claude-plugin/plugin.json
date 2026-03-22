@@ -1,6 +1,6 @@
 {
   "name": "jira",
-  "version": "6.0.2",
+  "version": "6.1.0",
   "description": "Atlassian Jira integration skills for Claude Code - triage issues, capture tasks from meeting notes, generate status reports, and manage backlogs",
   "author": {
     "name": "baleen37",
