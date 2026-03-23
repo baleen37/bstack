@@ -1,0 +1,17 @@
+{
+  "description": "Ralph Loop hooks",
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run \"${CLAUDE_PLUGIN_ROOT}/hooks/ralph-persist.ts\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
