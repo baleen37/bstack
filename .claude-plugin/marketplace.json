@@ -125,6 +125,14 @@
         "research"
       ],
       "version": "9.0.1"
+    },
+    {
+      "name": "ralph",
+      "description": "PRD-driven persistence loop — keeps Claude working until all user stories pass",
+      "source": "./plugins/ralph",
+      "category": "development",
+      "tags": ["ralph", "loop", "persistence", "prd", "automation"],
+      "version": "1.0.0"
     }
   ]
 }
