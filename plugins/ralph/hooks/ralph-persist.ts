@@ -70,8 +70,8 @@ async function main(): Promise<void> {
     const state: RalphState = {
       active: true,
       session_id: sessionId,
-      iteration: 0,
-      max_iterations: 100,
+      iteration: 1,
+      max_iterations: 10,
       started_at: now,
       last_checked_at: now,
       prompt,
