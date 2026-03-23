@@ -96,6 +96,8 @@ async function main(): Promise<void> {
   }
 
   // Pass-through: session mismatch
+  // If either session_id is empty/unknown, skip the check — don't break a running loop
+  // just because the caller didn't provide a session_id.
   if (state.session_id && sessionId && state.session_id !== sessionId) {
     allow();
     return;
