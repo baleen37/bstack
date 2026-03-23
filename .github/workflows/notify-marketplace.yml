@@ -24,5 +24,5 @@ jobs:
           VERSION="${VERSION#v}"
           gh api repos/baleen37/baleen-marketplace/dispatches \
             -f event_type='update-plugin' \
-            -f client_payload[plugin]='everything-agent' \
+            -f client_payload[plugin]='bstack' \
             -f client_payload[version]="$VERSION"
