@@ -1,7 +1,7 @@
 {
   "name": "me",
   "version": "5.5.0",
-  "description": "Everything Agent - AI coding assistant toolkit (Claude Code, OpenCode, and more)",
+  "description": "bstack - AI coding assistant toolkit (Claude Code, OpenCode, and more)",
   "private": true,
   "type": "module",
   "scripts": {

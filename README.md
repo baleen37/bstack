@@ -4,7 +4,7 @@ AI coding assistant toolkit - Claude Code, OpenCode, and more.
 
 ## Features
 
-Everything Agent is a single consolidated plugin providing:
+bstack is a single consolidated plugin providing:
 
 - **LSP Servers**: Bash, TypeScript, Python, Go, Kotlin, Lua, Nix, Terraform language server integration
 - **Git Guard**: Automatic git workflow protection (blocks `--no-verify`, etc.)
@@ -18,10 +18,10 @@ Everything Agent is a single consolidated plugin providing:
 
 ```bash
 # Add this repository as a marketplace
-claude plugin marketplace add https://github.com/baleen37/everything-agent
+claude plugin marketplace add https://github.com/baleen37/bstack
 
 # Install the plugin
-claude plugin install everything-agent
+claude plugin install bstack
 ```
 
 ### Using Git Guard
@@ -39,7 +39,7 @@ The handoff system runs automatically at SessionStart and provides commands to t
 ## Project Structure
 
 ```text
-everything-agent/
+bstack/
 ├── .claude-plugin/
 │   ├── plugin.json               # Root plugin configuration
 │   └── marketplace.json          # Marketplace configuration

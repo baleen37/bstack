@@ -4,7 +4,7 @@
 
 ## Purpose
 
-Everything Agent - AI 코딩 어시스턴트 툴킷 (Claude Code, OpenCode, 그 외)
+bstack - AI 코딩 어시스턴트 툴킷 (Claude Code, OpenCode, 그 외)
 
 AI 보조 개발을 위한 도구들을 제공하며, 반복적 자기 참조 AI 개발 루프(Ralph Loop), Git 워크플로우 보호, 개인용 개발 워크플로우 자동화 등의 기능을 포함합니다.
 
