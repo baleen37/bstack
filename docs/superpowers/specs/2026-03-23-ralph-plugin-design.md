@@ -6,11 +6,13 @@
 
 ## Overview
 
-Port OMC's Ralph Loop into bstack as an independent plugin. Ralph is a PRD-driven persistence loop that keeps Claude working on a task until all user stories pass verification. It works by intercepting Claude's `Stop` event and returning `decision: "block"` to force continuation.
+Port OMC's Ralph Loop into bstack as an independent plugin. Ralph is a PRD-driven persistence loop that
+keeps Claude working on a task until all user stories pass verification. It works by intercepting
+Claude's `Stop` event and returning `decision: "block"` to force continuation.
 
 ## Directory Structure
 
-```
+```text
 plugins/ralph/
 ├── .claude-plugin/
 │   └── plugin.json          ← plugin metadata
@@ -26,7 +28,7 @@ plugins/ralph/
 
 **Runtime state files** (relative to project root):
 
-```
+```text
 .ralph/
 ├── state/
 │   ├── ralph-state.json          ← loop state
@@ -64,7 +66,7 @@ Runs on every `Stop` event. Reads JSON from stdin, writes JSON to stdout (or not
 
 ### State file path
 
-```
+```text
 {cwd}/.ralph/state/ralph-state.json
 ```
 
@@ -72,9 +74,13 @@ Runs on every `Stop` event. Reads JSON from stdin, writes JSON to stdout (or not
 
 ### State initialization
 
-If `.ralph/state/ralph-state.json` does not exist but the hook detects a ralph activation signal (see SKILL.md Step 1), it creates the state file using `session_id` and `cwd` from stdin, with `active: true`, `iteration: 0`, `max_iterations: 100`, and the task prompt.
+If `.ralph/state/ralph-state.json` does not exist but the hook detects a ralph activation signal
+(see SKILL.md Step 1), it creates the state file using `session_id` and `cwd` from stdin, with
+`active: true`, `iteration: 0`, `max_iterations: 100`, and the task prompt.
 
-In practice: Claude writes `.ralph/prd.json` and a sentinel file `.ralph/state/ralph-activating` during `/ralph` skill execution. On the next Stop event, the hook detects this sentinel, creates `ralph-state.json`, and deletes the sentinel.
+In practice: Claude writes `.ralph/prd.json` and a sentinel file `.ralph/state/ralph-activating`
+during `/ralph` skill execution. On the next Stop event, the hook detects this sentinel, creates
+`ralph-state.json`, and deletes the sentinel.
 
 ### Pass-through conditions (write nothing, exit 0)
 
@@ -95,7 +101,8 @@ All other cases: increment `state.iteration`, update `last_checked_at`, write st
 }
 ```
 
-If `iteration >= max_iterations`: extend `max_iterations` by 10, continue blocking. No hard limit — identical to OMC. The only true exit is via `cancel-signal-state.json`.
+If `iteration >= max_iterations`: extend `max_iterations` by 10, continue blocking. No hard limit —
+identical to OMC. The only true exit is via `cancel-signal-state.json`.
 
 ### State file schema
 
@@ -117,7 +124,9 @@ If `iteration >= max_iterations`: extend `max_iterations` by 10, continue blocki
 
 ### Step 1 — Signal activation (first iteration only)
 
-Write `.ralph/state/ralph-activating` with the task description as content. Also write `.ralph/prd.json` skeleton. The Stop hook detects this sentinel on the next Stop event and creates `ralph-state.json` using `session_id` from stdin.
+Write `.ralph/state/ralph-activating` with the task description as content. Also write `.ralph/prd.json`
+skeleton. The Stop hook detects this sentinel on the next Stop event and creates `ralph-state.json`
+using `session_id` from stdin.
 
 ### Step 2 — Write PRD (first iteration only, skipped with `--no-prd`)
 
@@ -169,7 +178,8 @@ Create `.ralph/prd.json` with user stories and acceptance criteria.
 
 ## Tests (`tests/ralph.bats`)
 
-All tests run with isolated temporary directories (`$BATS_TMPDIR`). The hook script is invoked directly with crafted JSON via stdin.
+All tests run with isolated temporary directories (`$BATS_TMPDIR`).
+The hook script is invoked directly with crafted JSON via stdin.
 
 ### Unit tests — ralph-persist.ts
 
@@ -184,6 +194,7 @@ All tests run with isolated temporary directories (`$BATS_TMPDIR`). The hook scr
 ### Flow integration tests
 
 **Happy path:**
+
 1. Create `ralph-state.json` with `active: true`, `iteration: 1`, matching `session_id`
 2. Invoke hook with matching `session_id` → `decision: "block"`, `iteration` becomes 2
 3. Invoke hook again → `decision: "block"`, `iteration` becomes 3
@@ -191,13 +202,16 @@ All tests run with isolated temporary directories (`$BATS_TMPDIR`). The hook scr
 5. Invoke hook → writes nothing (exit 0), cancel signal deleted, `state.active: false`
 
 **Session isolation:**
+
 1. Create `ralph-state.json` with `session_id: "session-A"`
 2. Invoke hook with `session_id: "session-B"` → writes nothing (orphaned state ignored)
 
 **Stale recovery:**
+
 1. Create `ralph-state.json` with `last_checked_at` set to 3 hours ago
 2. Invoke hook → writes nothing, `state.active` set to `false`
 
 **max_iterations extension:**
+
 1. Create `ralph-state.json` with `iteration: 100`, `max_iterations: 100`
 2. Invoke hook → `max_iterations` becomes 110, `decision: "block"`

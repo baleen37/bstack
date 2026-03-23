@@ -5,7 +5,8 @@ description: PRD-driven persistence loop — keeps Claude working until all user
 
 # Ralph Loop
 
-You are executing the Ralph persistence loop. Your job is to implement the task completely. The Stop hook will keep you running until you write the cancel signal file.
+You are executing the Ralph persistence loop. Your job is to implement the task completely.
+The Stop hook will keep you running until you write the cancel signal file.
 
 ## Activation (first run only)
 
@@ -36,6 +37,7 @@ Create `.ralph/prd.json` with this structure:
 ```
 
 Rules:
+
 - Each story must have clear, testable acceptance criteria
 - Order stories by dependency (foundational first)
 - Keep stories small — one story = one focused piece of functionality
@@ -51,7 +53,8 @@ On each iteration:
 5. Run the project's test suite
 6. If tests pass: set `passes: true` for this story in `prd.json`
 7. If tests fail: append learnings to `.ralph/progress.txt`:
-   ```
+
+   ```text
    [ITERATION N] Story US-XXX failed: <what went wrong> / <what to try next>
    ```
 
@@ -59,8 +62,10 @@ On each iteration:
 
 When all stories have `passes: true`:
 
-1. **Architect review** (skip with `--critic=none`): Review the full implementation for design quality, edge cases, and code clarity. Fix any issues found.
-2. **Deslop pass** (skip with `--no-deslop`): Remove AI-generated boilerplate, overly verbose comments, unnecessary abstractions, and any code that exists for no clear reason.
+1. **Architect review** (skip with `--critic=none`): Review the full implementation for design quality,
+   edge cases, and code clarity. Fix any issues found.
+2. **Deslop pass** (skip with `--no-deslop`): Remove AI-generated boilerplate, overly verbose comments,
+   unnecessary abstractions, and any code that exists for no clear reason.
 3. **Regression test run**: Run the full test suite. All tests must pass.
 
 ## Completion

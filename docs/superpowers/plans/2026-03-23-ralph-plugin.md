@@ -1,10 +1,17 @@
 # Ralph Plugin Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development
+> (recommended) or superpowers:executing-plans to implement this plan task-by-task.
+> Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a standalone `plugins/ralph/` plugin that ports OMC's Ralph Loop into bstack — a PRD-driven persistence loop that intercepts Claude's `Stop` event to keep Claude working until all user stories pass.
+**Goal:** Build a standalone `plugins/ralph/` plugin that ports OMC's Ralph Loop into bstack — a
+PRD-driven persistence loop that intercepts Claude's `Stop` event to keep Claude working until all
+user stories pass.
 
-**Architecture:** A Bun TypeScript Stop hook script (`ralph-persist.ts`) reads state from `.ralph/state/ralph-state.json` and returns `decision: "block"` to Claude Code to prevent stopping. A SKILL.md instructs Claude to write a PRD, execute stories one by one, verify completion, then create a cancel signal file to exit the loop.
+**Architecture:** A Bun TypeScript Stop hook script (`ralph-persist.ts`) reads state from
+`.ralph/state/ralph-state.json` and returns `decision: "block"` to Claude Code to prevent stopping.
+A SKILL.md instructs Claude to write a PRD, execute stories one by one, verify completion, then
+create a cancel signal file to exit the loop.
 
 **Tech Stack:** Bun (TypeScript runtime), Claude Code hooks API (Stop event), BATS (tests), JSON state files
 
@@ -28,6 +35,7 @@
 ## Task 1: Plugin scaffold + marketplace registration
 
 **Files:**
+
 - Create: `plugins/ralph/.claude-plugin/plugin.json`
 - Modify: `.claude-plugin/marketplace.json`
 
@@ -107,6 +115,7 @@ git commit -m "feat(ralph): scaffold plugin with plugin.json and marketplace reg
 ## Task 2: hooks.json
 
 **Files:**
+
 - Create: `plugins/ralph/hooks/hooks.json`
 
 - [ ] **Step 1: Write the failing test**
@@ -197,6 +206,7 @@ git commit -m "feat(ralph): add Stop hook registration and tests"
 ## Task 3: ralph-persist.ts — pass-through cases
 
 **Files:**
+
 - Create: `plugins/ralph/hooks/ralph-persist.ts`
 - Create: `tests/ralph_persist.bats`
 
@@ -452,6 +462,7 @@ git commit -m "feat(ralph): implement Stop hook pass-through logic"
 ## Task 4: ralph-persist.ts — block logic tests
 
 **Files:**
+
 - Modify: `tests/ralph_persist.bats`
 
 - [ ] **Step 1: Add block logic tests**
@@ -506,6 +517,7 @@ git commit -m "test(ralph): add block logic and max_iterations tests"
 ## Task 5: Flow integration tests
 
 **Files:**
+
 - Modify: `tests/ralph_persist.bats`
 
 - [ ] **Step 1: Add flow tests**
@@ -585,6 +597,7 @@ git commit -m "test(ralph): add flow integration tests"
 ## Task 6: SKILL.md
 
 **Files:**
+
 - Create: `plugins/ralph/skills/ralph/SKILL.md`
 
 - [ ] **Step 1: Write the SKILL.md**
@@ -628,6 +641,7 @@ Create `.ralph/prd.json` with this structure:
 ```
 
 Rules:
+
 - Each story must have clear, testable acceptance criteria
 - Order stories by dependency (foundational first)
 - Keep stories small — one story = one focused piece of functionality
@@ -643,7 +657,8 @@ On each iteration:
 5. Run the project's test suite
 6. If tests pass: set `passes: true` for this story in `prd.json`
 7. If tests fail: append learnings to `.ralph/progress.txt`:
-   ```
+
+   ```text
    [ITERATION N] Story US-XXX failed: <what went wrong> / <what to try next>
    ```
 
@@ -651,8 +666,10 @@ On each iteration:
 
 When all stories have `passes: true`:
 
-1. **Architect review** (skip with `--critic=none`): Review the full implementation for design quality, edge cases, and code clarity. Fix any issues found.
-2. **Deslop pass** (skip with `--no-deslop`): Remove AI-generated boilerplate, overly verbose comments, unnecessary abstractions, and any code that exists for no clear reason.
+1. **Architect review** (skip with `--critic=none`): Review the full implementation for design quality,
+   edge cases, and code clarity. Fix any issues found.
+2. **Deslop pass** (skip with `--no-deslop`): Remove AI-generated boilerplate, overly verbose comments,
+   unnecessary abstractions, and any code that exists for no clear reason.
 3. **Regression test run**: Run the full test suite. All tests must pass.
 
 ## Completion
@@ -675,7 +692,6 @@ The Stop hook will detect the cancel signal and exit the loop.
 - Never declare completion without writing the cancel signal file
 - Never skip the regression test run
 - Read `progress.txt` at the start of every iteration — past failures contain critical information
-```
 
 - [ ] **Step 2: Verify frontmatter test passes**
 
@@ -727,7 +743,8 @@ find plugins/ralph -type f | sort
 ```
 
 Expected output:
-```
+
+```text
 plugins/ralph/.claude-plugin/plugin.json
 plugins/ralph/hooks/hooks.json
 plugins/ralph/hooks/ralph-persist.ts
