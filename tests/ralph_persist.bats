@@ -100,3 +100,54 @@ write_state() {
     max_iter=$($JQ_BIN -r '.max_iterations' "${RALPH_DIR}/.ralph/state/ralph-state.json")
     [ "$max_iter" = "110" ]
 }
+
+@test "happy path: full loop lifecycle" {
+    # Setup: active state
+    write_state '{"active":true,"session_id":"test-session","iteration":1,"max_iterations":100,"last_checked_at":"2099-01-01T00:00:00.000Z","prompt":"build todo API"}'
+
+    # iteration 1 → block, becomes 2
+    run invoke_hook "test-session"
+    [ "$status" -eq 0 ]
+    local decision
+    decision=$($JQ_BIN -r '.decision' <<< "$output")
+    [ "$decision" = "block" ]
+
+    # iteration 2 → block, becomes 3
+    run invoke_hook "test-session"
+    [ "$status" -eq 0 ]
+    decision=$($JQ_BIN -r '.decision' <<< "$output")
+    [ "$decision" = "block" ]
+
+    # Create cancel signal
+    touch "${RALPH_DIR}/.ralph/state/cancel-signal-state.json"
+
+    # Next stop → allow, cancel signal deleted, active false
+    run invoke_hook "test-session"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+    [ ! -f "${RALPH_DIR}/.ralph/state/cancel-signal-state.json" ]
+    local active
+    active=$($JQ_BIN -r '.active' "${RALPH_DIR}/.ralph/state/ralph-state.json")
+    [ "$active" = "false" ]
+}
+
+@test "session isolation: orphaned state is ignored" {
+    write_state '{"active":true,"session_id":"session-A","iteration":1,"max_iterations":100,"last_checked_at":"2099-01-01T00:00:00.000Z","prompt":"build todo API"}'
+
+    run invoke_hook "session-B"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
+
+@test "activation sentinel: creates state and blocks on first stop" {
+    mkdir -p "${RALPH_DIR}/.ralph/state"
+    echo "build todo API" > "${RALPH_DIR}/.ralph/state/ralph-activating"
+
+    run invoke_hook "test-session"
+    [ "$status" -eq 0 ]
+    local decision
+    decision=$($JQ_BIN -r '.decision' <<< "$output")
+    [ "$decision" = "block" ]
+    [ -f "${RALPH_DIR}/.ralph/state/ralph-state.json" ]
+    [ ! -f "${RALPH_DIR}/.ralph/state/ralph-activating" ]
+}
