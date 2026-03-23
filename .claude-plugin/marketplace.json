@@ -1,6 +1,6 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "me",
+  "name": "bstack",
   "description": "AI coding assistant toolkit - Claude Code, OpenCode, and more",
   "owner": {
     "name": "baleen",
