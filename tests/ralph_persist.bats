@@ -74,3 +74,29 @@ write_state() {
     active=$($JQ_BIN -r '.active' "${RALPH_DIR}/.ralph/state/ralph-state.json")
     [ "$active" = "false" ]
 }
+
+@test "active state with matching session: returns decision block and increments iteration" {
+    write_state '{"active":true,"session_id":"test-session","iteration":2,"max_iterations":100,"last_checked_at":"2099-01-01T00:00:00.000Z","prompt":"build todo API"}'
+
+    run invoke_hook "test-session"
+    [ "$status" -eq 0 ]
+    local decision
+    decision=$($JQ_BIN -r '.decision' <<< "$output")
+    [ "$decision" = "block" ]
+    local iteration
+    iteration=$($JQ_BIN -r '.iteration' "${RALPH_DIR}/.ralph/state/ralph-state.json")
+    [ "$iteration" = "3" ]
+}
+
+@test "max_iterations reached: extends by 10 and blocks" {
+    write_state '{"active":true,"session_id":"test-session","iteration":100,"max_iterations":100,"last_checked_at":"2099-01-01T00:00:00.000Z","prompt":"build todo API"}'
+
+    run invoke_hook "test-session"
+    [ "$status" -eq 0 ]
+    local decision
+    decision=$($JQ_BIN -r '.decision' <<< "$output")
+    [ "$decision" = "block" ]
+    local max_iter
+    max_iter=$($JQ_BIN -r '.max_iterations' "${RALPH_DIR}/.ralph/state/ralph-state.json")
+    [ "$max_iter" = "110" ]
+}
