@@ -23,7 +23,7 @@
         "memory",
         "context"
       ],
-      "version": "9.0.1"
+      "version": "10.0.0"
     },
     {
       "name": "core",
@@ -37,7 +37,7 @@
         "workflow",
         "skills"
       ],
-      "version": "9.0.1"
+      "version": "10.0.0"
     },
     {
       "name": "jira",
@@ -50,7 +50,7 @@
         "confluence",
         "project-management"
       ],
-      "version": "9.0.1"
+      "version": "10.0.0"
     },
     {
       "name": "lsp-gopls",
@@ -62,7 +62,7 @@
         "go",
         "gopls"
       ],
-      "version": "9.0.1"
+      "version": "10.0.0"
     },
     {
       "name": "lsp-typescript",
@@ -74,7 +74,7 @@
         "typescript",
         "javascript"
       ],
-      "version": "9.0.1"
+      "version": "10.0.0"
     },
     {
       "name": "lsp-clangd",
@@ -87,7 +87,7 @@
         "cpp",
         "clangd"
       ],
-      "version": "9.0.1"
+      "version": "10.0.0"
     },
     {
       "name": "lsp-lua",
@@ -99,7 +99,7 @@
         "lua",
         "lua-language-server"
       ],
-      "version": "9.0.1"
+      "version": "10.0.0"
     },
     {
       "name": "lsp-pyright",
@@ -111,7 +111,7 @@
         "python",
         "pyright"
       ],
-      "version": "9.0.1"
+      "version": "10.0.0"
     },
     {
       "name": "autoresearch",
@@ -124,15 +124,21 @@
         "autonomous",
         "research"
       ],
-      "version": "9.0.1"
+      "version": "10.0.0"
     },
     {
       "name": "ralph",
       "description": "PRD-driven persistence loop — keeps Claude working until all user stories pass",
       "source": "./plugins/ralph",
       "category": "development",
-      "tags": ["ralph", "loop", "persistence", "prd", "automation"],
-      "version": "1.0.0"
+      "tags": [
+        "ralph",
+        "loop",
+        "persistence",
+        "prd",
+        "automation"
+      ],
+      "version": "10.0.0"
     }
   ]
 }

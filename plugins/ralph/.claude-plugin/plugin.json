@@ -1,11 +1,17 @@
 {
   "name": "ralph",
-  "version": "1.0.0",
+  "version": "10.0.0",
   "description": "PRD-driven persistence loop — keeps Claude working until all user stories pass",
   "author": {
     "name": "baleen37",
     "email": "git@baleen.me"
   },
   "license": "MIT",
-  "keywords": ["ralph", "loop", "persistence", "prd", "automation"]
+  "keywords": [
+    "ralph",
+    "loop",
+    "persistence",
+    "prd",
+    "automation"
+  ]
 }
