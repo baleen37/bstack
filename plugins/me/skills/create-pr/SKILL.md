@@ -55,8 +55,10 @@ PR_URL=$(gh pr create --title "$(git log -1 --pretty=%s)" --body "<filled body>"
 gh pr merge --auto --squash || {
   gh pr checks --watch
   "${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts/verify-pr-status.sh"
-  # exit 0: safe to merge directly
-  # exit 1: broken — use me:pr-pass
+  VERIFY_EXIT=$?
+  # exit 1: broken — STOP, use me:pr-pass, do NOT merge
+  if [[ $VERIFY_EXIT -eq 1 ]]; then exit 1; fi
+  # exit 0 or 2: safe to merge directly
   gh pr merge --squash
 }
 ```
