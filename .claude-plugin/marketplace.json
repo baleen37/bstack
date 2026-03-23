@@ -112,6 +112,19 @@
         "pyright"
       ],
       "version": "6.1.0"
+    },
+    {
+      "name": "autoresearch",
+      "description": "Autonomous experiment loop — iteratively optimize any metric with git-tracked experiments",
+      "source": "./plugins/autoresearch",
+      "category": "development",
+      "tags": [
+        "experiments",
+        "optimization",
+        "autonomous",
+        "research"
+      ],
+      "version": "6.1.0"
     }
   ]
 }
