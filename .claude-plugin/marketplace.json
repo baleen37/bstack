@@ -23,7 +23,7 @@
         "memory",
         "context"
       ],
-      "version": "10.0.1"
+      "version": "10.0.2"
     },
     {
       "name": "core",
@@ -37,7 +37,7 @@
         "workflow",
         "skills"
       ],
-      "version": "10.0.1"
+      "version": "10.0.2"
     },
     {
       "name": "jira",
@@ -50,7 +50,7 @@
         "confluence",
         "project-management"
       ],
-      "version": "10.0.1"
+      "version": "10.0.2"
     },
     {
       "name": "lsp-gopls",
@@ -62,7 +62,7 @@
         "go",
         "gopls"
       ],
-      "version": "10.0.1"
+      "version": "10.0.2"
     },
     {
       "name": "lsp-typescript",
@@ -74,7 +74,7 @@
         "typescript",
         "javascript"
       ],
-      "version": "10.0.1"
+      "version": "10.0.2"
     },
     {
       "name": "lsp-clangd",
@@ -87,7 +87,7 @@
         "cpp",
         "clangd"
       ],
-      "version": "10.0.1"
+      "version": "10.0.2"
     },
     {
       "name": "lsp-lua",
@@ -99,7 +99,7 @@
         "lua",
         "lua-language-server"
       ],
-      "version": "10.0.1"
+      "version": "10.0.2"
     },
     {
       "name": "lsp-pyright",
@@ -111,7 +111,7 @@
         "python",
         "pyright"
       ],
-      "version": "10.0.1"
+      "version": "10.0.2"
     },
     {
       "name": "autoresearch",
@@ -124,7 +124,7 @@
         "autonomous",
         "research"
       ],
-      "version": "10.0.1"
+      "version": "10.0.2"
     },
     {
       "name": "ralph",
@@ -138,7 +138,7 @@
         "prd",
         "automation"
       ],
-      "version": "10.0.1"
+      "version": "10.0.2"
     }
   ]
 }
