@@ -46,21 +46,24 @@ PR_URL=$(gh pr create --title "$(git log -1 --pretty=%s)" --body "<filled body>"
 
 # 7) verify
 "${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts/verify-pr-status.sh"
-# exit 0: done
-# exit 1: broken — use me:pr-pass
-# exit 2: CI still running — continue to step 8
+VERIFY_EXIT=$?
+# exit 0: merge-ready
+# exit 1: broken — use me:pr-pass, STOP
+# exit 2: CI still running — wait before proceeding
+if [[ $VERIFY_EXIT -eq 1 ]]; then exit 1; fi
 
 # 8) auto-merge (optional, if requested in arguments)
-# Try --auto first; if it fails, fall back to watch + direct merge
-gh pr merge --auto --squash || {
+# If CI is still running (exit 2): wait for checks to finish first
+if [[ $VERIFY_EXIT -eq 2 ]]; then
   gh pr checks --watch
+  # Re-verify after CI completes
   "${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts/verify-pr-status.sh"
   VERIFY_EXIT=$?
-  # exit 1: broken — STOP, use me:pr-pass, do NOT merge
-  if [[ $VERIFY_EXIT -eq 1 ]]; then exit 1; fi
-  # exit 0 or 2: safe to merge directly
-  gh pr merge --squash
-}
+  if [[ $VERIFY_EXIT -eq 1 ]]; then exit 1; fi  # broken after CI — STOP
+fi
+
+# CI is done and PR is healthy — attempt auto-merge, fall back to direct merge
+gh pr merge --auto --squash || gh pr merge --squash
 ```
 
 ## Stop Conditions
