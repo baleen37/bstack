@@ -1,16 +1,17 @@
-# Me
+# bstack
 
-AI coding assistant toolkit - Claude Code, OpenCode, and more.
+AI 코딩 어시스턴트 툴킷 — Claude Code, OpenCode, 그 외.
 
 ## Features
 
-bstack is a single consolidated plugin providing:
+bstack은 플러그인 형태로 묶인 단일 통합 패키지입니다:
 
-- **LSP Servers**: Bash, TypeScript, Python, Go, Kotlin, Lua, Nix, Terraform language server integration
-- **Git Guard**: Automatic git workflow protection (blocks `--no-verify`, etc.)
-- **Session Handoff**: Smooth context transfer between Claude sessions
-- **Context Management**: Intelligent compaction suggestions for long conversations
-- **Skills**: Personal development workflow skills (GHA debugging, handoff, Reddit fetch, etc.)
+- **Git Guard**: `--no-verify` 등 위험한 git 명령어 자동 차단
+- **Session Handoff**: Claude 세션 간 컨텍스트 인계/인수
+- **LSP Servers**: Bash, TypeScript, Python, Go, Kotlin, Lua, Nix, Terraform 언어 서버 자동 설치
+- **Ralph Loop**: PRD 기반 자동 반복 개발 루프
+- **Skills**: 개인 개발 워크플로우 스킬 모음
+- **Jira Integration**: Jira 이슈 트리아지, 백로그 생성, 상태 리포트 등
 
 ## Quick Start
 
@@ -24,55 +25,76 @@ claude plugin marketplace add https://github.com/baleen37/bstack
 claude plugin install bstack
 ```
 
-### Using Git Guard
-
-Git Guard operates automatically via PreToolUse hooks - no commands needed:
-
-- `git commit --no-verify` is automatically blocked
-- Pre-commit validation is enforced
-- Works transparently in the background
-
-### Using Session Handoff
-
-The handoff system runs automatically at SessionStart and provides commands to transfer context between sessions.
-
 ## Project Structure
 
 ```text
 bstack/
-├── .claude-plugin/
-│   ├── plugin.json               # Root plugin configuration
-│   └── marketplace.json          # Marketplace configuration
-├── hooks/
-│   ├── hooks.json                # Unified hooks (SessionStart + PreToolUse)
-│   ├── commit-guard.sh           # Git workflow protection
-│   ├── handoff-session-start.sh  # Session handoff trigger
-│   └── lsp-*-check-install.sh   # LSP server install checks (8 languages)
-├── scripts/
-│   ├── handoff.sh                # Handoff script
-│   ├── pickup.sh                 # Pickup script
-│   ├── handoff-list.sh           # List handoffs
-│   ├── check-conflicts.sh        # Conflict checker
-│   ├── verify-pr-status.sh      # PR status verifier
-│   ├── sync-marketplace-version.sh # Version sync utility
-│   ├── ralph/                    # Ralph loop scripts
-│   └── databricks-devtools/      # Databricks CLI scripts
-├── skills/                       # All skills (18 total)
-│   ├── gha/                      # GitHub Actions debugging
-│   ├── handoff/                  # Handoff skill
-│   ├── reddit-fetch/             # Reddit content fetcher
-│   ├── remembering-conversations/ # Conversation memory
-│   ├── review-claudemd/          # CLAUDE.md review
-│   └── ...                       # Additional skills
-├── dist/
-│   ├── auto-compact.js           # Auto-compaction (PreToolUse)
-│   └── session-start.js          # Session start compaction check
-├── .github/workflows/            # CI/CD workflows
-├── docs/                         # Development and testing documentation
-├── tests/                        # BATS tests
-├── schemas/                      # JSON schemas
-└── CLAUDE.md                     # Project instructions for Claude Code
+├── plugins/
+│   ├── me/                    # Core personal workflow plugin
+│   │   ├── hooks/             # Session hooks (git guard, handoff, LSP checks)
+│   │   └── skills/            # Personal skills (16 total)
+│   ├── ralph/                 # Ralph Loop plugin
+│   │   ├── hooks/             # Ralph persistence hooks
+│   │   └── skills/            # ralph, ralph-cancel
+│   ├── autoresearch/          # Autonomous experiment loop plugin
+│   │   ├── commands/
+│   │   ├── hooks/
+│   │   └── skills/            # autoresearch
+│   ├── jira/                  # Jira integration plugin
+│   │   └── skills/            # 5 Jira workflow skills
+│   ├── core/                  # Shared agent definitions
+│   ├── lsp-*/                 # Individual LSP plugins (bash, go, lua, etc.)
+├── scripts/                   # Utility scripts (handoff, dispatch, version sync)
+├── docs/                      # Development and testing documentation
+├── tests/                     # BATS tests
+├── schemas/                   # JSON schemas
+└── CLAUDE.md                  # Project instructions for Claude Code
 ```
+
+### Skills
+
+#### `me` plugin (personal workflow)
+
+| Skill | Description |
+|-------|-------------|
+| `handoff` | 세션 종료 시 다음 세션을 위한 인계 문서 생성 |
+| `pickup` | 이전 세션의 인계 문서 로드 |
+| `create-pr` | 커밋, 푸시, PR 생성 통합 워크플로우 |
+| `pr-pass` | CI 실패, 머지 충돌 등 깨진 PR 수정 |
+| `commit` | Conventional Commits 형식으로 커밋 |
+| `research` | 코드베이스 탐색 및 버그 조사 |
+| `e2e` | 다수 컴포넌트에 걸친 E2E 검증 |
+| `eval-harness` | 두 변형을 정의된 기준으로 비교 평가 |
+| `iterate` | 반복 단일 변경 사이클로 점진적 개선 |
+| `competitive-agents` | 병렬 경쟁 에이전트로 설계 탐색 |
+| `tmux-workers` | tmux 분할 창에서 병렬 AI 에이전트 실행 |
+| `claude-code-rules` | `.claude/rules/` 규칙 파일 생성/관리 |
+| `remembering-conversations` | 이전 대화 컨텍스트 검색 및 적용 |
+| `review-claudemd` | CLAUDE.md 개선사항 발굴 |
+| `reddit-fetch` | WebFetch 차단 시 Reddit 콘텐츠 가져오기 |
+
+#### `ralph` plugin
+
+| Skill | Description |
+|-------|-------------|
+| `ralph` | PRD 기반 자동 반복 개발 루프 실행 |
+| `ralph-cancel` | 실행 중인 Ralph 루프 취소 |
+
+#### `autoresearch` plugin
+
+| Skill | Description |
+|-------|-------------|
+| `autoresearch` | 최적화 목표를 위한 자율 실험 루프 실행 |
+
+#### `jira` plugin
+
+| Skill | Description |
+|-------|-------------|
+| `capture-tasks-from-meeting-notes` | 회의록에서 Jira 태스크 자동 생성 |
+| `generate-status-report` | Jira 이슈 기반 프로젝트 상태 리포트 생성 |
+| `search-company-knowledge` | Jira에서 내부 개념/프로세스 검색 |
+| `triage-issue` | 버그 리포트 트리아지 및 중복 검색 |
+| `spec-to-backlog` | Confluence 스펙 문서를 Jira 백로그로 변환 |
 
 ## Development
 
@@ -82,19 +104,13 @@ bstack/
 # Run all BATS tests
 bats tests/
 
-# Run specific test file
-bats tests/directory_structure.bats
-
 # Run pre-commit hooks manually
 pre-commit run --all-files
 ```
 
 ### Version Management & Release
 
-This project uses **semantic-release** with **Conventional Commits** for
-automated version management.
-
-#### Commit Message Format (Conventional Commits)
+이 프로젝트는 **semantic-release**와 **Conventional Commits**를 사용하여 자동으로 버전을 관리합니다.
 
 ```bash
 # Interactive commit (recommended)
@@ -110,14 +126,6 @@ git commit -m "type(scope): description"
 - `fix`: Bug fix (patch version bump)
 - `docs`, `style`, `refactor`, `test`, `build`, `ci`, `chore`, `perf`: Patch version bump
 
-**Examples:**
-
-```text
-feat: add new LSP language server support
-fix: correct handoff session-start path
-docs: update installation instructions
-```
-
 #### Release Process
 
 1. Push commits to main branch
@@ -126,18 +134,9 @@ docs: update installation instructions
 4. Root `plugin.json` and `marketplace.json` are updated
 5. Git tag is created and GitHub release is published
 
-### Component Types
-
-- **Skills** (`skills/*/SKILL.md`): Context-aware guides that activate automatically
-- **Hooks** (`hooks/hooks.json` + `hooks/*.sh`): Event-driven automation (SessionStart, PreToolUse, etc.)
-- **Scripts** (`scripts/*.sh`): Utility scripts for handoff and workflow automation
-
 ## Pre-commit Hooks
 
-This project uses pre-commit hooks for code quality:
-
 ```bash
-# Run pre-commit manually
 pre-commit run --all-files
 ```
 
@@ -152,8 +151,6 @@ pre-commit run --all-files
 > Note: Pre-commit failures cannot be bypassed with `--no-verify` (enforced by git-guard).
 
 ## Contributing
-
-Contributions are welcome! This project follows:
 
 1. **Conventional Commits** - Use `bun run commit` for interactive commit creation
 2. **Pre-commit Hooks** - All hooks must pass before committing
