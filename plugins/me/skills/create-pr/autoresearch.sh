@@ -108,19 +108,17 @@ if [[ $hardcoded -eq 0 ]]; then
   code_quality=$((code_quality + 5))
 fi
 
-# 3e. Consistent error prefix format (5 points)
-# All error messages should use "ERROR:" or "✗" consistently
-inconsistent_errors=0
+# 3e. Consistent error output pattern (5 points)
+# All error/failure messages must go to stderr (>&2)
+# "ERROR:" for environment/precondition failures, "✗" for operation failures
+non_stderr_errors=0
 for script in "$SCRIPTS_DIR"/*.sh; do
   [[ "$(basename "$script")" == "autoresearch.sh" ]] && continue
-  has_error_prefix=$(grep -c 'echo.*"ERROR:' "$script" 2>/dev/null || true)
-  has_x_prefix=$(grep -c 'echo.*"✗' "$script" 2>/dev/null || true)
-  # Having both styles in same script is inconsistent
-  if [[ $has_error_prefix -gt 0 && $has_x_prefix -gt 0 ]]; then
-    inconsistent_errors=$((inconsistent_errors + 1))
-  fi
+  # Count error/failure messages NOT going to stderr
+  error_no_stderr=$(grep -E 'echo.*"(ERROR:|✗)' "$script" 2>/dev/null | grep -cv '>&2' || true)
+  non_stderr_errors=$((non_stderr_errors + error_no_stderr))
 done
-if [[ $inconsistent_errors -eq 0 ]]; then
+if [[ $non_stderr_errors -eq 0 ]]; then
   code_quality=$((code_quality + 5))
 fi
 

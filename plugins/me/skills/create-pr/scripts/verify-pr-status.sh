@@ -35,9 +35,9 @@ if [[ "$PR_STATE" == "MERGED" ]]; then
 fi
 if [[ "$PR_STATE" == "CLOSED" ]]; then
   echo ""
-  echo "✗ PR was closed without merging"
-  echo "  - Reopen if needed: gh pr reopen"
-  echo "  - URL: $PR_URL"
+  echo "✗ PR was closed without merging" >&2
+  echo "  - Reopen if needed: gh pr reopen" >&2
+  echo "  - URL: $PR_URL" >&2
   exit 1
 fi
 
@@ -50,22 +50,22 @@ case "$STATE" in
 
     if [[ $FAILED_REQUIRED -gt 0 ]]; then
       echo ""
-      echo "✗ Required CI checks failed"
-      echo "$CHECKS" | jq -r '.[] | select(.isRequired==true and (.state=="FAILURE" or .state=="ERROR")) | "  - ❌ \(.context): \(.state)"'
-      echo ""
-      echo "Fix CI failures before merge"
-      echo "Monitor: gh pr checks $PR_URL"
+      echo "✗ Required CI checks failed" >&2
+      echo "$CHECKS" | jq -r '.[] | select(.isRequired==true and (.state=="FAILURE" or .state=="ERROR")) | "  - ❌ \(.context): \(.state)"' >&2
+      echo "" >&2
+      echo "Fix CI failures before merge" >&2
+      echo "Monitor: gh pr checks $PR_URL" >&2
       exit 1
     fi
 
     if [[ $PENDING_REQUIRED -gt 0 ]]; then
-      echo ""
-      echo "⚠ PR status: CLEAN but required CI checks still running"
-      echo "$CHECKS" | jq -r '.[] | select(.isRequired==true and (.state=="PENDING" or .state=="IN_PROGRESS")) | "  - ⏳ \(.context): \(.state)"'
-      echo ""
-      echo "Cannot confirm merge-ready until CI completes"
-      echo "Monitor: gh pr checks $PR_URL"
-      echo "URL: $PR_URL"
+      echo "" >&2
+      echo "⚠ PR status: CLEAN but required CI checks still running" >&2
+      echo "$CHECKS" | jq -r '.[] | select(.isRequired==true and (.state=="PENDING" or .state=="IN_PROGRESS")) | "  - ⏳ \(.context): \(.state)"' >&2
+      echo "" >&2
+      echo "Cannot confirm merge-ready until CI completes" >&2
+      echo "Monitor: gh pr checks $PR_URL" >&2
+      echo "URL: $PR_URL" >&2
       exit 2
     fi
 
@@ -79,37 +79,37 @@ case "$STATE" in
 
   BEHIND)
     echo ""
-    echo "✗ PR branch is behind $BASE"
-    echo "  - Mergeable: $MERGEABLE"
-    echo "  - Sync required: git fetch origin && git merge origin/$BASE && git push"
-    echo "  - URL: $PR_URL"
+    echo "✗ PR branch is behind $BASE" >&2
+    echo "  - Mergeable: $MERGEABLE" >&2
+    echo "  - Sync required: git fetch origin && git merge origin/$BASE && git push" >&2
+    echo "  - URL: $PR_URL" >&2
     exit 1
     ;;
 
   DIRTY)
     echo ""
-    echo "✗ PR has conflicts"
-    echo "  - Mergeable: $MERGEABLE"
-    echo "  - Resolve conflicts manually and push"
-    echo "  - URL: $PR_URL"
+    echo "✗ PR has conflicts" >&2
+    echo "  - Mergeable: $MERGEABLE" >&2
+    echo "  - Resolve conflicts manually and push" >&2
+    echo "  - URL: $PR_URL" >&2
     exit 1
     ;;
 
   BLOCKED|UNSTABLE|UNKNOWN)
-    echo ""
-    echo "⚠ PR status: $STATE"
-    echo "  - Mergeable: $MERGEABLE"
-    echo "  - This may resolve automatically as CI completes"
-    echo "  - Check status: gh pr view"
-    echo "  - URL: $PR_URL"
+    echo "" >&2
+    echo "⚠ PR status: $STATE" >&2
+    echo "  - Mergeable: $MERGEABLE" >&2
+    echo "  - This may resolve automatically as CI completes" >&2
+    echo "  - Check status: gh pr view" >&2
+    echo "  - URL: $PR_URL" >&2
     exit 2
     ;;
 
   *)
-    echo ""
-    echo "⚠ Unknown mergeStateStatus: $STATE"
-    echo "  - Mergeable: $MERGEABLE"
-    echo "  - Check manually: $PR_URL"
+    echo "" >&2
+    echo "⚠ Unknown mergeStateStatus: $STATE" >&2
+    echo "  - Mergeable: $MERGEABLE" >&2
+    echo "  - Check manually: $PR_URL" >&2
     exit 1
     ;;
 esac
