@@ -36,7 +36,8 @@ load ../helpers/bats_helper
 
 @test "me: create-pr preflight-check.sh validates git repo" {
     local script="${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/preflight-check.sh"
-    grep -q "git rev-parse.*git-dir" "$script"
+    # Direct check or via shared require_git_repo from lib.sh
+    grep -q "git rev-parse.*git-dir" "$script" || grep -q "require_git_repo" "$script"
 }
 
 @test "me: create-pr verify-pr-status.sh handles all PR states with CI checks" {
