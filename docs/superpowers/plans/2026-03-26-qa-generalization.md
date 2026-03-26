@@ -1,3 +1,43 @@
+# QA Skill Generalization Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Generalize the `/qa` skill from web-only to support any project type (web, CLI, API, library) with a simplified 5-phase universal flow.
+
+**Architecture:** Single SKILL.md rewrite — 11 web-specific phases become 5 universal phases. Type-specific guidance lives inline. Supporting files (issue taxonomy, report template) are generalized to remove web-only assumptions.
+
+**Tech Stack:** Markdown skill files, no code dependencies.
+
+**Spec:** `docs/superpowers/specs/2026-03-26-qa-generalization-design.md`
+
+---
+
+### Task 1: Rewrite SKILL.md — 5-Phase Universal Flow
+
+**Files:**
+- Modify: `plugins/me/skills/qa/SKILL.md`
+
+The entire SKILL.md is rewritten. The new structure:
+
+1. Frontmatter — updated description, same allowed-tools
+2. Intro — universal QA engineer framing
+3. Browser Tool — kept but scoped to "when testing web projects"
+4. Setup section — params, tiers, clean tree, test framework bootstrap, output dirs
+5. Phase 1: Setup
+6. Phase 2: Explore — universal flow + type-specific strategies (web, CLI, API, library)
+7. Phase 3: Fix Loop — triage + fix cycle (largely preserved from current 8a-8f)
+8. Phase 4: Final QA
+9. Phase 5: Report
+10. Health Score Rubric — universal scoring mechanic, no fixed categories
+11. Rules — generalized from current web-specific rules
+12. Output Structure
+13. Completion Status
+
+- [ ] **Step 1: Write the new SKILL.md**
+
+Replace the entire contents of `plugins/me/skills/qa/SKILL.md` with:
+
+````markdown
 ---
 name: qa
 description: Systematically QA test a project and fix bugs found. Runs QA testing,
@@ -154,29 +194,7 @@ Run full mode, then load `baseline.json` from a previous run. Diff: which issues
 
 ## Phase 2: Explore
 
-Systematically test the project. The approach depends on what you're testing. See `qa/references/issue-taxonomy.md` for detailed per-type exploration checklists.
-
-**Tools by project type:**
-- **Web:** Browser tool (`mcp__plugin_superpowers-chrome_chrome__use_browser`) for navigation, interaction, screenshots
-- **CLI/API/Library:** Bash tool for commands, `curl` requests, test execution
-
-### Evidence Capture
-
-Save all evidence to `.qa/reports/evidence/`. Use the naming convention `issue-NNN-{description}.{ext}`:
-
-```bash
-# Command output (CLI, API, test runs)
-command 2>&1 | tee .qa/reports/evidence/issue-001-invalid-flag.txt
-
-# API response with headers
-curl -sS -D- http://localhost:3000/api/users 2>&1 > .qa/reports/evidence/issue-002-response.txt
-
-# Screenshots (web) — via browser tool screenshot action
-```
-
-In reports, reference evidence as:
-- Screenshots: `![Evidence](evidence/issue-001-before.png)`
-- Text output: `` `cat evidence/issue-001-output.txt` `` or quote inline
+Systematically test the project. The approach depends on what you're testing.
 
 ### Web Applications
 
@@ -199,7 +217,7 @@ In reports, reference evidence as:
 ### API Servers
 
 1. **Orient:** Find API spec (OpenAPI/Swagger) if available. Read route definitions. Identify all endpoints.
-2. **Hit endpoints:** Use `curl` via Bash to send real HTTP requests with valid inputs, invalid inputs, missing auth, edge cases.
+2. **Hit endpoints:** Send real HTTP requests with valid inputs, invalid inputs, missing auth, edge cases.
 3. **Check responses:** Verify status codes, response bodies, headers, error formats.
 4. **Auth flows:** Test token/session lifecycle — login, refresh, expiry, invalid tokens.
 5. **Spec compliance:** If a spec exists, verify every endpoint matches it.
@@ -334,7 +352,11 @@ After all fixes are applied:
 
 Choose categories appropriate to the project. There is no fixed set — pick what makes sense.
 
-**Universal categories** (see `qa/references/issue-taxonomy.md`): Correctness, Error Handling, Edge Cases, Usability, Performance, Security, Documentation. Use the subset relevant to the project — not all apply to every type.
+**Examples:**
+- Web: Console, Links, Visual, Functional, UX, Performance, Accessibility
+- CLI: Output Correctness, Error Handling, Edge Cases, Documentation, Performance
+- API: Response Correctness, Validation, Auth, Error Handling, Spec Compliance, Performance
+- Library: Test Coverage, API Usability, Error Messages, Edge Cases, Documentation
 
 **Scoring mechanic (universal):**
 Each category starts at 100. Deduct per finding:
@@ -374,12 +396,11 @@ Assign weights that sum to 100%. Weight core functionality higher than polish.
 .qa/reports/
 ├── qa-report-{YYYY-MM-DD}.md    # Structured report
 ├── evidence/
-│   ├── initial.png              # Web: landing page screenshot
-│   ├── issue-001-before.png     # Web: before fix screenshot
-│   ├── issue-001-after.png      # Web: after fix screenshot
-│   ├── issue-002-output.txt     # CLI: command output
-│   ├── issue-003-response.txt   # API: HTTP response with headers
-│   ├── issue-004-test-run.txt   # Library: test suite output
+│   ├── initial.png
+│   ├── issue-001-step-1.png
+│   ├── issue-001-before.png
+│   ├── issue-001-after.png
+│   ├── issue-002-output.txt
 │   └── ...
 └── baseline.json
 ```
@@ -395,3 +416,266 @@ Report status using one of:
 - **NEEDS_CONTEXT** — Missing information required to continue.
 
 If you have attempted a task 3 times without success, STOP and escalate.
+````
+
+- [ ] **Step 2: Verify the new SKILL.md**
+
+Read the file back and confirm:
+- Frontmatter is valid YAML
+- 5 phases are present (Setup, Explore, Fix Loop, Final QA, Report)
+- Browser Tool section is scoped to web projects
+- Type-specific exploration guidance exists for web, CLI, API, library
+- Health Score has no fixed categories
+- Rules are generic (no web-only assumptions)
+- All preserved features are present: tiers, diff-aware mode, regression mode, test bootstrap, fix loop, WTF-likelihood, 50-fix cap
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add plugins/me/skills/qa/SKILL.md
+git commit -m "feat(qa): generalize skill from web-only to universal 5-phase flow"
+```
+
+---
+
+### Task 2: Extend issue-taxonomy.md with Type-Aware Exploration Checklists
+
+**Files:**
+- Modify: `plugins/me/skills/qa/references/issue-taxonomy.md`
+
+The severity levels and existing categories stay. The Per-Page Exploration Checklist becomes type-aware with checklists for web, CLI, API, and library projects.
+
+- [ ] **Step 1: Update issue-taxonomy.md**
+
+Replace the `## Per-Page Exploration Checklist` section (lines 74-86) with the following. Keep everything above line 74 unchanged:
+
+```markdown
+## Exploration Checklists
+
+### Web Applications
+
+For each page visited:
+
+1. **Visual scan** — Take screenshot and read it. Look for layout issues, broken images, alignment.
+2. **Interactive elements** — Click every button, link, and control. Does each do what it says?
+3. **Forms** — Fill and submit. Test empty submission, invalid data, edge cases (long text, special characters).
+4. **Navigation** — Check all paths in/out. Breadcrumbs, back button, deep links, mobile menu.
+5. **States** — Check empty state, loading state, error state, full/overflow state.
+6. **Console** — Run console error check after interactions. Any new JS errors or failed requests?
+7. **Responsiveness** — If relevant, check mobile and tablet viewports.
+8. **Auth boundaries** — What happens when logged out? Different user roles?
+
+### CLI Tools
+
+For each command/subcommand:
+
+1. **Help text** — Does `--help` exist? Is it accurate and complete?
+2. **Happy path** — Run with typical inputs. Correct output?
+3. **Invalid inputs** — Wrong types, missing required args, unknown flags. Clear error messages?
+4. **Edge cases** — Empty input, huge input, special characters, piped input, no TTY.
+5. **Exit codes** — 0 on success, non-zero on failure? Consistent?
+6. **stderr vs stdout** — Errors go to stderr? Output is parseable (no debug noise on stdout)?
+7. **Combinations** — Do flags interact correctly? Conflicting flags handled?
+8. **Idempotency** — Run the same command twice. Same result?
+
+### API Servers
+
+For each endpoint:
+
+1. **Happy path** — Valid request, correct response code and body.
+2. **Validation** — Missing fields, wrong types, boundary values. Proper 4xx responses?
+3. **Auth** — Request without token, expired token, wrong role. Proper 401/403?
+4. **Error responses** — Consistent format? Useful error messages? No stack traces leaked?
+5. **Idempotency** — POST twice, PUT twice. Expected behavior?
+6. **Content negotiation** — Correct Content-Type headers? Accepts declared formats?
+7. **Edge cases** — Large payloads, empty bodies, unicode, special characters.
+8. **Spec compliance** — If OpenAPI/Swagger exists, does the endpoint match?
+
+### Libraries
+
+For each public API surface:
+
+1. **Test suite** — Run all tests. Note failures, slow tests, flaky tests.
+2. **Coverage gaps** — Are there exported functions with no tests?
+3. **Error messages** — When misused, are errors clear and actionable?
+4. **Type safety** — Do types match runtime behavior? Any `any` leaks?
+5. **Edge cases** — Boundary values, null/undefined, empty collections, concurrent usage.
+6. **Documentation** — Do README examples actually work? Are they up to date?
+7. **Backwards compatibility** — If there's a public API contract, is it honored?
+```
+
+- [ ] **Step 2: Verify the update**
+
+Read the file back and confirm:
+- Severity Levels and Categories sections are unchanged
+- Four exploration checklists exist: Web, CLI, API, Library
+- Web checklist matches the previous Per-Page content
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add plugins/me/skills/qa/references/issue-taxonomy.md
+git commit -m "feat(qa): add CLI, API, and library exploration checklists to taxonomy"
+```
+
+---
+
+### Task 3: Generalize qa-report-template.md
+
+**Files:**
+- Modify: `plugins/me/skills/qa/templates/qa-report-template.md`
+
+Remove web-only assumptions. All fields become optional or generic. The template should work for any project type.
+
+- [ ] **Step 1: Write the new report template**
+
+Replace the entire contents of `plugins/me/skills/qa/templates/qa-report-template.md` with:
+
+```markdown
+# QA Report: {PROJECT_NAME}
+
+| Field | Value |
+|-------|-------|
+| **Date** | {DATE} |
+| **Target** | {what was tested — URL, CLI command, API base, package name} |
+| **Branch** | {BRANCH} |
+| **Commit** | {COMMIT_SHA} ({COMMIT_DATE}) |
+| **PR** | {PR_NUMBER} ({PR_URL}) or "—" |
+| **Tier** | Quick / Standard / Exhaustive |
+| **Scope** | {SCOPE or "Full project"} |
+| **Duration** | {DURATION} |
+| **Areas tested** | {COUNT} |
+| **Evidence files** | {COUNT} |
+
+## Health Score: {SCORE}/100
+
+| Category | Weight | Score |
+|----------|--------|-------|
+| {category} | {weight}% | {0-100} |
+| ... | ... | ... |
+
+## Top 3 Things to Fix
+
+1. **{ISSUE-NNN}: {title}** — {one-line description}
+2. **{ISSUE-NNN}: {title}** — {one-line description}
+3. **{ISSUE-NNN}: {title}** — {one-line description}
+
+## Summary
+
+| Severity | Count |
+|----------|-------|
+| Critical | 0 |
+| High | 0 |
+| Medium | 0 |
+| Low | 0 |
+| **Total** | **0** |
+
+## Issues
+
+### ISSUE-001: {Short title}
+
+| Field | Value |
+|-------|-------|
+| **Severity** | critical / high / medium / low |
+| **Category** | {project-appropriate category} |
+| **Location** | {URL, command, endpoint, function — whatever is relevant} |
+
+**Description:** {What is wrong, expected vs actual.}
+
+**Repro Steps:**
+
+1. {Action}
+   ![Evidence](evidence/issue-001-step-1.png) or `{command output}`
+2. {Action}
+3. **Observe:** {what goes wrong}
+
+---
+
+## Fixes Applied
+
+| Issue | Fix Status | Commit | Files Changed |
+|-------|-----------|--------|---------------|
+| ISSUE-NNN | verified / best-effort / reverted / deferred | {SHA} | {files} |
+
+### Before/After Evidence
+
+#### ISSUE-NNN: {title}
+**Before:** ![Before](evidence/issue-NNN-before.png) or `{output before}`
+**After:** ![After](evidence/issue-NNN-after.png) or `{output after}`
+
+---
+
+## Regression Tests
+
+| Issue | Test File | Status | Description |
+|-------|-----------|--------|-------------|
+| ISSUE-NNN | path/to/test | committed / deferred / skipped | description |
+
+---
+
+## Ship Readiness
+
+| Metric | Value |
+|--------|-------|
+| Health score | {before} → {after} ({delta}) |
+| Issues found | N |
+| Fixes applied | N (verified: X, best-effort: Y, reverted: Z) |
+| Deferred | N |
+
+**Summary:** "QA found N issues, fixed M, health score X → Y."
+
+---
+
+## Regression (if applicable)
+
+| Metric | Baseline | Current | Delta |
+|--------|----------|---------|-------|
+| Health score | {N} | {N} | {+/-N} |
+| Issues | {N} | {N} | {+/-N} |
+
+**Fixed since baseline:** {list}
+**New since baseline:** {list}
+```
+
+- [ ] **Step 2: Verify the update**
+
+Read the file back and confirm:
+- No web-specific field names (URL → Target, Pages visited → Areas tested, Screenshots → Evidence files)
+- Health Score categories are dynamic (table with `{category}` placeholder, not fixed list)
+- Issue Location field is generic, not "URL"
+- Evidence references use `evidence/` directory, not `screenshots/`
+- Evidence can be screenshots OR command output (both shown in template)
+- No Console Health section (absorbed into dynamic health score categories)
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add plugins/me/skills/qa/templates/qa-report-template.md
+git commit -m "feat(qa): generalize report template for any project type"
+```
+
+---
+
+### Task 4: Verify Consistency Across All Three Files
+
+- [ ] **Step 1: Cross-reference check**
+
+Read all three files and verify:
+- SKILL.md references `qa/references/issue-taxonomy.md` — path still valid
+- SKILL.md references `qa/templates/qa-report-template.md` — path still valid
+- SKILL.md output structure says `evidence/` — template uses `evidence/` (not `screenshots/`)
+- SKILL.md health score description matches template's dynamic category table
+- SKILL.md phases match the flow described in this plan
+- Issue taxonomy checklists cover the same project types as SKILL.md Phase 2
+
+- [ ] **Step 2: Fix any inconsistencies found**
+
+If the cross-reference check reveals mismatches, fix them and amend the relevant commit.
+
+- [ ] **Step 3: Final commit (if needed)**
+
+Only if Step 2 produced changes:
+```bash
+git add -A
+git commit -m "fix(qa): resolve cross-file inconsistencies in generalized skill"
+```
