@@ -35,4 +35,15 @@ Improve the create-pr skill's overall quality: SKILL.md prompt clarity, shell sc
 - SKILL.md must remain a valid skill (YAML frontmatter + markdown)
 
 ## What's Been Tried
-(Nothing yet — baseline run pending)
+
+### Wins
+1. **stderr routing** (+5pts): All error/failure messages (ERROR:, ✗, ⚠) now go to stderr across all scripts
+2. **DRY base branch detection** (+5pts): Created `lib.sh` with `resolve_base_branch()`, replaced 3x duplicated detection logic in preflight-check, verify-pr-status, sync-with-base
+3. **DRY git repo check** (+0pts score, structural improvement): Added `require_git_repo()` to lib.sh, replaced 2x duplicated checks
+4. **SKILL.md Recovery section** (+1pt): Documented sync-with-base and verify-pr-status as recovery tools
+5. **Test coverage** (+1pt, 23→33 tests): Added lib.sh tests (5), sync-with-base tests (5)
+
+### Architecture Insights
+- "ERROR:" prefix for environment/precondition failures (exit 2), "✗" for operation failures (exit 1) is a meaningful convention worth preserving
+- ShellCheck requires `-x --source-path` when scripts source shared libraries
+- lib.sh needs same documentation standards (usage, exit codes) as standalone scripts
