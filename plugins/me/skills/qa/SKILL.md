@@ -154,7 +154,29 @@ Run full mode, then load `baseline.json` from a previous run. Diff: which issues
 
 ## Phase 2: Explore
 
-Systematically test the project. The approach depends on what you're testing.
+Systematically test the project. The approach depends on what you're testing. See `qa/references/issue-taxonomy.md` for detailed per-type exploration checklists.
+
+**Tools by project type:**
+- **Web:** Browser tool (`mcp__plugin_superpowers-chrome_chrome__use_browser`) for navigation, interaction, screenshots
+- **CLI/API/Library:** Bash tool for commands, `curl` requests, test execution
+
+### Evidence Capture
+
+Save all evidence to `.qa/reports/evidence/`. Use the naming convention `issue-NNN-{description}.{ext}`:
+
+```bash
+# Command output (CLI, API, test runs)
+command 2>&1 | tee .qa/reports/evidence/issue-001-invalid-flag.txt
+
+# API response with headers
+curl -sS -D- http://localhost:3000/api/users 2>&1 > .qa/reports/evidence/issue-002-response.txt
+
+# Screenshots (web) — via browser tool screenshot action
+```
+
+In reports, reference evidence as:
+- Screenshots: `![Evidence](evidence/issue-001-before.png)`
+- Text output: `` `cat evidence/issue-001-output.txt` `` or quote inline
 
 ### Web Applications
 
@@ -177,7 +199,7 @@ Systematically test the project. The approach depends on what you're testing.
 ### API Servers
 
 1. **Orient:** Find API spec (OpenAPI/Swagger) if available. Read route definitions. Identify all endpoints.
-2. **Hit endpoints:** Send real HTTP requests with valid inputs, invalid inputs, missing auth, edge cases.
+2. **Hit endpoints:** Use `curl` via Bash to send real HTTP requests with valid inputs, invalid inputs, missing auth, edge cases.
 3. **Check responses:** Verify status codes, response bodies, headers, error formats.
 4. **Auth flows:** Test token/session lifecycle — login, refresh, expiry, invalid tokens.
 5. **Spec compliance:** If a spec exists, verify every endpoint matches it.
@@ -312,11 +334,7 @@ After all fixes are applied:
 
 Choose categories appropriate to the project. There is no fixed set — pick what makes sense.
 
-**Examples:**
-- Web: Console, Links, Visual, Functional, UX, Performance, Accessibility
-- CLI: Output Correctness, Error Handling, Edge Cases, Documentation, Performance
-- API: Response Correctness, Validation, Auth, Error Handling, Spec Compliance, Performance
-- Library: Test Coverage, API Usability, Error Messages, Edge Cases, Documentation
+**Universal categories** (see `qa/references/issue-taxonomy.md`): Correctness, Error Handling, Edge Cases, Usability, Performance, Security, Documentation. Use the subset relevant to the project — not all apply to every type.
 
 **Scoring mechanic (universal):**
 Each category starts at 100. Deduct per finding:
@@ -356,11 +374,12 @@ Assign weights that sum to 100%. Weight core functionality higher than polish.
 .qa/reports/
 ├── qa-report-{YYYY-MM-DD}.md    # Structured report
 ├── evidence/
-│   ├── initial.png
-│   ├── issue-001-step-1.png
-│   ├── issue-001-before.png
-│   ├── issue-001-after.png
-│   ├── issue-002-output.txt
+│   ├── initial.png              # Web: landing page screenshot
+│   ├── issue-001-before.png     # Web: before fix screenshot
+│   ├── issue-001-after.png      # Web: after fix screenshot
+│   ├── issue-002-output.txt     # CLI: command output
+│   ├── issue-003-response.txt   # API: HTTP response with headers
+│   ├── issue-004-test-run.txt   # Library: test suite output
 │   └── ...
 └── baseline.json
 ```
