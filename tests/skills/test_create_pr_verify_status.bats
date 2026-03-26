@@ -48,6 +48,31 @@ setup() {
   [ -x "$SYNC_SCRIPT" ]
 }
 
+@test "sync-with-base.sh has proper shebang" {
+  head -n 1 "$SYNC_SCRIPT" | grep -q "^#!/usr/bin/env bash"
+}
+
+@test "sync-with-base.sh uses set -euo pipefail" {
+  grep -q "set -euo pipefail" "$SYNC_SCRIPT"
+}
+
+@test "sync-with-base.sh documents exit codes" {
+  grep -q "Exit codes:" "$SYNC_SCRIPT"
+}
+
+@test "sync-with-base.sh: exits 2 when not in a git repository" {
+  TEMP_DIR=$(mktemp -d)
+  cd "$TEMP_DIR"
+  run env -u GIT_DIR -u GIT_WORK_TREE "$SYNC_SCRIPT" main
+  [ "$status" -eq 2 ]
+  [[ "$output" =~ "Not in a git repository" ]]
+  rm -rf "$TEMP_DIR"
+}
+
+@test "sync-with-base.sh sources lib.sh" {
+  grep -q 'source.*lib.sh' "$SYNC_SCRIPT"
+}
+
 # ===== preflight-check.sh tests =====
 
 @test "preflight-check.sh is executable" {
