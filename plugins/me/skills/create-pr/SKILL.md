@@ -7,9 +7,9 @@ description: Use when the user asks to "create a PR", "create pull request", "op
 
 ## Overview
 
-Full PR flow: pre-flight → commit → conflict check → push → PR creation → verify → (optional) auto-merge.
+Full PR flow: pre-flight → commit → push → PR creation → wait-for-merge.
 
-If verify reports a broken state (BEHIND, DIRTY, failed checks), use `me:pr-pass` to fix it.
+If wait-for-merge reports a failure, use `me:pr-pass` to fix it.
 
 ## When to Use
 
@@ -24,52 +24,34 @@ If verify reports a broken state (BEHIND, DIRTY, failed checks), use `me:pr-pass
 # If on main/master: automatically create a branch from the last commit message
 #   git checkout -b <type>/<short-description>  (derived from commit subject)
 # Never ask the user — just create it.
+# Then run preflight check (blocking):
+"${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts/preflight-check.sh"
 
 # 2) commit
 git add <specific-files>
 git commit -m "type(scope): summary"
 
-# 3) conflict check (read-only)
-"${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts/check-conflicts.sh"
-
-# 4) push
+# 3) push
 git push -u origin HEAD
 
-# 5) detect PR template (check in order)
+# 4) detect PR template (check in order)
 # .github/PULL_REQUEST_TEMPLATE.md → PULL_REQUEST_TEMPLATE.md → default format
 # If found: read it, fill each section with actual change details, preserve empty checkboxes (- [ ]) as-is
 # If not found: use default format (see PR Body Format below)
-
-# 6) create PR (do not hardcode --base main)
-# Body: filled template or default format
-PR_URL=$(gh pr create --title "$(git log -1 --pretty=%s)" --body "<filled body>")
-
-# 7) verify
-"${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts/verify-pr-status.sh"
-VERIFY_EXIT=$?
-# exit 0: merge-ready
-# exit 1: broken — use me:pr-pass, STOP
-# exit 2: CI still running — wait before proceeding
-if [[ $VERIFY_EXIT -eq 1 ]]; then exit 1; fi
-
-# 8) auto-merge (optional, if requested in arguments)
-# If CI is still running (exit 2): wait for checks to finish first
-if [[ $VERIFY_EXIT -eq 2 ]]; then
-  gh pr checks --watch
-  # Re-verify after CI completes
-  "${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts/verify-pr-status.sh"
-  VERIFY_EXIT=$?
-  if [[ $VERIFY_EXIT -eq 1 ]]; then exit 1; fi  # broken after CI — STOP
-fi
-
-# CI is done and PR is healthy — attempt auto-merge, fall back to direct merge
+# Then create PR and enable auto-merge:
+gh pr create --title "$(git log -1 --pretty=%s)" --body "<filled body>"
 gh pr merge --auto --squash || gh pr merge --squash
+
+# 5) wait for merge
+"${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts/wait-for-merge.sh"
+# exit 0: merged (or CI passed, awaiting review) — done
+# exit 1: failed — use me:pr-pass, STOP
 ```
 
 ## Stop Conditions
 
 - No changes to commit and no unpushed commits
-- Conflict check failed
+- Pre-flight check failed (BEHIND or conflicts)
 - Required CI failed
 - State-changing follow-up not approved by user
 

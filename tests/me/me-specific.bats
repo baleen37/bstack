@@ -14,7 +14,8 @@ load ../helpers/bats_helper
 # create-pr skill tests
 @test "me: create-pr skill exists with required components" {
     [ -f "${PROJECT_ROOT}/plugins/me/skills/create-pr/SKILL.md" ]
-    [ -f "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/check-conflicts.sh" ]
+    [ -f "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/preflight-check.sh" ]
+    [ -f "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/wait-for-merge.sh" ]
     [ -f "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/verify-pr-status.sh" ]
     [ -f "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/sync-with-base.sh" ]
 }
@@ -27,13 +28,14 @@ load ../helpers/bats_helper
 }
 
 @test "me: create-pr scripts are executable" {
-    [ -x "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/check-conflicts.sh" ]
+    [ -x "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/preflight-check.sh" ]
+    [ -x "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/wait-for-merge.sh" ]
     [ -x "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/verify-pr-status.sh" ]
     [ -x "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/sync-with-base.sh" ]
 }
 
-@test "me: create-pr check-conflicts.sh validates git repo" {
-    local script="${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/check-conflicts.sh"
+@test "me: create-pr preflight-check.sh validates git repo" {
+    local script="${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/preflight-check.sh"
     grep -q "git rev-parse.*git-dir" "$script"
 }
 
