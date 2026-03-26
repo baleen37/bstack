@@ -1,2 +1,5 @@
 {"type":"config","name":"create-pr-quality","metricName":"quality_score","metricUnit":"points","bestDirection":"higher"}
 {"run":1,"commit":"46e5b1f","metric":90,"metrics":{"shellcheck_warnings":0,"test_pass_rate":100,"code_quality":15,"skillmd_quality":25},"status":"keep","description":"baseline","timestamp":1774494052,"segment":0}
+{"run":2,"commit":"f6cbdb0","metric":95,"metrics":{"shellcheck_warnings":0,"test_pass_rate":100,"code_quality":20,"skillmd_quality":25},"status":"keep","description":"send all error/failure messages to stderr","timestamp":1774494215,"segment":0}
+{"type":"config","name":"create-pr-quality-v2","metricName":"quality_score","metricUnit":"points","bestDirection":"higher"}
+{"run":3,"commit":"f6cbdb0","metric":93,"metrics":{"shellcheck_warnings":0,"test_pass_rate":100,"code_quality":20,"skillmd_quality":19,"advanced_quality":14},"status":"keep","description":"expanded metrics (new baseline)","timestamp":1774494344,"segment":1}
