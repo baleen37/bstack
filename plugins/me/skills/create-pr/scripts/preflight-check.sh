@@ -9,22 +9,15 @@ set -euo pipefail
 #   1 - Blocking issue found (BEHIND or conflict)
 #   2 - Environment error (not a git repo, gh not authenticated, etc.)
 
-BASE="${1:-}"
+# shellcheck source=lib.sh
+source "$(dirname "$0")/lib.sh"
 
 if ! git rev-parse --git-dir >/dev/null 2>&1; then
   echo "ERROR: Not in a git repository" >&2
   exit 2
 fi
 
-if [[ -z "$BASE" ]]; then
-  BASE=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name 2>/dev/null || true)
-fi
-if [[ -z "$BASE" ]]; then
-  echo "ERROR: Cannot determine default branch" >&2
-  echo "  - Pass base branch explicitly: $0 <base-branch>" >&2
-  echo "  - Or ensure 'gh' CLI is authenticated" >&2
-  exit 2
-fi
+resolve_base_branch "${1:-}"
 
 if ! git fetch origin "$BASE" >/dev/null 2>&1; then
   echo "ERROR: Failed to fetch origin/$BASE" >&2

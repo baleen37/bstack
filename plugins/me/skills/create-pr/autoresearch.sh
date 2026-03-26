@@ -19,7 +19,7 @@ max_score=$((max_score + 20))
 shellcheck_warnings=0
 for script in "$SCRIPTS_DIR"/*.sh; do
   [[ "$(basename "$script")" == "autoresearch.sh" ]] && continue
-  warnings=$(shellcheck -f json "$script" 2>/dev/null | jq 'length' || echo "0")
+  warnings=$(shellcheck -x --source-path="$SCRIPTS_DIR" -f json "$script" 2>/dev/null | jq 'length' || echo "0")
   shellcheck_warnings=$((shellcheck_warnings + warnings))
 done
 if [[ $shellcheck_warnings -eq 0 ]]; then

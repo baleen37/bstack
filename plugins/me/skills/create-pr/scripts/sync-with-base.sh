@@ -9,16 +9,10 @@ set -euo pipefail
 #   1 - Conflicts detected or push failed
 #   2 - Error (missing base branch, git errors, etc.)
 
-BASE="${1:-}"
-if [[ -z "$BASE" ]]; then
-  BASE=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name 2>/dev/null || echo "")
-  if [[ -z "$BASE" ]]; then
-    echo "ERROR: Cannot determine default branch" >&2
-    echo "  - Pass base branch explicitly: $0 <base-branch>" >&2
-    echo "  - Or ensure 'gh' CLI is authenticated" >&2
-    exit 2
-  fi
-fi
+# shellcheck source=lib.sh
+source "$(dirname "$0")/lib.sh"
+
+resolve_base_branch "${1:-}"
 
 if ! git rev-parse --git-dir >/dev/null 2>&1; then
   echo "ERROR: Not in a git repository" >&2

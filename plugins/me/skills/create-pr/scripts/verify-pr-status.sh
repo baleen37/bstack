@@ -9,16 +9,10 @@ set -euo pipefail
 #   1 - Action required (BEHIND, DIRTY, failed checks, unknown state)
 #   2 - Pending (required checks running, BLOCKED/UNSTABLE)
 
-BASE="${1:-}"
-if [[ -z "$BASE" ]]; then
-  BASE=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name 2>/dev/null || true)
-fi
-if [[ -z "$BASE" ]]; then
-  echo "ERROR: Cannot determine default branch" >&2
-  echo "  - Pass base branch explicitly: $0 <base-branch>" >&2
-  echo "  - Or ensure 'gh' CLI is authenticated" >&2
-  exit 1
-fi
+# shellcheck source=lib.sh
+source "$(dirname "$0")/lib.sh"
+
+resolve_base_branch "${1:-}"
 
 PR_URL=$(gh pr view --json url -q .url)
 PR_STATUS=$(gh pr view --json mergeable,mergeStateStatus,state)
