@@ -12,11 +12,7 @@ set -euo pipefail
 # shellcheck source=lib.sh
 source "$(dirname "$0")/lib.sh"
 
-if ! git rev-parse --git-dir >/dev/null 2>&1; then
-  echo "ERROR: Not in a git repository" >&2
-  exit 2
-fi
-
+require_git_repo
 resolve_base_branch "${1:-}"
 
 if ! git fetch origin "$BASE" >/dev/null 2>&1; then

@@ -6,7 +6,39 @@ load '../helpers/bats_helper'
 setup() {
   export VERIFY_SCRIPT="${BATS_TEST_DIRNAME}/../../plugins/me/skills/create-pr/scripts/verify-pr-status.sh"
   export SYNC_SCRIPT="${BATS_TEST_DIRNAME}/../../plugins/me/skills/create-pr/scripts/sync-with-base.sh"
+  export LIB_SCRIPT="${BATS_TEST_DIRNAME}/../../plugins/me/skills/create-pr/scripts/lib.sh"
 }
+
+# ===== lib.sh tests =====
+
+@test "lib.sh exists and is readable" {
+  [ -f "$LIB_SCRIPT" ]
+}
+
+@test "lib.sh defines resolve_base_branch function" {
+  grep -q "resolve_base_branch()" "$LIB_SCRIPT"
+}
+
+@test "lib.sh defines require_git_repo function" {
+  grep -q "require_git_repo()" "$LIB_SCRIPT"
+}
+
+@test "lib.sh: require_git_repo exits 2 outside git repo" {
+  TEMP_DIR=$(mktemp -d)
+  cd "$TEMP_DIR"
+  run env -u GIT_DIR -u GIT_WORK_TREE bash -c "source '$LIB_SCRIPT' && require_git_repo"
+  [ "$status" -eq 2 ]
+  [[ "$output" =~ "Not in a git repository" ]]
+  rm -rf "$TEMP_DIR"
+}
+
+@test "lib.sh: resolve_base_branch accepts explicit branch" {
+  run bash -c "source '$LIB_SCRIPT' && resolve_base_branch main && echo \$BASE"
+  [ "$status" -eq 0 ]
+  [[ "$output" =~ "main" ]]
+}
+
+# ===== verify-pr-status.sh tests =====
 
 @test "verify-pr-status.sh is executable" {
   [ -x "$VERIFY_SCRIPT" ]
