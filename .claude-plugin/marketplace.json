@@ -23,7 +23,7 @@
         "memory",
         "context"
       ],
-      "version": "15.0.0"
+      "version": "16.0.0"
     },
     {
       "name": "core",
@@ -37,7 +37,7 @@
         "workflow",
         "skills"
       ],
-      "version": "15.0.0"
+      "version": "16.0.0"
     },
     {
       "name": "jira",
@@ -50,7 +50,7 @@
         "confluence",
         "project-management"
       ],
-      "version": "15.0.0"
+      "version": "16.0.0"
     },
     {
       "name": "lsp-gopls",
@@ -62,7 +62,7 @@
         "go",
         "gopls"
       ],
-      "version": "15.0.0"
+      "version": "16.0.0"
     },
     {
       "name": "lsp-typescript",
@@ -74,7 +74,7 @@
         "typescript",
         "javascript"
       ],
-      "version": "15.0.0"
+      "version": "16.0.0"
     },
     {
       "name": "lsp-clangd",
@@ -87,7 +87,7 @@
         "cpp",
         "clangd"
       ],
-      "version": "15.0.0"
+      "version": "16.0.0"
     },
     {
       "name": "lsp-lua",
@@ -99,7 +99,7 @@
         "lua",
         "lua-language-server"
       ],
-      "version": "15.0.0"
+      "version": "16.0.0"
     },
     {
       "name": "lsp-pyright",
@@ -111,7 +111,7 @@
         "python",
         "pyright"
       ],
-      "version": "15.0.0"
+      "version": "16.0.0"
     },
     {
       "name": "autoresearch",
@@ -124,7 +124,7 @@
         "autonomous",
         "research"
       ],
-      "version": "15.0.0"
+      "version": "16.0.0"
     },
     {
       "name": "ralph",
@@ -138,7 +138,7 @@
         "prd",
         "automation"
       ],
-      "version": "15.0.0"
+      "version": "16.0.0"
     }
   ]
 }

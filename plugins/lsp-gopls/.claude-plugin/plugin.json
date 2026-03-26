@@ -1,6 +1,6 @@
 {
   "name": "lsp-gopls",
-  "version": "15.0.0",
+  "version": "16.0.0",
   "description": "Go language server plugin for Claude Code",
   "author": {
     "name": "baleen37",
