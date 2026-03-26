@@ -1,43 +1,30 @@
-# QA Report: {APP_NAME}
+# QA Report: {PROJECT_NAME}
 
 | Field | Value |
 |-------|-------|
 | **Date** | {DATE} |
-| **URL** | {URL} |
+| **Target** | {what was tested — URL, CLI command, API base, package name} |
 | **Branch** | {BRANCH} |
 | **Commit** | {COMMIT_SHA} ({COMMIT_DATE}) |
 | **PR** | {PR_NUMBER} ({PR_URL}) or "—" |
 | **Tier** | Quick / Standard / Exhaustive |
-| **Scope** | {SCOPE or "Full app"} |
+| **Scope** | {SCOPE or "Full project"} |
 | **Duration** | {DURATION} |
-| **Pages visited** | {COUNT} |
-| **Screenshots** | {COUNT} |
-| **Framework** | {DETECTED or "Unknown"} |
-| **Index** | [All QA runs](./index.md) |
+| **Areas tested** | {COUNT} |
+| **Evidence files** | {COUNT} |
 
 ## Health Score: {SCORE}/100
 
-| Category | Score |
-|----------|-------|
-| Console | {0-100} |
-| Links | {0-100} |
-| Visual | {0-100} |
-| Functional | {0-100} |
-| UX | {0-100} |
-| Performance | {0-100} |
-| Accessibility | {0-100} |
+| Category | Weight | Score |
+|----------|--------|-------|
+| {category} | {weight}% | {0-100} |
+| ... | ... | ... |
 
 ## Top 3 Things to Fix
 
 1. **{ISSUE-NNN}: {title}** — {one-line description}
 2. **{ISSUE-NNN}: {title}** — {one-line description}
 3. **{ISSUE-NNN}: {title}** — {one-line description}
-
-## Console Health
-
-| Error | Count | First seen |
-|-------|-------|------------|
-| {error message} | {N} | {URL} |
 
 ## Summary
 
@@ -56,23 +43,21 @@
 | Field | Value |
 |-------|-------|
 | **Severity** | critical / high / medium / low |
-| **Category** | visual / functional / ux / content / performance / console / accessibility |
-| **URL** | {page URL} |
+| **Category** | {project-appropriate category} |
+| **Location** | {URL, command, endpoint, function — whatever is relevant} |
 
 **Description:** {What is wrong, expected vs actual.}
 
 **Repro Steps:**
 
-1. Navigate to {URL}
-   ![Step 1](screenshots/issue-001-step-1.png)
+1. {Action}
+   ![Evidence](evidence/issue-001-step-1.png) or `{command output}`
 2. {Action}
-   ![Step 2](screenshots/issue-001-step-2.png)
 3. **Observe:** {what goes wrong}
-   ![Result](screenshots/issue-001-result.png)
 
 ---
 
-## Fixes Applied (if applicable)
+## Fixes Applied
 
 | Issue | Fix Status | Commit | Files Changed |
 |-------|-----------|--------|---------------|
@@ -81,8 +66,8 @@
 ### Before/After Evidence
 
 #### ISSUE-NNN: {title}
-**Before:** ![Before](screenshots/issue-NNN-before.png)
-**After:** ![After](screenshots/issue-NNN-after.png)
+**Before:** ![Before](evidence/issue-NNN-before.png) or `{output before}`
+**After:** ![After](evidence/issue-NNN-after.png) or `{output after}`
 
 ---
 
@@ -91,14 +76,6 @@
 | Issue | Test File | Status | Description |
 |-------|-----------|--------|-------------|
 | ISSUE-NNN | path/to/test | committed / deferred / skipped | description |
-
-### Deferred Tests
-
-#### ISSUE-NNN: {title}
-**Precondition:** {setup state that triggers the bug}
-**Action:** {what the user does}
-**Expected:** {correct behavior}
-**Why deferred:** {reason}
 
 ---
 
@@ -111,7 +88,7 @@
 | Fixes applied | N (verified: X, best-effort: Y, reverted: Z) |
 | Deferred | N |
 
-**PR Summary:** "QA found N issues, fixed M, health score X → Y."
+**Summary:** "QA found N issues, fixed M, health score X → Y."
 
 ---
 
