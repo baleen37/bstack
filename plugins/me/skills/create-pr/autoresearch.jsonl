@@ -1,0 +1,2 @@
+{"type":"config","name":"create-pr-quality","metricName":"quality_score","metricUnit":"points","bestDirection":"higher"}
+{"run":1,"commit":"46e5b1f","metric":90,"metrics":{"shellcheck_warnings":0,"test_pass_rate":100,"code_quality":15,"skillmd_quality":25},"status":"keep","description":"baseline","timestamp":1774494052,"segment":0}
