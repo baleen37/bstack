@@ -1,6 +1,6 @@
 {
   "name": "ralph",
-  "version": "13.0.1",
+  "version": "14.0.0",
   "description": "PRD-driven persistence loop — keeps Claude working until all user stories pass",
   "author": {
     "name": "baleen37",
