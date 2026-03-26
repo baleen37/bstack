@@ -29,8 +29,8 @@ fi
 
 if [[ "$PR_STATE" == "CLOSED" ]]; then
   echo ""
-  echo "✗ PR was closed without merging"
-  echo "  - URL: $PR_URL"
+  echo "✗ PR was closed without merging" >&2
+  echo "  - URL: $PR_URL" >&2
   exit 1
 fi
 

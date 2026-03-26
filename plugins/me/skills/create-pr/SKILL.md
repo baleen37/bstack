@@ -48,10 +48,22 @@ gh pr merge --auto --squash || gh pr merge --squash
 # exit 1: failed — use me:pr-pass, STOP
 ```
 
+## Recovery
+
+If preflight-check reports BEHIND or conflicts, sync first:
+```bash
+"${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts/sync-with-base.sh"
+```
+
+To check PR status without modifying anything:
+```bash
+"${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts/verify-pr-status.sh"
+```
+
 ## Stop Conditions
 
 - No changes to commit and no unpushed commits
-- Pre-flight check failed (BEHIND or conflicts)
+- Pre-flight check failed (BEHIND or conflicts) and sync-with-base also fails
 - Required CI failed
 - State-changing follow-up not approved by user
 
