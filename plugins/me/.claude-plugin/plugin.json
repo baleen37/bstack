@@ -1,6 +1,6 @@
 {
   "name": "me",
-  "version": "14.0.0",
+  "version": "15.0.0",
   "description": "AI coding assistant toolkit - LSP servers, git workflow protection, session handoff, context management, and development automation",
   "author": {
     "name": "baleen37",
