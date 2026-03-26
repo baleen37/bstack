@@ -8,6 +8,8 @@
 
 **Tech Stack:** bash, gh CLI, git, bats (testing)
 
+**Prerequisites:** Git 2.38+ (for `git merge-tree` exit code behavior)
+
 ---
 
 ## File Map
@@ -82,6 +84,101 @@ Open `tests/skills/test_create_pr_verify_status.bats` and append the following t
   PREFLIGHT_SCRIPT="${BATS_TEST_DIRNAME}/../../plugins/me/skills/create-pr/scripts/preflight-check.sh"
   run grep -Eq "\\\\033|RED=|GREEN=|YELLOW=" "$PREFLIGHT_SCRIPT"
   [ "$status" -ne 0 ]
+}
+
+# ===== preflight-check.sh integration tests =====
+
+setup_git_repos() {
+  # Create bare "remote" repo and two clones
+  export TEST_REMOTE=$(mktemp -d)
+  export TEST_CLONE_A=$(mktemp -d)
+  export TEST_CLONE_B=$(mktemp -d)
+
+  git init --bare "$TEST_REMOTE" >/dev/null 2>&1
+  git clone "$TEST_REMOTE" "$TEST_CLONE_A" >/dev/null 2>&1
+  git clone "$TEST_REMOTE" "$TEST_CLONE_B" >/dev/null 2>&1
+
+  # Create initial commit on main
+  cd "$TEST_CLONE_A"
+  echo "init" > file.txt
+  git add file.txt
+  git commit -m "initial commit" >/dev/null 2>&1
+  git push origin main >/dev/null 2>&1
+
+  cd "$TEST_CLONE_B"
+  git pull origin main >/dev/null 2>&1
+}
+
+teardown_git_repos() {
+  rm -rf "$TEST_REMOTE" "$TEST_CLONE_A" "$TEST_CLONE_B"
+}
+
+@test "preflight-check.sh: exits 0 when branch is up to date and clean" {
+  PREFLIGHT_SCRIPT="${BATS_TEST_DIRNAME}/../../plugins/me/skills/create-pr/scripts/preflight-check.sh"
+  setup_git_repos
+
+  cd "$TEST_CLONE_A"
+  git checkout -b feature/test >/dev/null 2>&1
+  echo "change" >> file.txt
+  git add file.txt
+  git commit -m "feature change" >/dev/null 2>&1
+
+  run "$PREFLIGHT_SCRIPT" main
+  teardown_git_repos
+  [ "$status" -eq 0 ]
+  [[ "$output" =~ "OK" ]]
+}
+
+@test "preflight-check.sh: exits 1 when branch is BEHIND base" {
+  PREFLIGHT_SCRIPT="${BATS_TEST_DIRNAME}/../../plugins/me/skills/create-pr/scripts/preflight-check.sh"
+  setup_git_repos
+
+  # Create feature branch from clone-A
+  cd "$TEST_CLONE_A"
+  git checkout -b feature/test >/dev/null 2>&1
+  echo "feature" >> file.txt
+  git add file.txt
+  git commit -m "feature change" >/dev/null 2>&1
+
+  # Push a new commit to main from clone-B
+  cd "$TEST_CLONE_B"
+  echo "main advance" >> file.txt
+  git add file.txt
+  git commit -m "main advance" >/dev/null 2>&1
+  git push origin main >/dev/null 2>&1
+
+  # Now feature branch in clone-A is behind
+  cd "$TEST_CLONE_A"
+  run "$PREFLIGHT_SCRIPT" main
+  teardown_git_repos
+  [ "$status" -eq 1 ]
+  [[ "$output" =~ "behind" ]]
+}
+
+@test "preflight-check.sh: exits 1 when merge would conflict" {
+  PREFLIGHT_SCRIPT="${BATS_TEST_DIRNAME}/../../plugins/me/skills/create-pr/scripts/preflight-check.sh"
+  setup_git_repos
+
+  # Create feature branch modifying file.txt
+  cd "$TEST_CLONE_A"
+  git checkout -b feature/test >/dev/null 2>&1
+  echo "feature version" > file.txt
+  git add file.txt
+  git commit -m "feature change" >/dev/null 2>&1
+
+  # Push conflicting change to main from clone-B
+  cd "$TEST_CLONE_B"
+  echo "main version" > file.txt
+  git add file.txt
+  git commit -m "conflicting main change" >/dev/null 2>&1
+  git push origin main >/dev/null 2>&1
+
+  # Now feature branch has conflicts with main
+  cd "$TEST_CLONE_A"
+  run "$PREFLIGHT_SCRIPT" main
+  teardown_git_repos
+  [ "$status" -eq 1 ]
+  [[ "$output" =~ "Conflict" ]]
 }
 
 # ===== wait-for-merge.sh tests =====
@@ -275,7 +372,7 @@ set -euo pipefail
 # Assumes: PR exists for current branch, auto-merge is already enabled
 #
 # Exit codes:
-#   0 - PR merged successfully
+#   0 - PR merged successfully, or CI passed and awaiting review approval
 #   1 - PR closed without merge, or CI failed
 
 PR_INFO=$(gh pr view --json url,state 2>/dev/null || true)
@@ -324,6 +421,14 @@ if [[ "$FINAL_STATE" == "MERGED" ]]; then
   exit 0
 fi
 
+if [[ "$FINAL_STATE" == "OPEN" ]]; then
+  echo ""
+  echo "✓ CI passed. PR awaiting review approval."
+  echo "  - URL: $PR_URL"
+  echo "  - Auto-merge is enabled — PR will merge after approval"
+  exit 0
+fi
+
 echo "" >&2
 echo "✗ PR not merged (state: $FINAL_STATE)" >&2
 echo "  - URL: $PR_URL" >&2
@@ -366,7 +471,7 @@ git rm tests/skills/test_check_conflicts.bats
 - [ ] **Step 2: Run full test suite to confirm nothing breaks**
 
 ```bash
-bats tests/skills/test_create_pr_verify_status.bats
+bats tests/skills/
 ```
 
 Expected: all tests PASS (no references to check-conflicts.sh remain)
@@ -386,7 +491,15 @@ git commit -m "remove(create-pr): delete check-conflicts.sh and its test file"
 
 - [ ] **Step 1: Replace SKILL.md content**
 
-Replace the entire `## Workflow` section in `plugins/me/skills/create-pr/SKILL.md` with:
+Replace the `## Overview` line in `plugins/me/skills/create-pr/SKILL.md`:
+
+```markdown
+Full PR flow: pre-flight → commit → push → PR creation → wait-for-merge.
+
+If wait-for-merge reports a failure, use `me:pr-pass` to fix it.
+```
+
+Replace the entire `## Workflow` section with:
 
 ```markdown
 ## Workflow
@@ -412,11 +525,11 @@ git push -u origin HEAD
 # If not found: use default format (see PR Body Format below)
 # Then create PR and enable auto-merge:
 gh pr create --title "$(git log -1 --pretty=%s)" --body "<filled body>"
-gh pr merge --auto --squash
+gh pr merge --auto --squash || gh pr merge --squash
 
 # 5) wait for merge
 "${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts/wait-for-merge.sh"
-# exit 0: merged — done
+# exit 0: merged (or CI passed, awaiting review) — done
 # exit 1: failed — use me:pr-pass, STOP
 ```
 ```
@@ -454,9 +567,13 @@ git commit -m "feat(create-pr): simplify workflow to 5 steps, use preflight-chec
 **Spec coverage:**
 - ✓ preflight-check.sh: BEHIND + conflict + advisory branch protection
 - ✓ wait-for-merge.sh: `gh pr checks --watch` + single state check, no polling loop
+- ✓ wait-for-merge.sh: OPEN state handled as success (review awaiting)
 - ✓ check-conflicts.sh deleted
-- ✓ SKILL.md 8 → 5 steps
+- ✓ SKILL.md 8 → 5 steps (Overview line also updated)
 - ✓ verify-pr-status.sh retained (untouched, for pr-pass)
+- ✓ auto-merge fallback preserved (`--auto --squash || --squash`)
+- ✓ Integration tests for preflight-check.sh (BEHIND, conflict, clean scenarios)
+- ✓ Git 2.38+ prerequisite documented
 
 **Placeholder scan:** None found.
 

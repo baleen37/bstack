@@ -2,6 +2,7 @@
 
 **Date:** 2026-03-26
 **Scope:** `plugins/me/skills/create-pr/`
+**Prerequisites:** Git 2.38+ (for `git merge-tree` exit code behavior)
 
 ## Goal
 
@@ -51,10 +52,13 @@ Runs after PR creation and auto-merge is enabled.
 gh pr checks --watch          # blocks until all CI checks complete
 gh pr view --json state,url   # single state check
 # MERGED → exit 0
+# OPEN   → exit 0 (CI passed, awaiting review approval — auto-merge is set)
 # CLOSED or CI failed → exit 1
 ```
 
 No polling loop — `gh pr checks --watch` handles the blocking wait natively.
+
+When CI passes but the PR remains OPEN (e.g., required reviewers haven't approved), this is a success — automation has done everything it can. The preflight advisory already informed the user about required reviewers.
 
 ## SKILL.md Changes
 
@@ -72,8 +76,13 @@ No polling loop — `gh pr checks --watch` handles the blocking wait natively.
 1. pre-flight + `preflight-check.sh`
 2. commit
 3. push
-4. detect template + create PR + enable auto-merge
+4. detect template + create PR + enable auto-merge (with fallback to direct merge)
 5. `wait-for-merge.sh`
+
+### Testing Strategy
+
+- **preflight-check.sh:** Integration tests using temporary git repos (bare + clones) to verify BEHIND detection, conflict detection, and clean-merge scenarios
+- **wait-for-merge.sh:** Static analysis tests only (gh API dependency makes integration testing impractical); manual verification checklist in implementation plan
 
 ## File Changes
 
