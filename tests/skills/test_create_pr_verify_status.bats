@@ -107,18 +107,22 @@ setup_git_repos() {
   export TEST_CLONE_A=$(mktemp -d)
   export TEST_CLONE_B=$(mktemp -d)
 
-  git init --bare "$TEST_REMOTE" >/dev/null 2>&1
+  git init --bare -b main "$TEST_REMOTE" >/dev/null 2>&1
   git clone "$TEST_REMOTE" "$TEST_CLONE_A" >/dev/null 2>&1
   git clone "$TEST_REMOTE" "$TEST_CLONE_B" >/dev/null 2>&1
 
   # Create initial commit on main
   cd "$TEST_CLONE_A"
+  git config user.name "Test" >/dev/null 2>&1
+  git config user.email "test@test.local" >/dev/null 2>&1
   echo "init" > file.txt
   git add file.txt
   git commit -m "initial commit" >/dev/null 2>&1
   git push origin main >/dev/null 2>&1
 
   cd "$TEST_CLONE_B"
+  git config user.name "Test" >/dev/null 2>&1
+  git config user.email "test@test.local" >/dev/null 2>&1
   git pull origin main >/dev/null 2>&1
 }
 
