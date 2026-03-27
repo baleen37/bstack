@@ -12,8 +12,8 @@ Autonomous experiment loop: try ideas, keep what works, discard what doesn't, ne
 1. Ask (or infer): **Goal**, **Command**, **Metric** (+ direction), **Files in scope**, **Constraints**.
 2. `git checkout -b autoresearch/<goal>-<date>`
 3. Read the source files. Understand the workload deeply before writing anything.
-4. `mkdir -p experiments` then write `autoresearch.md`, `autoresearch.sh`, and `experiments/worklog.md` (see below). Commit all three.
-5. Initialize experiment (write config header to `autoresearch.jsonl`) → run baseline → log result → start looping immediately.
+4. `mkdir -p .autoresearch` then write `.autoresearch/autoresearch.md`, `.autoresearch/run.sh`, and `.autoresearch/worklog.md` (see below). Commit all three.
+5. Initialize experiment (write config header to `.autoresearch/autoresearch.jsonl`) → run baseline → log result → start looping immediately.
 
 ### `autoresearch.md`
 
@@ -30,7 +30,7 @@ This is the heart of the session. A fresh agent with no context should be able t
 - **Secondary**: <name>, <name>, ...
 
 ## How to Run
-`./autoresearch.sh` — outputs `METRIC name=number` lines.
+`./.autoresearch/run.sh` — outputs `METRIC name=number` lines.
 
 ## Files in Scope
 <Every file the agent may modify, with a brief note on what it does.>
@@ -46,9 +46,9 @@ This is the heart of the session. A fresh agent with no context should be able t
 and architectural insights so the agent doesn't repeat failed approaches.>
 ```
 
-Update `autoresearch.md` periodically — especially the "What's Been Tried" section — so resuming agents have full context.
+Update `.autoresearch/autoresearch.md` periodically — especially the "What's Been Tried" section — so resuming agents have full context.
 
-### `autoresearch.sh`
+### `.autoresearch/run.sh`
 
 Bash script (`set -euo pipefail`) that: pre-checks fast (syntax errors in <1s), runs the benchmark, outputs `METRIC name=number` lines. Keep it fast — every second is multiplied by hundreds of runs. Update it during the loop as needed.
 
@@ -56,7 +56,7 @@ Bash script (`set -euo pipefail`) that: pre-checks fast (syntax errors in <1s), 
 
 ## JSONL State Protocol
 
-All experiment state lives in `autoresearch.jsonl`. This is the source of truth for resuming across sessions.
+All experiment state lives in `.autoresearch/autoresearch.jsonl`. This is the source of truth for resuming across sessions.
 
 ### Config Header
 
@@ -91,16 +91,16 @@ Fields:
 
 ### Initialization (equivalent of `init_experiment`)
 
-To initialize, write the config header to `autoresearch.jsonl`:
+To initialize, write the config header to `.autoresearch/autoresearch.jsonl`:
 
 ```bash
-echo '{"type":"config","name":"<name>","metricName":"<metric>","metricUnit":"<unit>","bestDirection":"<lower|higher>"}' > autoresearch.jsonl
+echo '{"type":"config","name":"<name>","metricName":"<metric>","metricUnit":"<unit>","bestDirection":"<lower|higher>"}' > .autoresearch/autoresearch.jsonl
 ```
 
 To re-initialize (change optimization target), **append** a new config header:
 
 ```bash
-echo '{"type":"config","name":"<name>","metricName":"<metric>","metricUnit":"<unit>","bestDirection":"<lower|higher>"}' >> autoresearch.jsonl
+echo '{"type":"config","name":"<name>","metricName":"<metric>","metricUnit":"<unit>","bestDirection":"<lower|higher>"}' >> .autoresearch/autoresearch.jsonl
 ```
 
 ---
@@ -111,7 +111,7 @@ Run the benchmark command, capturing timing and output:
 
 ```bash
 START_TIME=$(date +%s%N)
-bash -c "./autoresearch.sh" 2>&1 | tee /tmp/autoresearch-output.txt
+bash -c "./.autoresearch/run.sh" 2>&1 | tee /tmp/autoresearch-output.txt
 EXIT_CODE=$?
 END_TIME=$(date +%s%N)
 DURATION=$(echo "scale=3; ($END_TIME - $START_TIME) / 1000000000" | bc)
@@ -163,16 +163,16 @@ Use the current HEAD hash (before revert) as the commit field.
 ### 3. Append result to JSONL
 
 ```bash
-echo '{"run":<N>,"commit":"<hash>","metric":<value>,"metrics":{<secondaries>},"status":"<status>","description":"<desc>","timestamp":'$(date +%s)',"segment":<seg>}' >> autoresearch.jsonl
+echo '{"run":<N>,"commit":"<hash>","metric":<value>,"metrics":{<secondaries>},"status":"<status>","description":"<desc>","timestamp":'$(date +%s)',"segment":<seg>}' >> .autoresearch/autoresearch.jsonl
 ```
 
 ### 4. Update dashboard
 
-After every log, regenerate `autoresearch-dashboard.md` (see Dashboard section below).
+After every log, regenerate `.autoresearch/dashboard.md` (see Dashboard section below).
 
 ### 5. Append to worklog
 
-After every experiment, append a concise entry to `experiments/worklog.md`. This file survives context compactions and crashes, giving any resuming agent (or the user) a complete narrative of the session. Format:
+After every experiment, append a concise entry to `.autoresearch/worklog.md`. This file survives context compactions and crashes, giving any resuming agent (or the user) a complete narrative of the session. Format:
 
 ```markdown
 ### Run N: <short description> — <primary_metric>=<value> (<STATUS>)
@@ -185,7 +185,7 @@ After every experiment, append a concise entry to `experiments/worklog.md`. This
 
 Also update the "Key Insights" and "Next Ideas" sections at the bottom of the worklog when you learn something new.
 
-**On setup**, create `experiments/worklog.md` with the session header, data summary, and baseline result. **On resume**, read `experiments/worklog.md` to recover context.
+**On setup**, create `.autoresearch/worklog.md` with the session header, data summary, and baseline result. **On resume**, read `.autoresearch/worklog.md` to recover context.
 
 ### 6. Secondary metric consistency
 
@@ -197,7 +197,7 @@ If you want to add a new secondary metric mid-session, that's fine — but from 
 
 ## Dashboard
 
-After each experiment, regenerate `autoresearch-dashboard.md`:
+After each experiment, regenerate `.autoresearch/dashboard.md`:
 
 ```markdown
 # Autoresearch Dashboard: <name>
@@ -227,22 +227,22 @@ Include delta percentages vs baseline for each metric value. Show ALL runs in th
 - **Don't thrash.** Repeatedly reverting the same idea? Try something structurally different.
 - **Crashes:** fix if trivial, otherwise log and move on. Don't over-invest.
 - **Think longer when stuck.** Re-read source files, study the profiling data, reason about what the CPU is actually doing. The best ideas come from deep understanding, not from trying random variations.
-- **Resuming:** if `autoresearch.md` exists, read it + `autoresearch.jsonl` + `experiments/worklog.md` + git log, continue looping. The worklog has the full narrative and insights.
+- **Resuming:** if `.autoresearch/autoresearch.md` exists, read it + `.autoresearch/autoresearch.jsonl` + `.autoresearch/worklog.md` + git log, continue looping. The worklog has the full narrative and insights.
 
 **NEVER STOP.** The user may be away for hours. Keep going until interrupted.
 
 ## Ideas Backlog
 
-When you discover complex but promising optimizations that you decide not to pursue right now, **append them as bullet points to `autoresearch.ideas.md`**. Don't let good ideas get lost.
+When you discover complex but promising optimizations that you decide not to pursue right now, **append them as bullet points to `.autoresearch/ideas.md`**. Don't let good ideas get lost.
 
-If the loop stops (context limit, crash, etc.) and `autoresearch.ideas.md` exists, you'll be asked to:
+If the loop stops (context limit, crash, etc.) and `.autoresearch/ideas.md` exists, you'll be asked to:
 1. Read the ideas file and use it as inspiration for new experiment paths
 2. Prune ideas that are duplicated, already tried, or clearly bad
 3. Create experiments based on the remaining ideas
 4. If nothing is left, try to come up with your own new ideas
-5. If all paths are exhausted, delete `autoresearch.ideas.md` and write a final summary report
+5. If all paths are exhausted, delete `.autoresearch/ideas.md` and write a final summary report
 
-When there is no `autoresearch.ideas.md` file and the loop ends, the research is complete.
+When there is no `.autoresearch/ideas.md` file and the loop ends, the research is complete.
 
 ## User Steers
 
@@ -250,4 +250,4 @@ User messages sent while an experiment is running should be noted and incorporat
 
 ## Updating autoresearch.md
 
-Periodically update `autoresearch.md` — especially the "What's Been Tried" section — so that a fresh agent resuming the loop has full context on what worked, what didn't, and what architectural insights have been gained. Do this every 5-10 experiments or after any significant breakthrough.
+Periodically update `.autoresearch/autoresearch.md` — especially the "What's Been Tried" section — so that a fresh agent resuming the loop has full context on what worked, what didn't, and what architectural insights have been gained. Do this every 5-10 experiments or after any significant breakthrough.
