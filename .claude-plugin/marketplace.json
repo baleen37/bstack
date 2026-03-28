@@ -9,11 +9,10 @@
   "plugins": [
     {
       "name": "me",
-      "description": "AI coding assistant toolkit - LSP servers, git workflow protection, session handoff, context management, and development automation",
+      "description": "AI coding assistant toolkit - git workflow protection, session handoff, context management, and development automation",
       "source": "./plugins/me",
       "category": "development",
       "tags": [
-        "lsp",
         "git",
         "workflow",
         "automation",
@@ -49,67 +48,6 @@
         "atlassian",
         "confluence",
         "project-management"
-      ],
-      "version": "16.1.1"
-    },
-    {
-      "name": "lsp-gopls",
-      "description": "Go language server plugin for Claude Code",
-      "source": "./plugins/lsp-gopls",
-      "category": "development",
-      "tags": [
-        "lsp",
-        "go",
-        "gopls"
-      ],
-      "version": "16.1.1"
-    },
-    {
-      "name": "lsp-typescript",
-      "description": "TypeScript language server plugin for Claude Code",
-      "source": "./plugins/lsp-typescript",
-      "category": "development",
-      "tags": [
-        "lsp",
-        "typescript",
-        "javascript"
-      ],
-      "version": "16.1.1"
-    },
-    {
-      "name": "lsp-clangd",
-      "description": "C/C++ language server plugin for Claude Code",
-      "source": "./plugins/lsp-clangd",
-      "category": "development",
-      "tags": [
-        "lsp",
-        "c",
-        "cpp",
-        "clangd"
-      ],
-      "version": "16.1.1"
-    },
-    {
-      "name": "lsp-lua",
-      "description": "Lua language server plugin for Claude Code",
-      "source": "./plugins/lsp-lua",
-      "category": "development",
-      "tags": [
-        "lsp",
-        "lua",
-        "lua-language-server"
-      ],
-      "version": "16.1.1"
-    },
-    {
-      "name": "lsp-pyright",
-      "description": "Python language server plugin for Claude Code",
-      "source": "./plugins/lsp-pyright",
-      "category": "development",
-      "tags": [
-        "lsp",
-        "python",
-        "pyright"
       ],
       "version": "16.1.1"
     },
