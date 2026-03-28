@@ -12,7 +12,7 @@ New project setup checklist. Verify each item and configure what's missing.
 ### 1. Branch Protection
 
 - [ ] `main` branch direct push is disabled
-- [ ] PRs require at least 1 approval
+- [ ] PRs require at least 0 approvals (optional; configure based on team size)
 - [ ] All CI status checks must pass before merge
 - [ ] Configure via GitHub branch protection rules or repo settings
 
