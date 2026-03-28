@@ -1,14 +1,13 @@
 {
   "name": "me",
   "version": "16.1.1",
-  "description": "AI coding assistant toolkit - LSP servers, git workflow protection, session handoff, context management, and development automation",
+  "description": "AI coding assistant toolkit - git workflow protection, session handoff, context management, and development automation",
   "author": {
     "name": "baleen37",
     "email": "git@baleen.me"
   },
   "license": "MIT",
   "keywords": [
-    "lsp",
     "git",
     "workflow",
     "automation",
@@ -17,90 +16,6 @@
     "handoff",
     "memory",
     "context",
-    "compacting",
-    "bash",
-    "typescript",
-    "python",
-    "go",
-    "kotlin",
-    "lua",
-    "nix",
-    "terraform"
-  ],
-  "lspServers": {
-    "bash": {
-      "command": "bash-language-server",
-      "args": [
-        "start"
-      ],
-      "extensionToLanguage": {
-        ".sh": "bash",
-        ".bash": "bash",
-        ".zsh": "bash"
-      }
-    },
-    "typescript": {
-      "command": "typescript-language-server",
-      "args": [
-        "--stdio"
-      ],
-      "extensionToLanguage": {
-        ".ts": "typescript",
-        ".tsx": "typescript",
-        ".js": "javascript",
-        ".jsx": "javascript",
-        ".mjs": "javascript",
-        ".cjs": "javascript"
-      }
-    },
-    "python": {
-      "command": "pyright-langserver",
-      "args": [
-        "--stdio"
-      ],
-      "extensionToLanguage": {
-        ".py": "python",
-        ".pyi": "python"
-      }
-    },
-    "go": {
-      "command": "gopls",
-      "args": [
-        "serve"
-      ],
-      "extensionToLanguage": {
-        ".go": "go"
-      }
-    },
-    "kotlin": {
-      "command": "kotlin-language-server",
-      "extensionToLanguage": {
-        ".kt": "kotlin",
-        ".kts": "kotlin"
-      }
-    },
-    "lua": {
-      "command": "lua-language-server",
-      "extensionToLanguage": {
-        ".lua": "lua"
-      }
-    },
-    "nix": {
-      "command": "nil",
-      "extensionToLanguage": {
-        ".nix": "nix"
-      }
-    },
-    "terraform": {
-      "command": "terraform-ls",
-      "args": [
-        "serve"
-      ],
-      "extensionToLanguage": {
-        ".tf": "terraform",
-        ".tf.json": "terraform",
-        ".tfvars": "terraform"
-      }
-    }
-  }
+    "compacting"
+  ]
 }
