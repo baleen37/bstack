@@ -1,22 +1,22 @@
 ---
 name: spec-to-backlog
-description: "Automatically convert Confluence specification documents into structured Jira backlogs with Epics and implementation tickets. When Claude needs to: (1) Create Jira tickets from a Confluence page, (2) Generate a backlog from a specification, (3) Break down a spec into implementation tasks, or (4) Convert requirements into Jira issues. Handles reading Confluence pages, analyzing specifications, creating Epics with proper structure, and generating detailed implementation tickets linked to the Epic."
+description: "Convert specifications into structured Jira backlogs with Epics and implementation tickets. When Claude needs to: (1) Create Jira tickets from a spec, requirements doc, or conversation, (2) Generate a backlog from a specification, (3) Break down a spec into implementation tasks, or (4) Convert requirements into Jira issues. Handles analyzing specifications from any source (markdown, free text, conversation context), creating Epics with proper structure, and generating detailed implementation tickets linked to the Epic."
 ---
 
 # Spec to Backlog
 
 ## Overview
 
-Transform Confluence specification documents into structured Jira backlogs automatically. This skill reads
-requirement documents from Confluence, intelligently breaks them down into logical implementation tasks,
-**creates an Epic first** to organize the work, then generates individual Jira tickets linked to that Epic -
-eliminating tedious manual copy-pasting.
+Transform specifications into structured Jira backlogs automatically. This skill reads requirement
+documents from any source — markdown files, free text, or conversation context — intelligently breaks
+them down into logical implementation tasks, **creates an Epic first** to organize the work, then
+generates individual Jira tickets linked to that Epic - eliminating tedious manual copy-pasting.
 
 ## Core Workflow
 
 **CRITICAL: Always follow this exact sequence:**
 
-1. **Fetch Confluence Page** -> Get the specification content
+1. **Obtain Spec Content** -> Get the specification content from context, file, or user
 2. **Ask for Project Key** -> Identify target Jira project
 3. **Analyze Specification** -> Break down into logical tasks (internally, don't create yet)
 4. **Present Breakdown** -> Show user the planned Epic and tickets
@@ -29,44 +29,28 @@ Creating tickets first will result in orphaned tickets.
 
 ---
 
-## Step 1: Fetch Confluence Page
+## Step 1: Obtain Specification Content
 
-When triggered, obtain the Confluence page content:
+Determine where the specification content comes from before proceeding.
 
-### If user provides a Confluence URL
+### If spec content is already in the conversation
 
-Extract the cloud ID and page ID from the URL pattern:
+The user may have pasted markdown, free text, a requirements doc, or described the feature in
+the conversation. If there is enough content to analyze, proceed directly to Step 3.
 
-- Standard format: `https://[site].atlassian.net/wiki/spaces/[SPACE]/pages/[PAGE_ID]/[title]`
-- The cloud ID can be extracted from `[site].atlassian.net` or by calling `getAccessibleAtlassianResources`
-- The page ID is the numeric value in the URL path
+### If the user referenced a file path
 
-### If user provides only a page title or description
+Read the file directly if it is accessible. For a local markdown file, read its contents and
+proceed to Step 3.
 
-Use the `search` tool to find the page:
+### If spec content is missing or unclear
 
-```text
-search(
-  cloudId="...",
-  query="type=page AND title~'[search terms]'"
-)
-```
+Ask the user to provide the specification:
 
-If multiple pages match, ask the user to clarify which one to use.
+> "Please share the specification content — you can paste markdown, free text, or describe the
+> feature you want to break down into Jira tickets."
 
-### Fetch the page
-
-Call `getConfluencePage` with the cloudId and pageId:
-
-```text
-getConfluencePage(
-  cloudId="...",
-  pageId="123456",
-  contentFormat="markdown"
-)
-```
-
-This returns the page content in Markdown format, which you'll analyze in Step 3.
+Wait for the user's response, then proceed to Step 3.
 
 ---
 
@@ -265,9 +249,6 @@ createJiraIssue(
 ## Overview
 [1-2 sentence summary of what this epic delivers]
 
-## Source
-Confluence Spec: [Link to Confluence page]
-
 ## Objectives
 - [Key objective 1]
 - [Key objective 2]
@@ -288,16 +269,6 @@ Confluence Spec: [Link to Confluence page]
 ### Capture the Epic Key
 
 The response will include the Epic's key (e.g., "PROJ-123"). **Save this key** - you'll need it for every child ticket.
-
-**Example response:**
-
-```json
-{
-  "key": "PROJ-123",
-  "id": "10001",
-  "self": "https://yoursite.atlassian.net/rest/api/3/issue/10001"
-}
-```
 
 **Confirm Epic creation to user:**
 "Created Epic: PROJ-123 - User Authentication System"
@@ -351,7 +322,7 @@ Use action verbs and be specific:
 
 ````markdown
 ## Context
-[Brief context for this task from the Confluence spec]
+[Brief context for this task from the spec]
 
 ## Requirements
 - [Requirement 1]
@@ -370,7 +341,6 @@ Use action verbs and be specific:
 - [ ] [Testable criterion 3]
 
 ## Related
-- Confluence Spec: [Link to relevant section if possible]
 - Epic: PROJ-123
 ````
 
@@ -435,14 +405,13 @@ https://yoursite.atlassian.net/browse/PROJ-123
 
 ## Edge Cases & Troubleshooting
 
-### Multiple Specs or Pages
+### Multiple Specs
 
 **If user references multiple documents:**
 
 - Process each separately, or ask which to prioritize
 - Consider creating separate Epics for distinct features
-- "I see you've provided 3 spec documents. Should I create separate Epics for each, or would you like me to
-  focus on one first?"
+- "I see you've provided content for 3 different features. Should I create separate Epics for each, or would you like me to focus on one first?"
 
 ### Existing Epic
 
