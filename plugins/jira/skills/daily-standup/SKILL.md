@@ -21,14 +21,24 @@ Fetch the current user's Jira issues and format them into a daily standup report
 
 ## Workflow
 
-### Step 1: Fetch Jira Issues
+### Step 1: Determine Previous Workday
 
-Run three queries in parallel:
+Before querying, calculate the previous workday based on today's day of week:
+
+- **Monday** → use `-3d` (Friday)
+- **Tuesday–Friday** → use `-1d` (yesterday)
+- **Saturday/Sunday** → use `-1d` (treat as normal, unlikely to run standup on weekends)
+
+Use the `currentDate` from context or system to determine today's day of week.
+
+### Step 2: Fetch Jira Issues
+
+Run three queries in parallel using the lookback period from Step 1 (`{LOOKBACK}`):
 
 **Query A — 어제 한 일** (assignee, recently updated, active statuses):
 
 ```jql
-assignee = currentUser() AND status IN ("In Progress", "Done") AND updated >= -1d ORDER BY updated DESC
+assignee = currentUser() AND status IN ("In Progress", "Done") AND updated >= -{LOOKBACK} ORDER BY updated DESC
 ```
 
 **Query B — 오늘 할 일** (currently in progress):
@@ -49,7 +59,7 @@ Fields to fetch: `["summary", "status", "updated", "key"]`
 
 ---
 
-### Step 2: Show Backlog and Ask for Today's Plan
+### Step 3: Show Backlog and Ask for Today's Plan
 
 Present the Backlog items as a numbered list and ask if any should be added to "오늘 할 일":
 
@@ -66,7 +76,7 @@ Wait for user response. Add selected items to the "오늘 할 일" list.
 
 ---
 
-### Step 3: Ask for Blocker and Insight
+### Step 4: Ask for Blocker and Insight
 
 Ask in a single message:
 
@@ -80,7 +90,7 @@ Wait for user response.
 
 ---
 
-### Step 4: Output the Standup Report
+### Step 5: Output the Standup Report
 
 Format and print the final report using the template in `references/standup-template.md`.
 
