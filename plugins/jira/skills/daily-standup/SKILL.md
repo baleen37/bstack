@@ -82,39 +82,11 @@ Wait for user response.
 
 ### Step 4: Output the Standup Report
 
-Format and print the final report using this exact template:
+Format and print the final report using the template in `references/standup-template.md`.
 
-```
-어제 한 업무는 무엇인가요?
-어제 한 업무
-  - [ISSUE-KEY] [summary]
-  - [ISSUE-KEY] [summary]
-
-
-
-
-오늘 할 일을 적어보아요
-- [ISSUE-KEY] [summary]
-  - [ISSUE-KEY] [summary]
-
-
-
-
-도움(Risk/Blocker)이 필요해요.
-[blocker content, or blank]
-
-
-
-공유하고 싶은 인사이트를 적어봐요.
-[insight content, or blank]
-```
-
-**Formatting rules:**
-
-- 어제 한 일: Query A 결과. 들여쓰기 두 칸(`  - `).
-- 오늘 할 일: Query B 결과 + 사용자가 추가한 Backlog 항목. 첫 번째 레벨(`- `), 하위 항목은 들여쓰기(`  - `).
-- 섹션 사이 빈 줄 3개 유지 (템플릿 그대로).
-- 이슈 키와 제목만 포함. 링크나 상태 표시 불필요.
+- 어제 한 일: Query A 결과
+- 오늘 할 일: Query B 결과 + 사용자가 추가한 Backlog 항목
+- 나머지 섹션: 사용자 입력값, 없으면 빈칸
 
 ---
 
