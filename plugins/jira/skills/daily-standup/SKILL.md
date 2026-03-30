@@ -35,22 +35,24 @@ Use the `currentDate` from context or system to determine today's day of week.
 
 Run three queries in parallel using the lookback period from Step 1 (`{LOOKBACK}`):
 
-**Query A — 어제 한 일** (assignee, recently updated, active statuses):
+All queries must exclude Epic issue type: add `AND issuetype != Epic` to every JQL.
+
+**Query A — 어제 한 일 후보** (assignee, recently updated, active statuses, no Epics):
 
 ```jql
-assignee = currentUser() AND status IN ("In Progress", "Done") AND updated >= -{LOOKBACK} ORDER BY updated DESC
+assignee = currentUser() AND issuetype != Epic AND status IN ("In Progress", "Done") AND updated >= -{LOOKBACK} ORDER BY updated DESC
 ```
 
-**Query B — 오늘 할 일** (currently in progress):
+**Query B — 오늘 할 일** (currently in progress, no Epics):
 
 ```jql
-assignee = currentUser() AND status = "In Progress" ORDER BY updated DESC
+assignee = currentUser() AND issuetype != Epic AND status = "In Progress" ORDER BY updated DESC
 ```
 
-**Query C — 참고용 Backlog** (upcoming work, top 10):
+**Query C — 참고용 Backlog** (upcoming work, top 10, no Epics):
 
 ```jql
-assignee = currentUser() AND status = "Backlog" ORDER BY updated DESC
+assignee = currentUser() AND issuetype != Epic AND status = "Backlog" ORDER BY updated DESC
 ```
 
 Use `maxResults: 20` for A and B, `maxResults: 10` for C.
@@ -59,9 +61,23 @@ Fields to fetch: `["summary", "status", "updated", "key"]`
 
 ---
 
-### Step 3: Show Backlog and Ask for Today's Plan
+### Step 3: Ask User to Select Yesterday's Work
 
-Present the Backlog items as a numbered list and ask if any should be added to "오늘 할 일":
+Query A returns candidates — the user must confirm which ones they actually worked on.
+Present as a numbered list and wait for selection:
+
+```
+어제 한 업무 후보 (금요일 기준):
+1. SEARCH-11966 [추천] product-traits 적재 배치 전환
+2. SEARCH-12625 product-tratis.v3 -> v4 전환에 따른 검색 쿼리 작업
+...
+
+어제 실제로 작업한 항목을 골라주세요. (번호로 답하거나 전체면 "전체", 없으면 엔터)
+```
+
+Wait for user response. Use selected items as "어제 한 일".
+
+Then present Backlog items and ask for today's additions:
 
 ```
 참고용 Backlog (최근 업데이트 순):
@@ -94,7 +110,7 @@ Wait for user response.
 
 Format and print the final report using the template in `references/standup-template.md`.
 
-- 어제 한 일: Query A 결과
+- 어제 한 일: 사용자가 Query A에서 선택한 항목
 - 오늘 할 일: Query B 결과 + 사용자가 추가한 Backlog 항목
 - 나머지 섹션: 사용자 입력값, 없으면 빈칸
 
