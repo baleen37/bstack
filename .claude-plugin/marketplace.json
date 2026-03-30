@@ -77,6 +77,19 @@
         "automation"
       ],
       "version": "16.2.1"
+    },
+    {
+      "name": "obsidian",
+      "description": "Obsidian vault integration skills for Claude Code",
+      "source": "./plugins/obsidian",
+      "category": "development",
+      "tags": [
+        "obsidian",
+        "vault",
+        "notes",
+        "cli"
+      ],
+      "version": "1.0.0"
     }
   ]
 }

@@ -1,0 +1,16 @@
+{
+  "name": "obsidian",
+  "version": "1.0.0",
+  "description": "Obsidian vault integration skills for Claude Code",
+  "author": {
+    "name": "baleen37",
+    "email": "git@baleen.me"
+  },
+  "license": "MIT",
+  "keywords": [
+    "obsidian",
+    "vault",
+    "notes",
+    "cli"
+  ]
+}
