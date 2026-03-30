@@ -8,7 +8,7 @@
   },
   "plugins": [
     {
-      "name": "me",
+      "name": "bstack",
       "description": "AI coding assistant toolkit - git workflow protection, session handoff, context management, and development automation",
       "source": "./plugins/me",
       "category": "development",
