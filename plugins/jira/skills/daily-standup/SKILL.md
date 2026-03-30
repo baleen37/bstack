@@ -90,14 +90,10 @@ Wait for user response. Add selected items to the "오늘 할 일" list.
 
 ---
 
-### Step 4: Ask for Blocker and Insight
-
-Ask in a single message:
+### Step 4: Ask for Blocker
 
 ```
-도움(Risk/Blocker)이 필요한 사항이 있나요?
-공유하고 싶은 인사이트가 있나요?
-(없으면 엔터)
+도움(Risk/Blocker)이 필요한 사항이 있나요? (없으면 엔터)
 ```
 
 Wait for user response.
@@ -110,7 +106,7 @@ Format and print the final report using the template in `references/standup-temp
 
 - 어제 한 일: 사용자가 Query A에서 선택한 항목
 - 오늘 할 일: Query B 결과 + 사용자가 추가한 Backlog 항목
-- 나머지 섹션: 사용자 입력값, 없으면 빈칸
+- 도움 섹션: 사용자 입력값, 없으면 빈칸
 
 ---
 

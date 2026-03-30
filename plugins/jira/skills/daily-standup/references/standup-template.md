@@ -22,11 +22,6 @@ Use this template exactly when generating the standup report. Maintain spacing a
 
 도움(Risk/Blocker)이 필요해요.
 {BLOCKER_CONTENT}
-
-
-
-공유하고 싶은 인사이트를 적어봐요.
-{INSIGHT_CONTENT}
 ```
 
 ## Placeholder Rules
@@ -36,7 +31,6 @@ Use this template exactly when generating the standup report. Maintain spacing a
 | `{ISSUE_KEY}` | Jira issue key (e.g. `SEARCH-12134`) |
 | `{ISSUE_SUMMARY}` | Issue title as-is from Jira |
 | `{BLOCKER_CONTENT}` | User-provided blocker text, or blank if none |
-| `{INSIGHT_CONTENT}` | User-provided insight text, or blank if none |
 
 ## Formatting Rules
 
@@ -65,9 +59,4 @@ Use this template exactly when generating the standup report. Maintain spacing a
 
 
 도움(Risk/Blocker)이 필요해요.
-
-
-
-
-공유하고 싶은 인사이트를 적어봐요.
 ```
