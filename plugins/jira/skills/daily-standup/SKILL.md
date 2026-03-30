@@ -67,10 +67,9 @@ Query A returns candidates — the user must confirm which ones they actually wo
 Present as a numbered list and wait for selection:
 
 ```
-어제 한 업무 후보 (금요일 기준):
-1. SEARCH-11966 [추천] product-traits 적재 배치 전환
-2. SEARCH-12625 product-tratis.v3 -> v4 전환에 따른 검색 쿼리 작업
-...
+어제 한 업무 후보 ({이전 업무일} 기준):
+1. {ISSUE_KEY} {ISSUE_SUMMARY}
+2. {ISSUE_KEY} {ISSUE_SUMMARY}
 
 어제 실제로 작업한 항목을 골라주세요. (번호로 답하거나 전체면 "전체", 없으면 엔터)
 ```
@@ -81,9 +80,8 @@ Then present Backlog items and ask for today's additions:
 
 ```
 참고용 Backlog (최근 업데이트 순):
-1. SEARCH-12563 Slow path signal 증분 처리 구조 전환
-2. SEARCH-12255 기등록된 검매핑에 대해 모델 파라미터로 상쇄 처리 기능 필요
-...
+1. {ISSUE_KEY} {ISSUE_SUMMARY}
+2. {ISSUE_KEY} {ISSUE_SUMMARY}
 
 오늘 할 일에 추가할 항목이 있나요? (번호로 답하거나 없으면 엔터)
 ```
