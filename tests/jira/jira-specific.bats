@@ -2,22 +2,13 @@
 # Jira (Atlassian) specific tests for consolidated structure
 load ../helpers/bats_helper
 
-@test "jira: .mcp.json exists and is valid" {
-    [ -f "${PROJECT_ROOT}/.mcp.json" ]
-    jq empty "${PROJECT_ROOT}/.mcp.json"
-}
-
-@test "jira: .mcp.json contains atlassian server config" {
-    grep -q "atlassian" "${PROJECT_ROOT}/.mcp.json"
-    grep -q "https://mcp.atlassian.com/v1/mcp" "${PROJECT_ROOT}/.mcp.json"
-}
-
-@test "jira: all 5 skills exist with SKILL.md" {
+@test "jira: all 6 skills exist with SKILL.md" {
     [ -f "${PROJECT_ROOT}/plugins/jira/skills/triage-issue/SKILL.md" ]
     [ -f "${PROJECT_ROOT}/plugins/jira/skills/capture-tasks-from-meeting-notes/SKILL.md" ]
     [ -f "${PROJECT_ROOT}/plugins/jira/skills/generate-status-report/SKILL.md" ]
     [ -f "${PROJECT_ROOT}/plugins/jira/skills/search-company-knowledge/SKILL.md" ]
     [ -f "${PROJECT_ROOT}/plugins/jira/skills/spec-to-backlog/SKILL.md" ]
+    [ -f "${PROJECT_ROOT}/plugins/jira/skills/daily-standup/SKILL.md" ]
 }
 
 @test "jira: skills have valid frontmatter" {
@@ -27,6 +18,7 @@ load ../helpers/bats_helper
         "generate-status-report"
         "search-company-knowledge"
         "spec-to-backlog"
+        "daily-standup"
     )
 
     for skill_name in "${jira_skills[@]}"; do

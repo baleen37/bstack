@@ -21,26 +21,38 @@ Fetch the current user's Jira issues and format them into a daily standup report
 
 ## Workflow
 
-### Step 1: Fetch Jira Issues
+### Step 1: Determine Previous Workday
 
-Run three queries in parallel:
+Before querying, calculate the previous workday based on today's day of week:
 
-**Query A — 어제 한 일** (assignee, recently updated, active statuses):
+- **Monday** → use `-3d` (Friday)
+- **Tuesday–Friday** → use `-1d` (yesterday)
+- **Saturday/Sunday** → use `-1d` (treat as normal, unlikely to run standup on weekends)
+
+Use the `currentDate` from context or system to determine today's day of week.
+
+### Step 2: Fetch Jira Issues
+
+Run three queries in parallel using the lookback period from Step 1 (`{LOOKBACK}`):
+
+All queries must exclude Epic issue type: add `AND issuetype != Epic` to every JQL.
+
+**Query A — 어제 한 일 후보** (assignee, recently updated, active statuses, no Epics):
 
 ```jql
-assignee = currentUser() AND status IN ("In Progress", "Done") AND updated >= -1d ORDER BY updated DESC
+assignee = currentUser() AND issuetype != Epic AND status IN ("In Progress", "Done") AND updated >= -{LOOKBACK} ORDER BY updated DESC
 ```
 
-**Query B — 오늘 할 일** (currently in progress):
+**Query B — 오늘 할 일** (currently in progress, no Epics):
 
 ```jql
-assignee = currentUser() AND status = "In Progress" ORDER BY updated DESC
+assignee = currentUser() AND issuetype != Epic AND status = "In Progress" ORDER BY updated DESC
 ```
 
-**Query C — 참고용 Backlog** (upcoming work, top 10):
+**Query C — 참고용 Backlog** (upcoming work, top 10, no Epics):
 
 ```jql
-assignee = currentUser() AND status = "Backlog" ORDER BY updated DESC
+assignee = currentUser() AND issuetype != Epic AND status = "Backlog" ORDER BY updated DESC
 ```
 
 Use `maxResults: 20` for A and B, `maxResults: 10` for C.
@@ -49,15 +61,27 @@ Fields to fetch: `["summary", "status", "updated", "key"]`
 
 ---
 
-### Step 2: Show Backlog and Ask for Today's Plan
+### Step 3: Ask User to Select Yesterday's Work
 
-Present the Backlog items as a numbered list and ask if any should be added to "오늘 할 일":
+Query A returns candidates — the user must confirm which ones they actually worked on.
+Present as a numbered list and wait for selection:
+
+```
+어제 한 업무 후보 ({이전 업무일} 기준):
+1. {ISSUE_KEY} {ISSUE_SUMMARY}
+2. {ISSUE_KEY} {ISSUE_SUMMARY}
+
+어제 실제로 작업한 항목을 골라주세요. (번호로 답하거나 전체면 "전체", 없으면 엔터)
+```
+
+Wait for user response. Use selected items as "어제 한 일".
+
+Then present Backlog items and ask for today's additions:
 
 ```
 참고용 Backlog (최근 업데이트 순):
-1. SEARCH-12563 Slow path signal 증분 처리 구조 전환
-2. SEARCH-12255 기등록된 검매핑에 대해 모델 파라미터로 상쇄 처리 기능 필요
-...
+1. {ISSUE_KEY} {ISSUE_SUMMARY}
+2. {ISSUE_KEY} {ISSUE_SUMMARY}
 
 오늘 할 일에 추가할 항목이 있나요? (번호로 답하거나 없으면 엔터)
 ```
@@ -66,55 +90,12 @@ Wait for user response. Add selected items to the "오늘 할 일" list.
 
 ---
 
-### Step 3: Ask for Blocker and Insight
-
-Ask in a single message:
-
-```
-도움(Risk/Blocker)이 필요한 사항이 있나요?
-공유하고 싶은 인사이트가 있나요?
-(없으면 엔터)
-```
-
-Wait for user response.
-
----
-
 ### Step 4: Output the Standup Report
 
-Format and print the final report using this exact template:
+Format and print the final report using the template in `references/standup-template.md`.
 
-```
-어제 한 업무는 무엇인가요?
-어제 한 업무
-  - [ISSUE-KEY] [summary]
-  - [ISSUE-KEY] [summary]
-
-
-
-
-오늘 할 일을 적어보아요
-- [ISSUE-KEY] [summary]
-  - [ISSUE-KEY] [summary]
-
-
-
-
-도움(Risk/Blocker)이 필요해요.
-[blocker content, or blank]
-
-
-
-공유하고 싶은 인사이트를 적어봐요.
-[insight content, or blank]
-```
-
-**Formatting rules:**
-
-- 어제 한 일: Query A 결과. 들여쓰기 두 칸(`  - `).
-- 오늘 할 일: Query B 결과 + 사용자가 추가한 Backlog 항목. 첫 번째 레벨(`- `), 하위 항목은 들여쓰기(`  - `).
-- 섹션 사이 빈 줄 3개 유지 (템플릿 그대로).
-- 이슈 키와 제목만 포함. 링크나 상태 표시 불필요.
+- 어제 한 일: 사용자가 Query A에서 선택한 항목
+- 오늘 할 일: Query B 결과 + 사용자가 추가한 Backlog 항목
 
 ---
 
