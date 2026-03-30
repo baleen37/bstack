@@ -16,12 +16,6 @@ Use this template exactly when generating the standup report. Maintain spacing a
 오늘 할 일을 적어보아요
 - {ISSUE_KEY} {ISSUE_SUMMARY}
   - {ISSUE_KEY} {ISSUE_SUMMARY}
-
-
-
-
-도움(Risk/Blocker)이 필요해요.
-{BLOCKER_CONTENT}
 ```
 
 ## Placeholder Rules
@@ -30,7 +24,6 @@ Use this template exactly when generating the standup report. Maintain spacing a
 |-------------|-------------|
 | `{ISSUE_KEY}` | Jira issue key (e.g. `SEARCH-12134`) |
 | `{ISSUE_SUMMARY}` | Issue title as-is from Jira |
-| `{BLOCKER_CONTENT}` | User-provided blocker text, or blank if none |
 
 ## Formatting Rules
 
@@ -54,9 +47,4 @@ Use this template exactly when generating the standup report. Maintain spacing a
 오늘 할 일을 적어보아요
 - SEARCH-12625 product-traits.v3 → v4 전환에 따른 검색 쿼리 작업 (기본 query 작업)
   - SEARCH-12563 Slow path signal 증분 처리 구조 전환
-
-
-
-
-도움(Risk/Blocker)이 필요해요.
 ```
