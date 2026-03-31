@@ -7,32 +7,30 @@ description: Use when a PR is broken and needs to be fixed — CI failures, merg
 
 Diagnose and fix a broken PR.
 
-## Diagnose (run in parallel)
+## Diagnose
 
 ```bash
-gh pr checks
-gh pr view --json mergeable,mergeStateStatus,state
+# Single call — all needed fields
+gh pr view --json state,mergeable,mergeStateStatus
 ```
 
-**Interpret `mergeStateStatus: UNKNOWN`** — GitHub returns UNKNOWN transiently. Check `state` first:
-- `state: MERGED` → already merged, nothing to fix
-- `state: CLOSED` → PR was closed without merging, reopen if needed
-- `state: OPEN` + UNKNOWN → CI still settling, wait a few seconds and re-check
+- `MERGED` → done, nothing to fix
+- `CLOSED` → reopen if needed
+- `OPEN` + `UNKNOWN` → CI settling, re-check in a few seconds
 
 ## Fix by Symptom
 
-**CI failure**
+**CI failure** — if `wait-for-merge.sh` printed a `run-id`, use it directly:
 ```bash
-gh run view <run-id> --log-failed  # read logs
+gh run view <run-id> --log-failed 2>&1 | grep -A3 "not ok\|Error\|FAILED" | head -40
 # fix, commit, push
-gh pr checks --watch
+gh pr checks --watch > /dev/null 2>&1; echo "CI: $?"
 ```
 
-**Failing tests** — run locally first, never fix blind
+**Failing tests** — run locally first, never fix blind:
 ```bash
 <test command>
 # fix, commit, push
-gh pr checks --watch
 ```
 
 **Conflict (DIRTY)**
@@ -43,13 +41,12 @@ git fetch origin && git merge origin/<base>
 
 **BEHIND base**
 ```bash
-git fetch origin && git merge origin/<base-branch>
-git push
+git fetch origin && git merge origin/<base> && git push
 ```
 
 ## Done
 
-`gh pr checks --watch` exits 0.
+`gh pr checks --watch` exits 0 (suppress output, check exit code only).
 
 ## Stop and Ask
 

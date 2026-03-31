@@ -61,27 +61,5 @@ if [[ "$CONFLICT_FOUND" -eq 1 ]]; then
   exit 1
 fi
 
-# --- Check 3: Branch protection (advisory only) ---
-REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null || true)
-if [[ -n "$REPO" ]]; then
-  PROTECTION=$(gh api "repos/$REPO/branches/$BASE/protection" 2>/dev/null || true)
-  if [[ -n "$PROTECTION" ]]; then
-    REQUIRED_REVIEWERS=$(echo "$PROTECTION" | jq -r '.required_pull_request_reviews.required_approving_review_count // 0' 2>/dev/null || echo "0")
-    REQUIRED_CHECKS=$(echo "$PROTECTION" | jq -r '.required_status_checks.contexts // [] | length' 2>/dev/null || echo "0")
-    if [[ "$REQUIRED_REVIEWERS" -gt 0 || "$REQUIRED_CHECKS" -gt 0 ]]; then
-      echo "INFO: Branch protection on $BASE:"
-      if [[ "$REQUIRED_REVIEWERS" -gt 0 ]]; then
-        echo "  - Required approvals: $REQUIRED_REVIEWERS"
-      fi
-      if [[ "$REQUIRED_CHECKS" -gt 0 ]]; then
-        echo "  - Required CI checks: $REQUIRED_CHECKS"
-        echo "$PROTECTION" | jq -r '.required_status_checks.contexts[]' 2>/dev/null | sed 's/^/    - /' || true
-      fi
-    fi
-  fi
-fi
-
 echo "OK: Pre-flight checks passed"
-echo "  - Branch is up to date with origin/$BASE"
-echo "  - No merge conflicts detected"
 exit 0
