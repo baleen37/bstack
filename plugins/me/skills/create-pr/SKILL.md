@@ -53,14 +53,18 @@ gh pr merge --auto --squash || gh pr merge --squash
 
 When `wait-for-merge.sh` exits 1 (CI failed):
 
-1. Invoke `me:pr-pass` to fix the failure
-2. `me:pr-pass` will push a fix and CI will re-run
-3. After `me:pr-pass`, re-run `wait-for-merge.sh`
+```bash
+# Diagnose first — read only failure lines (token-efficient)
+RUN_ID=$(gh run list --branch "$(git branch --show-current)" --json databaseId,conclusion -q '[.[] | select(.conclusion=="failure")] | .[0].databaseId')
+gh run view "$RUN_ID" --log-failed 2>&1 | grep -A3 "not ok\|Error\|FAILED" | head -40
+```
 
-**Stop condition:** If `me:pr-pass` cannot determine a fix (ambiguous root cause, requires architecture decisions, touches unrelated systems), STOP and report to user with:
-- What failed
-- Why it's too complex to auto-fix
-- What the user needs to decide
+Then invoke `me:pr-pass` with the diagnosis. After fix is pushed, re-run `wait-for-merge.sh`.
+
+**Stop (ask user) if:**
+- Root cause is ambiguous after reading logs
+- Fix requires architecture decisions or touches unrelated systems
+- `me:pr-pass` invoked twice with no progress
 
 ## Recovery
 
