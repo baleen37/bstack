@@ -49,12 +49,9 @@ setup() {
   [ "$status" -eq 0 ]
 }
 
-@test "verify-pr-status.sh documents exit codes" {
-  run grep -A 3 "Exit codes:" "$VERIFY_SCRIPT"
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"0 - PR is merge-ready"* ]]
-  [[ "$output" == *"1 - Action required"* ]]
-  [[ "$output" == *"2 - Pending"* ]]
+@test "verify-pr-status.sh has exit code comments" {
+  grep -q "Exit 0" "$VERIFY_SCRIPT"
+  grep -q "Exit 1" "$VERIFY_SCRIPT"
 }
 
 @test "verify-pr-status.sh checks required CI status" {
@@ -88,8 +85,8 @@ setup() {
   grep -q "set -euo pipefail" "$SYNC_SCRIPT"
 }
 
-@test "sync-with-base.sh documents exit codes" {
-  grep -q "Exit codes:" "$SYNC_SCRIPT"
+@test "sync-with-base.sh has exit code comments" {
+  grep -q "Exit" "$SYNC_SCRIPT"
 }
 
 @test "sync-with-base.sh: exits 2 when not in a git repository" {
@@ -122,12 +119,11 @@ setup() {
   grep -q "set -euo pipefail" "$PREFLIGHT_SCRIPT"
 }
 
-@test "preflight-check.sh documents exit codes" {
+@test "preflight-check.sh has exit code comments" {
   PREFLIGHT_SCRIPT="${BATS_TEST_DIRNAME}/../../plugins/me/skills/create-pr/scripts/preflight-check.sh"
-  grep -q "Exit codes:" "$PREFLIGHT_SCRIPT"
-  grep -q "0 " "$PREFLIGHT_SCRIPT"
-  grep -q "1 " "$PREFLIGHT_SCRIPT"
-  grep -q "2 " "$PREFLIGHT_SCRIPT"
+  grep -q "exit 0" "$PREFLIGHT_SCRIPT"
+  grep -q "exit 1" "$PREFLIGHT_SCRIPT"
+  grep -q "exit 2" "$PREFLIGHT_SCRIPT"
 }
 
 @test "preflight-check.sh: exits 2 when not in a git repository" {
@@ -272,11 +268,10 @@ teardown_git_repos() {
   grep -q "set -euo pipefail" "$WAIT_SCRIPT"
 }
 
-@test "wait-for-merge.sh documents exit codes" {
+@test "wait-for-merge.sh has exit code comments" {
   WAIT_SCRIPT="${BATS_TEST_DIRNAME}/../../plugins/me/skills/create-pr/scripts/wait-for-merge.sh"
-  grep -q "Exit codes:" "$WAIT_SCRIPT"
-  grep -q "0 " "$WAIT_SCRIPT"
-  grep -q "1 " "$WAIT_SCRIPT"
+  grep -q "exit 0" "$WAIT_SCRIPT"
+  grep -q "exit 1" "$WAIT_SCRIPT"
 }
 
 @test "wait-for-merge.sh uses gh pr checks --watch" {

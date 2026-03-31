@@ -5,95 +5,55 @@ description: Use when the user asks to "create a PR", "create pull request", "op
 
 # Create PR
 
-## Overview
-
-Full PR flow: pre-flight → commit → push → PR creation → wait-for-merge.
-
-If wait-for-merge reports a failure, use `me:pr-pass` to fix it.
-
-## When to Use
-
-- User asks to create/open/submit a PR
-- User asks for commit → push → PR workflow
-- User requests "auto merge" after PR creation
+Full PR flow: pre-flight → commit → push → PR → wait-for-merge.
 
 ## Workflow
 
 ```bash
-# 1) pre-flight (run in parallel: git status, git branch --show-current, git log --oneline -5)
-# If on main/master: automatically create a branch from the last commit message
-#   git checkout -b <type>/<short-description>  (derived from commit subject)
-# Never ask the user — just create it.
-# Then run preflight check (blocking):
+# 1) pre-flight (parallel: git status, git branch --show-current, git log --oneline -5)
+# If on main/master: git checkout -b <type>/<short-description> (from last commit subject)
 "${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts/preflight-check.sh"
+# If BEHIND: "${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts/sync-with-base.sh"
 
 # 2) commit
 git add <specific-files>
 git commit -m "type(scope): summary"
 
-# 3) push
+# 3) push + PR + auto-merge
 git push -u origin HEAD
+gh pr create --title "$(git log -1 --pretty=%s)" --body "<body>"
+gh pr merge --auto --squash
 
-# 4) detect PR template (check in order)
-# .github/PULL_REQUEST_TEMPLATE.md → PULL_REQUEST_TEMPLATE.md → default format
-# If found: read it, fill each section with actual change details, preserve empty checkboxes (- [ ]) as-is
-# If not found: use default format (see PR Body Format below)
-# Then create PR and enable auto-merge:
-gh pr create --title "$(git log -1 --pretty=%s)" --body "<filled body>"
-gh pr merge --auto --squash || gh pr merge --squash
-
-# 5) wait for merge
+# 4) wait
 "${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts/wait-for-merge.sh"
-# exit 0: merged — done
-# exit 0: CI passed, awaiting review — done (auto-merge will handle it)
-# exit 1: CI failed — invoke me:pr-pass (see CI Failure Handling below)
+# exit 0: done (merged or awaiting review)
+# exit 1: CI failed → diagnose then invoke me:pr-pass
 ```
 
-## CI Failure Handling
-
-When `wait-for-merge.sh` exits 1 (CI failed):
+## CI Failure
 
 ```bash
-# Diagnose first — read only failure lines (token-efficient)
-RUN_ID=$(gh run list --branch "$(git branch --show-current)" --json databaseId,conclusion -q '[.[] | select(.conclusion=="failure")] | .[0].databaseId')
+# Read only failure lines (token-efficient)
+RUN_ID=$(gh run list --branch "$(git branch --show-current)" \
+  --json databaseId,conclusion -q '[.[] | select(.conclusion=="failure")] | .[0].databaseId')
 gh run view "$RUN_ID" --log-failed 2>&1 | grep -A3 "not ok\|Error\|FAILED" | head -40
 ```
 
-Then invoke `me:pr-pass` with the diagnosis. After fix is pushed, re-run `wait-for-merge.sh`.
+Invoke `me:pr-pass`. After fix is pushed, re-run `wait-for-merge.sh`.
 
 **Stop (ask user) if:**
-- Root cause is ambiguous after reading logs
-- Fix requires architecture decisions or touches unrelated systems
+- Root cause ambiguous after reading logs
+- Fix requires architecture decisions
 - `me:pr-pass` invoked twice with no progress
-
-## Recovery
-
-If preflight-check reports BEHIND or conflicts, sync first:
-```bash
-"${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts/sync-with-base.sh"
-```
-
-To check PR status without modifying anything:
-```bash
-"${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts/verify-pr-status.sh"
-```
 
 ## Stop Conditions
 
-- No changes to commit and no unpushed commits
-- Pre-flight check failed (BEHIND or conflicts) and sync-with-base also fails
-- `me:pr-pass` cannot determine a clear fix (complex/ambiguous failure)
-- `me:pr-pass` has been invoked twice with no progress (likely flaky or systemic)
+- Nothing to commit and no unpushed commits
+- Sync failed (conflicts need manual resolution)
+- `me:pr-pass` cannot determine a clear fix
 
-## PR Body Format
+## PR Body
 
-### If template found (`.github/PULL_REQUEST_TEMPLATE.md` or `PULL_REQUEST_TEMPLATE.md`)
+**If template found** (`.github/PULL_REQUEST_TEMPLATE.md` → `PULL_REQUEST_TEMPLATE.md`): fill each section, preserve `- [ ]` as-is.
 
-Read the template file and use its structure as the body skeleton. Fill each section with actual change details. Preserve empty checkboxes (`- [ ]`) exactly as-is — do not check them.
-
-### If no template found (default)
-
-- Summary: 1-2 sentences max
-- Changes: Bullet list
-- Tests: What you verified
-- Breaking: Only if applicable
+**No template:** Summary (1-2 sentences) + Changes (bullets) + Tests

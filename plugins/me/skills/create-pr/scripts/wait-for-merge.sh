@@ -1,77 +1,33 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# wait-for-merge.sh - Wait for PR CI to complete and confirm merge
-# Usage: wait-for-merge.sh
-#
-# Assumes: PR exists for current branch, auto-merge is already enabled
-#
-# Exit codes:
-#   0 - PR merged successfully, or CI passed and awaiting review approval
-#   1 - PR closed without merge, or CI failed
+# wait-for-merge.sh
+# Exit 0: merged or awaiting review | Exit 1: CI failed or closed
 
-PR_INFO=$(gh pr view --json url,state 2>/dev/null || true)
-if [[ -z "$PR_INFO" ]]; then
-  echo "ERROR: No open PR found for current branch" >&2
-  echo "  - Create a PR first: gh pr create" >&2
+PR=$(gh pr view --json url,state 2>/dev/null) || { echo "ERROR: No PR for current branch" >&2; exit 1; }
+URL=$(jq -r .url <<<"$PR")
+STATE=$(jq -r .state <<<"$PR")
+
+[[ "$STATE" == "MERGED" ]] && { echo "✓ Already merged: $URL"; exit 0; }
+[[ "$STATE" == "CLOSED" ]] && { echo "✗ PR closed: $URL" >&2; exit 1; }
+
+echo "Waiting for CI... $URL"
+
+# Suppress verbose watch output — only exit code matters
+if ! gh pr checks --watch > /dev/null 2>&1; then
+  echo "✗ CI failed: $URL" >&2
   exit 1
 fi
 
-PR_URL=$(echo "$PR_INFO" | jq -r .url)
-PR_STATE=$(echo "$PR_INFO" | jq -r .state)
+STATE=$(gh pr view --json state -q .state)
+[[ "$STATE" == "MERGED" ]] && { echo "✓ Merged: $URL"; exit 0; }
 
-if [[ "$PR_STATE" == "MERGED" ]]; then
-  echo ""
-  echo "✓ PR already merged"
-  echo "  - URL: $PR_URL"
+# CI passed — try direct merge (fallback if auto-merge not active)
+if gh pr merge --squash --delete-branch > /dev/null 2>&1; then
+  echo "✓ Merged: $URL"
   exit 0
 fi
 
-if [[ "$PR_STATE" == "CLOSED" ]]; then
-  echo ""
-  echo "✗ PR was closed without merging" >&2
-  echo "  - URL: $PR_URL" >&2
-  exit 1
-fi
-
-echo "Waiting for CI checks to complete..."
-echo "  - URL: $PR_URL"
-
-# Block until all CI checks finish (pass or fail)
-if ! gh pr checks --watch 2>&1; then
-  echo "" >&2
-  echo "✗ CI checks failed" >&2
-  echo "  - Fix CI failures and push again" >&2
-  echo "  - Monitor: gh pr checks $PR_URL" >&2
-  exit 1
-fi
-
-# Single state check after CI completes
-FINAL_STATE=$(gh pr view --json state -q .state)
-
-if [[ "$FINAL_STATE" == "MERGED" ]]; then
-  echo ""
-  echo "✓ PR merged successfully"
-  echo "  - URL: $PR_URL"
-  exit 0
-fi
-
-if [[ "$FINAL_STATE" == "OPEN" ]]; then
-  # Try direct merge (works when no branch protection requiring review)
-  if gh pr merge --squash --delete-branch 2>/dev/null; then
-    echo ""
-    echo "✓ PR merged successfully"
-    echo "  - URL: $PR_URL"
-    exit 0
-  fi
-  # Merge blocked (review required or other policy)
-  echo ""
-  echo "✓ CI passed. PR awaiting review approval."
-  echo "  - URL: $PR_URL"
-  exit 0
-fi
-
-echo "" >&2
-echo "✗ PR not merged (state: $FINAL_STATE)" >&2
-echo "  - URL: $PR_URL" >&2
-exit 1
+# Merge blocked — needs review
+echo "✓ CI passed, awaiting review: $URL"
+exit 0

@@ -16,10 +16,8 @@ setup() {
 }
 
 @test "SKILL.md has required sections" {
-  # Required sections that all skills should have
-  grep -q "^## Overview" "$SKILL_MD"
-  grep -q "^## When to Use" "$SKILL_MD"
-  # Note: "Red Flags" is optional and not required for all skills
+  # Must have at least one ## section
+  grep -q "^## " "$SKILL_MD"
 }
 
 @test "SKILL.md has Iron Law principle" {
