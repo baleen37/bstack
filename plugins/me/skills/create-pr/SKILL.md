@@ -32,11 +32,9 @@ gh pr merge --auto --squash
 
 ## CI Failure
 
+`wait-for-merge.sh` prints the failed `run-id`. Use it directly:
 ```bash
-# Read only failure lines (token-efficient)
-RUN_ID=$(gh run list --branch "$(git branch --show-current)" \
-  --json databaseId,conclusion -q '[.[] | select(.conclusion=="failure")] | .[0].databaseId')
-gh run view "$RUN_ID" --log-failed 2>&1 | grep -A3 "not ok\|Error\|FAILED" | head -40
+gh run view <run-id> --log-failed 2>&1 | grep -A3 "not ok\|Error\|FAILED" | head -40
 ```
 
 Invoke `me:pr-pass`. After fix is pushed, re-run `wait-for-merge.sh`.

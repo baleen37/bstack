@@ -34,6 +34,6 @@ case "$STATE" in
     ;;
   BEHIND)   echo "✗ Behind $BASE — run: git fetch origin && git merge origin/$BASE && git push ($URL)" >&2; exit 1;;
   DIRTY)    echo "✗ Conflicts — resolve and push: $URL" >&2; exit 1;;
-  BLOCKED|UNSTABLE) echo "⚠ Status $STATE ($MERGEABLE): $URL" >&2; exit 2;;
+  BLOCKED|UNSTABLE|UNKNOWN) echo "⚠ Status $STATE ($MERGEABLE): $URL" >&2; exit 2;;
   *)        echo "⚠ Status $STATE ($MERGEABLE): $URL" >&2; exit 2;;
 esac
