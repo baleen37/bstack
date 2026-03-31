@@ -57,15 +57,21 @@ if [[ "$FINAL_STATE" == "MERGED" ]]; then
 fi
 
 if [[ "$FINAL_STATE" == "OPEN" ]]; then
+  # Try direct merge (works when no branch protection requiring review)
+  if gh pr merge --squash --delete-branch 2>/dev/null; then
+    echo ""
+    echo "✓ PR merged successfully"
+    echo "  - URL: $PR_URL"
+    exit 0
+  fi
+  # Merge blocked (review required or other policy)
   echo ""
   echo "✓ CI passed. PR awaiting review approval."
   echo "  - URL: $PR_URL"
-  echo "  - Auto-merge is enabled — PR will merge after approval"
   exit 0
 fi
 
 echo "" >&2
 echo "✗ PR not merged (state: $FINAL_STATE)" >&2
 echo "  - URL: $PR_URL" >&2
-echo "  - Check: gh pr view" >&2
 exit 1
