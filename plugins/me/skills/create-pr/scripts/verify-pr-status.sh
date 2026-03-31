@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # verify-pr-status.sh (read-only)
-# Exit 0: merge-ready | Exit 1: action required | Exit 2: pending
+# Exit 0: merge-ready | Exit 1: action required | Exit 2: pending/CI running
 
 # shellcheck source=lib.sh
 source "$(dirname "$0")/lib.sh"
@@ -32,7 +32,7 @@ case "$STATE" in
     [[ $PENDING -gt 0 ]] && { echo "⏳ CI running: $URL" >&2; exit 2; }
     echo "✓ Merge-ready: $URL"; exit 0
     ;;
-  BEHIND)  echo "✗ Behind $BASE — sync required: $URL" >&2; exit 1;;
+  BEHIND)  echo "✗ Behind $BASE — run: git fetch origin && git merge origin/$BASE && git push ($URL)" >&2; exit 1;;
   DIRTY)   echo "✗ Conflicts — resolve and push: $URL" >&2; exit 1;;
   *)       echo "⚠ Status $STATE ($MERGEABLE): $URL" >&2; exit 2;;
 esac
