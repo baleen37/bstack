@@ -15,10 +15,10 @@ echo "Waiting for CI... $URL"
 
 # Suppress verbose watch output — only exit code matters
 if ! gh pr checks --watch > /dev/null 2>&1; then
-  # Emit failed run ID so caller can diagnose without extra API call
-  FAILED_RUN=$(gh run list --branch "$(git branch --show-current)" \
-    --json databaseId,conclusion -q \
-    '[.[] | select(.conclusion=="failure")] | .[0].databaseId' 2>/dev/null || true)
+  # Get failed run ID from PR checks (accurate — avoids stale run list)
+  FAILED_RUN=$(gh pr checks --json name,link,state \
+    -q '[.[] | select(.state=="FAILURE")] | .[0].link' 2>/dev/null \
+    | grep -oE '[0-9]{10,}' | head -1 || true)
   echo "✗ CI failed: $URL" >&2
   [[ -n "$FAILED_RUN" ]] && echo "  run-id: $FAILED_RUN" >&2
   exit 1
