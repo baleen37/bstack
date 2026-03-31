@@ -44,9 +44,23 @@ gh pr merge --auto --squash || gh pr merge --squash
 
 # 5) wait for merge
 "${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts/wait-for-merge.sh"
-# exit 0: merged (or CI passed, awaiting review) — done
-# exit 1: failed — use me:pr-pass, STOP
+# exit 0: merged — done
+# exit 0: CI passed, awaiting review — done (auto-merge will handle it)
+# exit 1: CI failed — invoke me:pr-pass (see CI Failure Handling below)
 ```
+
+## CI Failure Handling
+
+When `wait-for-merge.sh` exits 1 (CI failed):
+
+1. Invoke `me:pr-pass` to fix the failure
+2. `me:pr-pass` will push a fix and CI will re-run
+3. After `me:pr-pass`, re-run `wait-for-merge.sh`
+
+**Stop condition:** If `me:pr-pass` cannot determine a fix (ambiguous root cause, requires architecture decisions, touches unrelated systems), STOP and report to user with:
+- What failed
+- Why it's too complex to auto-fix
+- What the user needs to decide
 
 ## Recovery
 
@@ -64,8 +78,8 @@ To check PR status without modifying anything:
 
 - No changes to commit and no unpushed commits
 - Pre-flight check failed (BEHIND or conflicts) and sync-with-base also fails
-- Required CI failed
-- State-changing follow-up not approved by user
+- `me:pr-pass` cannot determine a clear fix (complex/ambiguous failure)
+- `me:pr-pass` has been invoked twice with no progress (likely flaky or systemic)
 
 ## PR Body Format
 
