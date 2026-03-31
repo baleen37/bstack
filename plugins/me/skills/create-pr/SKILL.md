@@ -1,11 +1,18 @@
 ---
 name: create-pr
-description: Use when the user asks to "create a PR", "create pull request", "open a PR", "submit a PR", "make a pull request", "merge PR", or requests complete git workflow including commit, push, and PR creation
+description: Use when user asks to create a PR, open a pull request, push and merge, or complete a git commit/push/PR workflow.
 ---
 
 # Create PR
 
+## Overview
+
 Full PR flow: pre-flight → commit → push → PR → wait-for-merge.
+
+## When to Use
+
+- "Create a PR", "open a PR", "submit a PR", "merge this"
+- Any commit → push → PR workflow request
 
 ## Workflow
 
