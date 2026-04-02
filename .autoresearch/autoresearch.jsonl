@@ -4,3 +4,8 @@
 {"run":3,"commit":"17e69a5","metric":5836,"metrics":{"line_count":169,"file_count":6,"word_count":844},"status":"keep","description":"compress SKILL.md prose","timestamp":1775130856,"segment":0}
 {"run":4,"commit":"6265fd9","metric":4534,"metrics":{"line_count":141,"file_count":5,"word_count":666},"status":"keep","description":"remove unused verify-pr-status.sh","timestamp":1775130894,"segment":0}
 {"run":5,"commit":"3eb5c55","metric":4019,"metrics":{"line_count":122,"file_count":4,"word_count":601},"status":"keep","description":"merge sync-with-base into preflight-check","timestamp":1775130966,"segment":0}
+{"run":6,"commit":"d790d50","metric":3558,"metrics":{"line_count":107,"file_count":3,"word_count":541},"status":"keep","description":"inline lib.sh into preflight, remove lib.sh","timestamp":1775131007,"segment":0}
+{"run":7,"commit":"9706617","metric":3202,"metrics":{"line_count":85,"file_count":3,"word_count":490},"status":"keep","description":"further compress SKILL.md","timestamp":1775131034,"segment":0}
+{"run":8,"commit":"9725788","metric":3103,"metrics":{"line_count":82,"file_count":3,"word_count":471},"status":"keep","description":"compact wait-for-merge.sh","timestamp":1775131065,"segment":0}
+{"run":9,"commit":"7f78174","metric":2884,"metrics":{"line_count":68,"file_count":3,"word_count":448},"status":"keep","description":"further compress preflight-check.sh","timestamp":1775131088,"segment":0}
+{"type":"config","name":"create-pr-skill-tokens","metricName":"skill_bytes","metricUnit":"bytes","bestDirection":"lower"}

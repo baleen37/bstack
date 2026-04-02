@@ -1,47 +1,33 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DIR="plugins/me/skills/create-pr"
+SKILL="plugins/me/skills/create-pr/SKILL.md"
+SCRIPTS_DIR="plugins/me/skills/create-pr/scripts"
 
-# Total bytes (primary metric)
-TOTAL_BYTES=$(cat "$DIR/SKILL.md" "$DIR"/scripts/*.sh 2>/dev/null | wc -c | tr -d ' ')
-echo "METRIC total_bytes=$TOTAL_BYTES"
+# Primary: SKILL.md bytes (this is what loads into LLM context)
+SKILL_BYTES=$(wc -c < "$SKILL" | tr -d ' ')
+echo "METRIC skill_bytes=$SKILL_BYTES"
 
-# Secondary metrics
-LINE_COUNT=$(cat "$DIR/SKILL.md" "$DIR"/scripts/*.sh 2>/dev/null | wc -l | tr -d ' ')
-echo "METRIC line_count=$LINE_COUNT"
+# Secondary
+SKILL_LINES=$(wc -l < "$SKILL" | tr -d ' ')
+echo "METRIC skill_lines=$SKILL_LINES"
+SKILL_WORDS=$(wc -w < "$SKILL" | tr -d ' ')
+echo "METRIC skill_words=$SKILL_WORDS"
+SCRIPT_BYTES=$(cat "$SCRIPTS_DIR"/*.sh 2>/dev/null | wc -c | tr -d ' ')
+echo "METRIC script_bytes=$SCRIPT_BYTES"
 
-FILE_COUNT=$(find "$DIR" -type f \( -name "*.md" -o -name "*.sh" \) | wc -l | tr -d ' ')
-echo "METRIC file_count=$FILE_COUNT"
-
-WORD_COUNT=$(cat "$DIR/SKILL.md" "$DIR"/scripts/*.sh 2>/dev/null | wc -w | tr -d ' ')
-echo "METRIC word_count=$WORD_COUNT"
-
-# Validity checks
+# Validity
 echo "--- Validity Checks ---"
+head -1 "$SKILL" | grep -q '^---' || { echo "FAIL: missing frontmatter" >&2; exit 1; }
+echo "OK: frontmatter"
 
-# Check SKILL.md frontmatter
-if head -1 "$DIR/SKILL.md" | grep -q '^---'; then
-  echo "OK: SKILL.md has frontmatter"
-else
-  echo "FAIL: SKILL.md missing frontmatter" >&2
-  exit 1
-fi
-
-# ShellCheck
-SHELLCHECK_FAIL=0
-SCRIPTS_DIR="$DIR/scripts"
+FAIL=0
 for f in "$SCRIPTS_DIR"/*.sh; do
-  if ! (cd "$SCRIPTS_DIR" && shellcheck -x "$(basename "$f")") > /dev/null 2>&1; then
-    echo "FAIL: shellcheck $f" >&2
+  if ! (cd "$SCRIPTS_DIR" && shellcheck -x "$(basename "$f")") >/dev/null 2>&1; then
+    echo "FAIL: shellcheck $(basename "$f")" >&2
     (cd "$SCRIPTS_DIR" && shellcheck -x "$(basename "$f")") >&2 || true
-    SHELLCHECK_FAIL=1
+    FAIL=1
   fi
 done
-if [[ $SHELLCHECK_FAIL -eq 0 ]]; then
-  echo "OK: All scripts pass shellcheck"
-else
-  exit 1
-fi
-
+[[ $FAIL -eq 0 ]] && echo "OK: shellcheck" || exit 1
 echo "--- Done ---"
