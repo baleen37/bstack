@@ -1,0 +1,19 @@
+{"type":"config","name":"create-pr-optimize","metricName":"total_bytes","metricUnit":"bytes","bestDirection":"lower"}
+{"run":1,"commit":"d018e0f","metric":9073,"metrics":{"line_count":284,"file_count":6,"word_count":1375},"status":"keep","description":"baseline","timestamp":1775130716,"segment":0}
+{"run":2,"commit":"9e5692e","metric":6268,"metrics":{"line_count":183,"file_count":6,"word_count":917},"status":"keep","description":"compress scripts - remove verbose messages and redundant comments","timestamp":1775130811,"segment":0}
+{"run":3,"commit":"17e69a5","metric":5836,"metrics":{"line_count":169,"file_count":6,"word_count":844},"status":"keep","description":"compress SKILL.md prose","timestamp":1775130856,"segment":0}
+{"run":4,"commit":"6265fd9","metric":4534,"metrics":{"line_count":141,"file_count":5,"word_count":666},"status":"keep","description":"remove unused verify-pr-status.sh","timestamp":1775130894,"segment":0}
+{"run":5,"commit":"3eb5c55","metric":4019,"metrics":{"line_count":122,"file_count":4,"word_count":601},"status":"keep","description":"merge sync-with-base into preflight-check","timestamp":1775130966,"segment":0}
+{"run":6,"commit":"d790d50","metric":3558,"metrics":{"line_count":107,"file_count":3,"word_count":541},"status":"keep","description":"inline lib.sh into preflight, remove lib.sh","timestamp":1775131007,"segment":0}
+{"run":7,"commit":"9706617","metric":3202,"metrics":{"line_count":85,"file_count":3,"word_count":490},"status":"keep","description":"further compress SKILL.md","timestamp":1775131034,"segment":0}
+{"run":8,"commit":"9725788","metric":3103,"metrics":{"line_count":82,"file_count":3,"word_count":471},"status":"keep","description":"compact wait-for-merge.sh","timestamp":1775131065,"segment":0}
+{"run":9,"commit":"7f78174","metric":2884,"metrics":{"line_count":68,"file_count":3,"word_count":448},"status":"keep","description":"further compress preflight-check.sh","timestamp":1775131088,"segment":0}
+{"type":"config","name":"create-pr-skill-tokens","metricName":"skill_bytes","metricUnit":"bytes","bestDirection":"lower"}
+{"run":10,"commit":"1b650ac","metric":1081,"metrics":{"skill_lines":27,"skill_words":151,"script_bytes":1803},"status":"keep","description":"baseline (segment 1 — skill_bytes only)","timestamp":1775131168,"segment":1}
+{"run":11,"commit":"6ba0c3d","metric":802,"metrics":{"skill_lines":23,"skill_words":110,"script_bytes":1803},"status":"keep","description":"compress SKILL.md — remove redundant sections","timestamp":1775131195,"segment":1}
+{"run":12,"commit":"ec416bc","metric":732,"metrics":{"skill_lines":19,"skill_words":100,"script_bytes":1803},"status":"keep","description":"extract script path variable S=","timestamp":1775131213,"segment":1}
+{"run":13,"commit":"9bb6f1e","metric":675,"metrics":{"skill_lines":18,"skill_words":93,"script_bytes":1803},"status":"keep","description":"merge inline comments, remove bold","timestamp":1775131235,"segment":1}
+{"run":14,"commit":"563874d","metric":635,"metrics":{"skill_lines":18,"skill_words":82,"script_bytes":1803},"status":"keep","description":"micro-compress wording","timestamp":1775131249,"segment":1}
+{"run":15,"commit":"059de59","metric":605,"metrics":{"skill_lines":17,"skill_words":82,"script_bytes":1803},"status":"keep","description":"remove explicit template path","timestamp":1775131290,"segment":1}
+{"run":16,"commit":"059de59","metric":608,"metrics":{"skill_lines":16,"skill_words":83,"script_bytes":1803},"status":"discard","description":"merge pr create+merge into one line (bytes increased)","timestamp":1775131309,"segment":1}
+{"run":17,"commit":"96b1a8f","metric":665,"metrics":{"skill_lines":17,"skill_words":92,"script_bytes":1818},"status":"keep","description":"add auto-merge re-enable after CI fix + push -u","timestamp":1775132341,"segment":1}
