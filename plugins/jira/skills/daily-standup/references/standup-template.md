@@ -28,7 +28,9 @@ Use this template exactly when generating the standup report. Maintain spacing a
 ## Formatting Rules
 
 - 어제 한 업무: 들여쓰기 두 칸 (`  - `)
-- 오늘 할 일: 첫 번째 레벨 (`- `), 하위 항목은 들여쓰기 두 칸 (`  - `)
+- 오늘 할 일:
+  - **In Progress 이슈** → 첫 번째 레벨 (`- `) — 이미 진행 중인 핵심 업무
+  - **Backlog에서 추가한 이슈** → 들여쓰기 두 칸 (`  - `) — 오늘 새로 시작할 업무
 - 섹션 사이 빈 줄 3개 유지
 - 이슈 키와 제목만 포함. 링크, 상태, 날짜 표시 불필요
 

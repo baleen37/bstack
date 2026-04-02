@@ -23,70 +23,77 @@ Fetch the current user's Jira issues and format them into a daily standup report
 
 ### Step 1: Determine Previous Workday
 
-Before querying, calculate the previous workday based on today's day of week:
+Calculate the lookback period based on today's day of week:
 
-- **Monday** → use `-3d` (Friday)
-- **Tuesday–Friday** → use `-1d` (yesterday)
-- **Saturday/Sunday** → use `-1d` (treat as normal, unlikely to run standup on weekends)
+- **Monday** → `-3d` (Friday)
+- **Tuesday–Friday** → `-1d`
+- **Saturday/Sunday** → `-1d`
 
-Use the `currentDate` from context or system to determine today's day of week.
+Use `currentDate` from context to determine day of week.
 
 ### Step 2: Fetch Jira Issues
 
-Run three queries in parallel using the lookback period from Step 1 (`{LOOKBACK}`):
+Run three queries **in parallel**. Use `{LOOKBACK}` from Step 1.
 
-All queries must exclude Epic issue type: add `AND issuetype != Epic` to every JQL.
+모든 쿼리 공통 설정:
+- `AND issuetype NOT IN (Epic, Initiative)`
+- `fields: ["summary", "status", "key", "-description"]` — `-description`으로 description 제외 필수
+- `responseContentFormat: "markdown"`
 
-**Query A — 어제 한 일 후보** (assignee, recently updated, active statuses, no Epics):
-
-```jql
-assignee = currentUser() AND issuetype != Epic AND status IN ("In Progress", "Done") AND updated >= -{LOOKBACK} ORDER BY updated DESC
-```
-
-**Query B — 오늘 할 일** (currently in progress, no Epics):
+**Query A — 오늘 할 일** (현재 In Progress):
 
 ```jql
-assignee = currentUser() AND issuetype != Epic AND status = "In Progress" ORDER BY updated DESC
+assignee = currentUser() AND issuetype NOT IN (Epic, Initiative) AND status = "In Progress" ORDER BY updated DESC
 ```
 
-**Query C — 참고용 Backlog** (upcoming work, top 10, no Epics):
+`maxResults: 5`
+
+**Query B — 어제 한 일 후보** (최근 완료된 이슈):
 
 ```jql
-assignee = currentUser() AND issuetype != Epic AND status = "Backlog" ORDER BY updated DESC
+assignee = currentUser() AND issuetype NOT IN (Epic, Initiative) AND status = "Done" AND updated >= -{LOOKBACK} ORDER BY updated DESC
 ```
 
-Use `maxResults: 20` for A and B, `maxResults: 10` for C.
+`maxResults: 15`
 
-Fields to fetch: `["summary", "status", "updated", "key"]`
+**Query C — 참고용 Backlog** (upcoming work):
+
+```jql
+assignee = currentUser() AND issuetype NOT IN (Epic, Initiative) AND status = "Backlog" ORDER BY updated DESC
+```
+
+`maxResults: 5`
+
+> **설계 근거:** In Progress와 Done을 별도 쿼리로 분리하면 (1) maxResults 제한으로 Done 이슈가 잘리는 문제 방지, (2) status 정렬 순서에 의존하지 않음, (3) 각 쿼리의 결과를 명확히 분류 가능.
 
 ---
 
-### Step 3: Ask User to Select Yesterday's Work
+### Step 3: Ask User to Confirm
 
-Query A returns candidates — the user must confirm which ones they actually worked on.
-Present as a numbered list and wait for selection:
+Query 결과를 한 번에 보여주고 **한 번의 응답**으로 처리합니다.
+
+다음 형식으로 출력하고 사용자 응답을 기다립니다:
 
 ```
-어제 한 업무 후보 ({이전 업무일} 기준):
+📋 어제 한 업무 후보 ({이전 업무일} 기준):
 1. {ISSUE_KEY} {ISSUE_SUMMARY}
 2. {ISSUE_KEY} {ISSUE_SUMMARY}
+...
 
-어제 실제로 작업한 항목을 골라주세요. (번호로 답하거나 전체면 "전체", 없으면 엔터)
+📌 참고용 Backlog:
+a. {ISSUE_KEY} {ISSUE_SUMMARY}
+b. {ISSUE_KEY} {ISSUE_SUMMARY}
+...
+
+어제 실제로 작업한 항목 번호를 골라주세요. (예: 1,3,5 / 전체 / 엔터=없음)
+오늘 할 일에 추가할 Backlog 항목은? (예: a,b / 엔터=없음)
 ```
 
-Wait for user response. Use selected items as "어제 한 일".
+- Done 이슈가 없으면 "어제 한 업무 후보" 섹션 생략
+- Backlog 이슈가 없으면 "참고용 Backlog" 섹션 생략
+- 둘 다 없으면 질문 없이 Step 4로 진행
 
-Then present Backlog items and ask for today's additions:
-
-```
-참고용 Backlog (최근 업데이트 순):
-1. {ISSUE_KEY} {ISSUE_SUMMARY}
-2. {ISSUE_KEY} {ISSUE_SUMMARY}
-
-오늘 할 일에 추가할 항목이 있나요? (번호로 답하거나 없으면 엔터)
-```
-
-Wait for user response. Add selected items to the "오늘 할 일" list.
+> **AskUserQuestion을 사용하지 않는 이유:** 옵션 수 제한(2~4개)이 있어 Done 이슈가 많을 때 대응 불가. 텍스트 기반 번호 선택이 더 유연합니다.
 
 ---
 
@@ -94,8 +101,10 @@ Wait for user response. Add selected items to the "오늘 할 일" list.
 
 Format and print the final report using the template in `references/standup-template.md`.
 
-- 어제 한 일: 사용자가 Query A에서 선택한 항목
-- 오늘 할 일: Query B 결과 + 사용자가 추가한 Backlog 항목
+- **어제 한 일**: 사용자가 선택한 Done 이슈 (Query B에서 선택)
+- **오늘 할 일**:
+  - 첫 번째 레벨 (`- `): Query A의 In Progress 이슈 (자동 포함)
+  - 하위 레벨 (`  - `): 사용자가 추가한 Backlog 항목 (Query C에서 선택)
 
 ---
 
@@ -103,7 +112,7 @@ Format and print the final report using the template in `references/standup-temp
 
 ### 어제 한 일이 없을 때
 
-Query A 결과가 비어있으면 (주말, 휴일 등):
+Done 이슈가 없거나 사용자가 아무것도 선택하지 않으면:
 
 ```
 어제 한 업무
@@ -112,7 +121,7 @@ Query A 결과가 비어있으면 (주말, 휴일 등):
 
 ### 오늘 할 일이 없을 때
 
-Query B 결과가 비어있고 사용자가 Backlog에서도 선택하지 않으면:
+In Progress 이슈가 없고 Backlog에서도 선택하지 않으면:
 
 ```
 오늘 할 일을 적어보아요
