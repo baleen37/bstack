@@ -7,8 +7,8 @@ Execute each line literally (scripts MUST be run, not reimplemented):
 
 ```bash
 S="${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts"
+# If on main/master: checkout -b <type>/<short> first
 "$S/preflight-check.sh"          # syncs if behind base
-# If on main/master: checkout -b <type>/<short> first, re-run preflight
 git add <files> && git commit -m "type(scope): msg"
 git push -u origin HEAD
 gh pr create --title "$(git log -1 --pretty=%s)" --body "<body>"
