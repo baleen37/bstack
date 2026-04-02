@@ -20,5 +20,5 @@ if ! gh pr checks --watch >/dev/null 2>&1; then
 fi
 
 [[ $(gh pr view --json state -q .state) == "MERGED" ]] && { echo "Merged: $URL"; exit 0; }
-gh pr merge --squash --delete-branch >/dev/null 2>&1 && { echo "Merged: $URL"; exit 0; }
+gh pr merge --squash >/dev/null 2>&1 && { echo "Merged: $URL"; exit 0; }
 echo "CI passed, awaiting review: $URL"
