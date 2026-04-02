@@ -13,5 +13,5 @@ gh pr merge --auto --squash
 "$S/wait-for-merge.sh"    # 0=done 1=CI fail(prints run-id)
 ```
 
-CI fail: `gh run view <run-id> --log-failed` → `me:pr-pass`. Stop if unclear/×2.
+CI fail: `gh run view <run-id> --log-failed` → `me:pr-pass` → re-enable `gh pr merge --auto --squash` → re-run wait. Stop if unclear/×2.
 PR body: fill PR template if exists, else summary+changes+tests.
