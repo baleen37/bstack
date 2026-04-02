@@ -13,30 +13,35 @@ Compressed all files from 9073→2884 bytes (-68.2%):
 - Merged sync-with-base.sh into preflight-check.sh
 - Inlined lib.sh (only used by 1 script)
 
-### Segment 1 (skill_bytes): Runs 10-17
-Re-focused on SKILL.md only (what LLM actually reads). 1081→665 bytes (-38.5%):
-- Removed redundant sections (Overview, When to Use, Stop Conditions)
-- Extracted `S=` variable for script path (saves 40+ chars)
-- Flattened code block comments
-- Removed bold markdown markers
-- **Run 17 (test-driven fix):** Added auto-merge re-enable after CI fix push
+### Segment 1 (skill_bytes): Runs 10-27
+Re-focused on SKILL.md only (what LLM reads). 1081→776 bytes (-28.2%):
+- Removed redundant sections, shortened description
+- Extracted `S=` path variable
+- Added "scripts MUST be run" directive (test-driven)
+- Added auto-merge re-enable after CI fix (test-driven)
+- Removed redundant "re-run preflight" instruction
+- Fixed broken tests (63/63 pass)
 
-### Subagent Tests
-- **Test 1 (PR #601-602):** tmux worker on main branch, used old SKILL.md. Succeeded but used old sync-with-base.sh.
-- **Test 2 (PR #604):** subagent on optimized branch. Succeeded but found:
-  - preflight push needs `-u` for new branches (fixed)
-  - auto-merge disabled after fix push (added to SKILL.md)
+### Subagent Tests (4 PRs)
+| PR | Scenario | Finding |
+|----|----------|---------|
+| #604 | basic optimized flow | push -u needed, auto-merge disabled after push |
+| #605 | main branch | agent skipped scripts → added MUST directive |
+| #606 | MUST directive | scripts executed correctly, stale tests found |
+| #607 | final validation | clean pass, 14 tool calls |
+
+### Bug Fixes Found Through Testing
+1. preflight push needs `-u` for new branches
+2. auto-merge disabled after force-push → added re-enable instruction
+3. agent skipping scripts → added "MUST be run" directive
+4. stale tests referencing deleted scripts → updated test suite
+5. `--delete-branch` in fallback merge inconsistent → removed
 
 ---
 
 ## Key Insights
-- Scripts don't load into LLM context — only SKILL.md bytes matter for token cost
-- Byte reduction has diminishing returns below ~600 bytes
-- Real testing (subagent PRs) found bugs that byte counting never would
-- LLM follows the code block as primary instruction; prose sections are secondary
-- `S=` path variable is the single biggest SKILL.md byte saver
-
-## Next Ideas
-- Test with a project that has PR template to verify template detection
-- Consider if `gh pr merge --auto --squash` should be in wait-for-merge.sh instead
-- Verify preflight works correctly on repos without gh CLI auth
+- SKILL.md is the only file that costs tokens — scripts don't load into context
+- "MUST run" directive is essential — without it agents reimplement script logic
+- Real testing (subagent PRs) found 5 bugs that static analysis missed
+- Byte reduction has diminishing returns below ~700 bytes for this skill
+- Code block format is the primary instruction channel for LLM agents
