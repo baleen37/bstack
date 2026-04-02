@@ -25,3 +25,4 @@
 {"run":25,"commit":"dece665","metric":794,"metrics":{"skill_lines":20,"skill_words":109,"script_bytes":1818},"status":"keep","description":"final validation — both scripts executed, 14 tool calls, PR #607 merged","timestamp":1775133750,"segment":1}
 {"run":26,"commit":"6a0be38","metric":794,"metrics":{"skill_lines":20,"skill_words":109,"script_bytes":1802},"status":"keep","description":"remove --delete-branch from fallback merge","timestamp":1775133769,"segment":1}
 {"run":27,"commit":"494dc0b","metric":776,"metrics":{"skill_lines":20,"skill_words":107,"script_bytes":1802},"status":"keep","description":"remove re-run preflight, reorder main check","timestamp":1775133796,"segment":1}
+{"run":28,"commit":"b792e67","metric":776,"metrics":{"skill_lines":21,"skill_words":107,"script_bytes":1802},"status":"keep","description":"wrap CI fail line for markdownlint","timestamp":1775133928,"segment":1}
