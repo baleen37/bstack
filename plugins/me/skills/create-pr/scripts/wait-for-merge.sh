@@ -1,24 +1,38 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# wait-for-merge.sh — exit 0: merged/awaiting review | exit 1: CI failed/closed
 
-PR=$(gh pr view --json url,state 2>/dev/null) || { echo "ERROR: No PR" >&2; exit 1; }
+# wait-for-merge.sh
+# Exit 0: merged or awaiting review | Exit 1: CI failed or closed
+
+PR=$(gh pr view --json url,state 2>/dev/null) || { echo "ERROR: No PR for current branch" >&2; exit 1; }
 URL=$(jq -r .url <<<"$PR")
-case $(jq -r .state <<<"$PR") in
-  MERGED) echo "Merged: $URL"; exit 0;;
-  CLOSED) echo "Closed: $URL" >&2; exit 1;;
-esac
+STATE=$(jq -r .state <<<"$PR")
+
+[[ "$STATE" == "MERGED" ]] && { echo "✓ Already merged: $URL"; exit 0; }
+[[ "$STATE" == "CLOSED" ]] && { echo "✗ PR closed: $URL" >&2; exit 1; }
 
 echo "Waiting for CI... $URL"
-if ! gh pr checks --watch >/dev/null 2>&1; then
-  RUN_ID=$(gh pr checks --json name,link,state \
+
+# Suppress verbose watch output — only exit code matters
+if ! gh pr checks --watch > /dev/null 2>&1; then
+  # Get failed run ID from PR checks (accurate — avoids stale run list)
+  FAILED_RUN=$(gh pr checks --json name,link,state \
     -q '[.[] | select(.state=="FAILURE")] | .[0].link' 2>/dev/null \
     | grep -oE '[0-9]{10,}' | head -1 || true)
-  echo "CI failed: $URL" >&2
-  [[ -n "$RUN_ID" ]] && echo "  run-id: $RUN_ID" >&2
+  echo "✗ CI failed: $URL" >&2
+  [[ -n "$FAILED_RUN" ]] && echo "  run-id: $FAILED_RUN" >&2
   exit 1
 fi
 
-[[ $(gh pr view --json state -q .state) == "MERGED" ]] && { echo "Merged: $URL"; exit 0; }
-gh pr merge --squash --delete-branch >/dev/null 2>&1 && { echo "Merged: $URL"; exit 0; }
-echo "CI passed, awaiting review: $URL"
+STATE=$(gh pr view --json state -q .state)
+[[ "$STATE" == "MERGED" ]] && { echo "✓ Merged: $URL"; exit 0; }
+
+# CI passed — try direct merge (fallback if auto-merge not active)
+if gh pr merge --squash --delete-branch > /dev/null 2>&1; then
+  echo "✓ Merged: $URL"
+  exit 0
+fi
+
+# Merge blocked — needs review
+echo "✓ CI passed, awaiting review: $URL"
+exit 0

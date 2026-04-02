@@ -1,17 +1,65 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# preflight-check.sh — exit 0: ready | exit 1: blocking | exit 2: env error
 
-git rev-parse --git-dir >/dev/null 2>&1 || { echo "ERROR: Not a git repo" >&2; exit 2; }
-BASE="${1:-$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name 2>/dev/null || echo "")}"
-[[ -n "$BASE" ]] || { echo "ERROR: Cannot determine default branch" >&2; exit 2; }
-git fetch origin "$BASE" >/dev/null 2>&1 || { echo "ERROR: fetch failed" >&2; exit 2; }
+# preflight-check.sh - Pre-push checks: BEHIND, conflicts, branch protection (advisory)
+# Usage: preflight-check.sh [base-branch]
+#
+# Exit codes:
+#   0 - All blocking checks passed (may have advisory warnings)
+#   1 - Blocking issue found (BEHIND or conflict)
+#   2 - Environment error (not a git repo, gh not authenticated, etc.)
 
-if [[ $(git rev-list HEAD..origin/"$BASE" --count 2>/dev/null || echo 0) -gt 0 ]]; then
-  echo "Behind base — syncing..."
-  git merge "origin/$BASE" --no-edit || { git diff --name-only --diff-filter=U >&2; exit 1; }
-  git push || { echo "Push failed" >&2; exit 1; }
+# shellcheck source=lib.sh
+source "$(dirname "$0")/lib.sh"
+
+require_git_repo
+resolve_base_branch "${1:-}"
+
+if ! git fetch origin "$BASE" >/dev/null 2>&1; then
+  echo "ERROR: Failed to fetch origin/$BASE" >&2
+  echo "  - Check if remote 'origin' exists: git remote -v" >&2
+  echo "  - Check if branch '$BASE' exists on remote" >&2
+  exit 2
 fi
 
-git merge-tree --write-tree HEAD "origin/$BASE" >/dev/null 2>&1 || { echo "ERROR: Conflicts with origin/$BASE" >&2; exit 1; }
-echo "OK"
+# --- Check 1: BEHIND ---
+BEHIND_COUNT=$(git rev-list HEAD..origin/"$BASE" --count 2>/dev/null || echo "0")
+
+# --- Check 2: Conflicts ---
+CONFLICT_FOUND=0
+if ! MERGE_OUTPUT=$(git merge-tree --write-tree HEAD "origin/$BASE" 2>&1); then
+  CONFLICT_FOUND=1
+fi
+
+if [[ "$BEHIND_COUNT" -gt 0 ]]; then
+  echo "ERROR: Branch is $BEHIND_COUNT commit(s) behind origin/$BASE" >&2
+  echo "  Sync with base before pushing:" >&2
+  echo "    git fetch origin $BASE && git merge origin/$BASE" >&2
+  if [[ "$CONFLICT_FOUND" -eq 1 ]]; then
+    echo "ERROR: Conflicts detected with origin/$BASE" >&2
+    echo "  Resolve conflicts after syncing:" >&2
+    if echo "$MERGE_OUTPUT" | grep -q "CONFLICT"; then
+      echo "Conflicts:" >&2
+      echo "$MERGE_OUTPUT" | grep "CONFLICT" | sed 's/^/  - /' >&2
+    fi
+  fi
+  exit 1
+fi
+
+if [[ "$CONFLICT_FOUND" -eq 1 ]]; then
+  echo "ERROR: Conflicts detected with origin/$BASE" >&2
+  echo "Resolution steps:" >&2
+  echo "  1. git fetch origin $BASE" >&2
+  echo "  2. git merge origin/$BASE" >&2
+  echo "  3. Resolve conflicts" >&2
+  echo "  4. git add <resolved-files>" >&2
+  echo "  5. git commit" >&2
+  if echo "$MERGE_OUTPUT" | grep -q "CONFLICT"; then
+    echo "Conflicts:" >&2
+    echo "$MERGE_OUTPUT" | grep "CONFLICT" | sed 's/^/  - /' >&2
+  fi
+  exit 1
+fi
+
+echo "OK: Pre-flight checks passed"
+exit 0
