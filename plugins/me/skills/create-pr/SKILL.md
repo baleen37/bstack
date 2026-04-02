@@ -13,6 +13,5 @@ gh pr merge --auto --squash
 "$S/wait-for-merge.sh"    # 0=done 1=CI fail(prints run-id)
 ```
 
-CI fail: `gh run view <run-id> --log-failed` → `me:pr-pass`. Stop if unclear/tried ×2.
-
-PR body: fill `.github/PULL_REQUEST_TEMPLATE.md` if exists, else summary+changes+tests.
+CI fail: `gh run view <run-id> --log-failed` → `me:pr-pass`. Stop if unclear/×2.
+PR body: fill PR template if exists, else summary+changes+tests.
