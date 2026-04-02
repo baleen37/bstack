@@ -16,3 +16,4 @@
 {"run":14,"commit":"563874d","metric":635,"metrics":{"skill_lines":18,"skill_words":82,"script_bytes":1803},"status":"keep","description":"micro-compress wording","timestamp":1775131249,"segment":1}
 {"run":15,"commit":"059de59","metric":605,"metrics":{"skill_lines":17,"skill_words":82,"script_bytes":1803},"status":"keep","description":"remove explicit template path","timestamp":1775131290,"segment":1}
 {"run":16,"commit":"059de59","metric":608,"metrics":{"skill_lines":16,"skill_words":83,"script_bytes":1803},"status":"discard","description":"merge pr create+merge into one line (bytes increased)","timestamp":1775131309,"segment":1}
+{"run":17,"commit":"96b1a8f","metric":665,"metrics":{"skill_lines":17,"skill_words":92,"script_bytes":1818},"status":"keep","description":"add auto-merge re-enable after CI fix + push -u","timestamp":1775132341,"segment":1}
