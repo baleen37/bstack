@@ -5,21 +5,14 @@ description: Use when user asks to create a PR, open a pull request, push and me
 
 # Create PR
 
-## Overview
-
-Full PR flow: pre-flight → commit → push → PR → wait-for-merge.
-
-## When to Use
-
-- "Create a PR", "open a PR", "submit a PR", "merge this"
-- Any commit → push → PR workflow request
+Pre-flight → commit → push → PR → wait-for-merge.
 
 ## Workflow
 
 ```bash
-# 1) pre-flight (parallel: git status, git branch --show-current, git log --oneline -5)
-# If on main/master: git checkout -b <type>/<short-description> (from last commit subject)
+# 1) pre-flight
 "${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts/preflight-check.sh"
+# If on main/master: git checkout -b <type>/<short-description>
 # If BEHIND: "${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts/sync-with-base.sh"
 
 # 2) commit
@@ -33,32 +26,25 @@ gh pr merge --auto --squash
 
 # 4) wait
 "${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts/wait-for-merge.sh"
-# exit 0: done (merged or awaiting review)
-# exit 1: CI failed → diagnose then invoke me:pr-pass
+# exit 0: done | exit 1: CI failed → read logs, invoke me:pr-pass
 ```
 
 ## CI Failure
 
-`wait-for-merge.sh` prints the failed `run-id`. Use it directly:
+`wait-for-merge.sh` prints `run-id`. Read logs:
 ```bash
 gh run view <run-id> --log-failed 2>&1 | grep -A3 "not ok\|Error\|FAILED" | head -40
 ```
+Invoke `me:pr-pass`. Re-run `wait-for-merge.sh` after fix.
 
-Invoke `me:pr-pass`. After fix is pushed, re-run `wait-for-merge.sh`.
-
-**Stop (ask user) if:**
-- Root cause ambiguous after reading logs
-- Fix requires architecture decisions
-- `me:pr-pass` invoked twice with no progress
+**Stop if:** root cause unclear, architecture decision needed, or `me:pr-pass` invoked twice without progress.
 
 ## Stop Conditions
 
 - Nothing to commit and no unpushed commits
 - Sync failed (conflicts need manual resolution)
-- `me:pr-pass` cannot determine a clear fix
 
 ## PR Body
 
-**If template found** (`.github/PULL_REQUEST_TEMPLATE.md` → `PULL_REQUEST_TEMPLATE.md`): fill each section, preserve `- [ ]` as-is.
-
-**No template:** Summary (1-2 sentences) + Changes (bullets) + Tests
+**Template found** (`.github/PULL_REQUEST_TEMPLATE.md`): fill sections, keep `- [ ]` as-is.
+**No template:** Summary (1-2 sentences) + Changes (bullets) + Tests.
