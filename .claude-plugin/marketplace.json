@@ -22,7 +22,7 @@
         "memory",
         "context"
       ],
-      "version": "16.5.11"
+      "version": "16.5.12"
     },
     {
       "name": "core",
@@ -36,7 +36,7 @@
         "workflow",
         "skills"
       ],
-      "version": "16.5.11"
+      "version": "16.5.12"
     },
     {
       "name": "jira",
@@ -49,7 +49,7 @@
         "confluence",
         "project-management"
       ],
-      "version": "16.5.11"
+      "version": "16.5.12"
     },
     {
       "name": "autoresearch",
@@ -62,7 +62,7 @@
         "autonomous",
         "research"
       ],
-      "version": "16.5.11"
+      "version": "16.5.12"
     },
     {
       "name": "ralph",
@@ -76,7 +76,7 @@
         "prd",
         "automation"
       ],
-      "version": "16.5.11"
+      "version": "16.5.12"
     },
     {
       "name": "obsidian",
@@ -89,7 +89,7 @@
         "notes",
         "cli"
       ],
-      "version": "16.5.11"
+      "version": "16.5.12"
     }
   ]
 }
