@@ -1,46 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# sync-with-base.sh - Sync current PR branch with default/base branch
-# Usage: sync-with-base.sh [base-branch]
-#
-# Exit codes:
-#   0 - Sync completed and pushed
-#   1 - Conflicts detected or push failed
-#   2 - Error (missing base branch, git errors, etc.)
+# sync-with-base.sh - Sync current branch with base branch
+# Exit: 0=synced+pushed, 1=conflicts/push failed, 2=env error
 
 # shellcheck source=lib.sh
 source "$(dirname "$0")/lib.sh"
-
 require_git_repo
 resolve_base_branch "${1:-}"
 
-echo "Fetching origin/$BASE..."
-if ! git fetch origin "$BASE"; then
-  echo "ERROR: Failed to fetch origin/$BASE" >&2
-  exit 2
-fi
+git fetch origin "$BASE" || { echo "ERROR: Failed to fetch origin/$BASE" >&2; exit 2; }
 
-echo "Merging origin/$BASE into current branch..."
 if ! git merge "origin/$BASE" --no-edit; then
-  echo "" >&2
-  echo "✗ Merge failed - conflicts detected" >&2
-  echo "Files with conflicts:" >&2
-  git diff --name-only --diff-filter=U | sed 's/^/  - /' >&2
-  echo "" >&2
-  echo "Resolution steps:" >&2
-  echo "  1. Resolve conflicts in listed files" >&2
-  echo "  2. git add <files>" >&2
-  echo "  3. git commit" >&2
-  echo "  4. git push" >&2
+  echo "Merge conflicts:" >&2
+  git diff --name-only --diff-filter=U | sed 's/^/  /' >&2
   exit 1
 fi
 
-echo "Pushing synced branch..."
-if ! git push; then
-  echo "✗ Push failed" >&2
-  exit 1
-fi
-
-echo "✓ Branch synced with origin/$BASE and pushed"
-exit 0
+git push || { echo "Push failed" >&2; exit 1; }
+echo "Synced with origin/$BASE and pushed"
