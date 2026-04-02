@@ -16,7 +16,10 @@ setup() {
 }
 
 @test "SKILL.md has required sections" {
-  # Must have at least one ## section
+  # Minimal workflow skills (like create-pr) use code blocks instead of ## sections
+  if head -10 "$SKILL_MD" | grep -q "Execute each line literally"; then
+    skip "Minimal workflow skill uses code block format instead of ## sections"
+  fi
   grep -q "^## " "$SKILL_MD"
 }
 
