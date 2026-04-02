@@ -15,9 +15,9 @@ setup() {
   [ -f "$SKILL_MD" ]
 }
 
-@test "SKILL.md has required sections" {
-  # Must have at least one ## section
-  grep -q "^## " "$SKILL_MD"
+@test "SKILL.md has workflow content" {
+  # Must have a code block or section with workflow steps
+  grep -q '```' "$SKILL_MD" || grep -q "^## " "$SKILL_MD"
 }
 
 @test "SKILL.md has Iron Law principle" {

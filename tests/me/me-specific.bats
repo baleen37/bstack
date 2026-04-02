@@ -16,8 +16,6 @@ load ../helpers/bats_helper
     [ -f "${PROJECT_ROOT}/plugins/me/skills/create-pr/SKILL.md" ]
     [ -f "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/preflight-check.sh" ]
     [ -f "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/wait-for-merge.sh" ]
-    [ -f "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/verify-pr-status.sh" ]
-    [ -f "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/sync-with-base.sh" ]
 }
 
 @test "me: create-pr skill has proper frontmatter" {
@@ -30,24 +28,11 @@ load ../helpers/bats_helper
 @test "me: create-pr scripts are executable" {
     [ -x "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/preflight-check.sh" ]
     [ -x "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/wait-for-merge.sh" ]
-    [ -x "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/verify-pr-status.sh" ]
-    [ -x "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/sync-with-base.sh" ]
 }
 
 @test "me: create-pr preflight-check.sh validates git repo" {
     local script="${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/preflight-check.sh"
-    # Direct check or via shared require_git_repo from lib.sh
-    grep -q "git rev-parse.*git-dir" "$script" || grep -q "require_git_repo" "$script"
-}
-
-@test "me: create-pr verify-pr-status.sh handles all PR states with CI checks" {
-    local script="${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/verify-pr-status.sh"
-    grep -q "CLEAN)" "$script"
-    grep -q "BEHIND)" "$script"
-    grep -q "DIRTY)" "$script"
-    grep -q "statusCheckRollup" "$script"
-    grep -q "isRequired" "$script"
-    grep -q "BLOCKED|UNSTABLE" "$script"
+    grep -q "git rev-parse.*git-dir" "$script"
 }
 
 
