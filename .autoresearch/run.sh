@@ -30,10 +30,11 @@ fi
 
 # ShellCheck
 SHELLCHECK_FAIL=0
-for f in "$DIR"/scripts/*.sh; do
-  if ! shellcheck "$f" > /dev/null 2>&1; then
+SCRIPTS_DIR="$DIR/scripts"
+for f in "$SCRIPTS_DIR"/*.sh; do
+  if ! (cd "$SCRIPTS_DIR" && shellcheck -x "$(basename "$f")") > /dev/null 2>&1; then
     echo "FAIL: shellcheck $f" >&2
-    shellcheck "$f" >&2 || true
+    (cd "$SCRIPTS_DIR" && shellcheck -x "$(basename "$f")") >&2 || true
     SHELLCHECK_FAIL=1
   fi
 done
