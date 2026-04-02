@@ -1,14 +1,12 @@
 ---
 name: create-pr
-description: Use when user asks to create a PR, open a pull request, push and merge, or complete a git commit/push/PR workflow.
+description: Create a PR — commit, push, open PR, wait for merge.
 ---
 
-# Create PR
-
 ```bash
-# 1) pre-flight (auto-syncs if behind base)
+# 1) pre-flight (auto-syncs if behind)
 "${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts/preflight-check.sh"
-# On main/master? → git checkout -b <type>/<short-description>
+# On main/master? → git checkout -b <type>/<short>
 
 # 2) commit + push + PR
 git add <files> && git commit -m "type(scope): summary"
@@ -20,8 +18,6 @@ gh pr merge --auto --squash
 "${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts/wait-for-merge.sh"
 ```
 
-**CI failure:** `wait-for-merge.sh` prints `run-id` → `gh run view <run-id> --log-failed 2>&1 | head -40` → invoke `me:pr-pass` → re-run wait. Stop if root cause unclear or `me:pr-pass` tried twice.
+**CI fail:** wait prints `run-id` → `gh run view <run-id> --log-failed` → invoke `me:pr-pass`. Stop if unclear or tried twice.
 
-**Stop:** nothing to commit, no unpushed commits, or conflicts need manual resolution.
-
-**PR body:** Use `.github/PULL_REQUEST_TEMPLATE.md` if exists (keep `- [ ]`). Otherwise: summary + change bullets + tests.
+**PR body:** Fill `.github/PULL_REQUEST_TEMPLATE.md` if exists, else summary + changes + tests.
