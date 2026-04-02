@@ -10,10 +10,9 @@ Pre-flight → commit → push → PR → wait-for-merge.
 ## Workflow
 
 ```bash
-# 1) pre-flight
+# 1) pre-flight (checks behind + auto-syncs if needed)
 "${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts/preflight-check.sh"
 # If on main/master: git checkout -b <type>/<short-description>
-# If BEHIND: "${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts/sync-with-base.sh"
 
 # 2) commit
 git add <specific-files>
@@ -42,7 +41,7 @@ Invoke `me:pr-pass`. Re-run `wait-for-merge.sh` after fix.
 ## Stop Conditions
 
 - Nothing to commit and no unpushed commits
-- Sync failed (conflicts need manual resolution)
+- Preflight failed with conflicts (manual resolution needed)
 
 ## PR Body
 
