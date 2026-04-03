@@ -5,8 +5,15 @@ import { join } from "path";
 const STALE_MS = 7_200_000; // 2h
 
 function allow(): never { process.exit(0); }
-function block(i: number, m: number, p: string): never {
-  process.stdout.write(JSON.stringify({ decision: "block", reason: `[RALPH ${i}/${m}] Continue: ${p}` }));
+function block(i: number, m: number, p: string, cwd: string): never {
+  let progress = "";
+  try {
+    const prd = JSON.parse(readFileSync(join(cwd, ".ralph", "prd.json"), "utf8"));
+    const stories = prd.userStories || [];
+    const done = stories.filter((s: any) => s.passes).length;
+    progress = ` (${done}/${stories.length} stories done)`;
+  } catch {}
+  process.stdout.write(JSON.stringify({ decision: "block", reason: `[RALPH ${i}/${m}]${progress} Continue: ${p}` }));
   process.exit(0);
 }
 
@@ -28,7 +35,7 @@ async function main() {
     const now = new Date().toISOString();
     mkdirSync(dir, { recursive: true });
     save({ active: true, session_id: sid, iteration: 1, max_iterations: 10, started_at: now, last_checked_at: now, prompt: p });
-    block(1, 10, p);
+    block(1, 10, p, cwd);
   }
 
   let s: any;
@@ -42,7 +49,7 @@ async function main() {
   s.iteration += 1;
   s.last_checked_at = new Date().toISOString();
   save(s);
-  block(s.iteration, s.max_iterations, s.prompt);
+  block(s.iteration, s.max_iterations, s.prompt, cwd);
 }
 
 main().catch((e) => { process.stderr.write(`ralph-persist: ${e}\n`); process.exit(0); });
