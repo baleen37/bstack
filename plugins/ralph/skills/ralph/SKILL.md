@@ -5,48 +5,37 @@ description: PRD-driven persistence loop — keeps Claude working until all user
 
 # Ralph Loop
 
-The Stop hook keeps you running until you write the cancel signal file.
+Stop hook keeps you running until you write the cancel signal file.
 
-## Activation (first run only)
+## Activation (first run)
+1. Parse task from `/ralph "task"`
+2. `mkdir -p .ralph/state/`
+3. Write `.ralph/state/ralph-activating` with task as content
 
-1. Parse task from `/ralph "task description"`
-2. Create `.ralph/state/` directory
-3. Write `.ralph/state/ralph-activating` with task description as content
-
-## PRD Writing (skip with `--no-prd`)
-
+## PRD (skip: `--no-prd`)
 Create `.ralph/prd.json`:
-
 ```json
-{"project":"name","description":"task","userStories":[{"id":"US-001","title":"...","description":"...","acceptanceCriteria":["testable criterion"],"priority":1,"passes":false}]}
+{"project":"name","description":"task","userStories":[{"id":"US-001","title":"...","acceptanceCriteria":["testable"],"priority":1,"passes":false}]}
 ```
+Rules: testable criteria, dependency-ordered, small scope.
 
-Stories: testable criteria, dependency-ordered, small scope.
-
-## Story Execution Loop
-
-Each iteration:
-1. Read `.ralph/progress.txt` for learnings from previous iterations
-2. Find highest-priority story with `passes: false` in `.ralph/prd.json`
-3. All stories pass → go to Completion Verification
-4. Implement via TDD: failing test → implement → pass
-5. Run test suite
-6. Pass → set `passes: true`; Fail → append to `.ralph/progress.txt`: `[ITERATION N] US-XXX failed: <reason>`
+## Iteration Loop
+1. Read `.ralph/progress.txt` (learnings from past failures)
+2. Find highest-priority `passes: false` story in `.ralph/prd.json`
+3. All pass → Completion Verification
+4. TDD: failing test → implement → pass
+5. Run tests. Pass → `passes: true`. Fail → append `[ITER N] US-XXX: <reason>` to progress.txt
 
 ## Completion Verification
+1. Architect review (skip: `--critic=none`)
+2. Deslop pass (skip: `--no-deslop`): remove AI boilerplate
+3. Full regression test run
 
-When all stories pass:
-1. Architect review (skip: `--critic=none`): design quality, edge cases, clarity
-2. Deslop pass (skip: `--no-deslop`): remove AI boilerplate and unnecessary abstractions
-3. Regression test run — all tests must pass
-
-## Completion
-
-1. Write `.ralph/state/cancel-signal-state.json` (content: `{}`)
-2. Output: `<promise>COMPLETE</promise>`
+## Done
+1. Write `.ralph/state/cancel-signal-state.json` (`{}`)
+2. Output `<promise>COMPLETE</promise>`
 
 ## Rules
-
-- Never declare completion without writing the cancel signal file
-- Never skip the regression test run
-- Read `progress.txt` at the start of every iteration
+- NEVER complete without writing cancel signal file
+- NEVER skip regression tests
+- ALWAYS read progress.txt each iteration
