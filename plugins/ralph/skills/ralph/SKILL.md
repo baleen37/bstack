@@ -9,8 +9,7 @@ Stop hook keeps you running until you write the cancel signal.
 S=`.ralph/state/`
 
 ## Activation (first run)
-1. Parse task from `/ralph "task"`
-2. `mkdir -p $S` → write `$S/ralph-activating` with task content
+1. `mkdir -p $S` → write `$S/ralph-activating` with the task description as content
 
 ## PRD
 Create `.ralph/prd.json`: `project`, `userStories[]` (each: `id`, `title`, `acceptanceCriteria[]`, `priority`, `passes:false`). Testable, dependency-ordered, small.
@@ -20,7 +19,7 @@ Create `.ralph/prd.json`: `project`, `userStories[]` (each: `id`, `title`, `acce
 2. Find highest-priority `passes:false` in `.ralph/prd.json`
 3. All pass → Verify & Done
 4. TDD: failing test → implement → pass
-5. Pass → `passes:true`. Fail → append `[ITER N] US-XXX: <reason>` to progress.txt
+5. Tests pass → `passes:true`. Tests still fail after implementation → append `[ITER N] US-XXX: <reason>` to progress.txt
 
 ## Verify & Done
 1. Architect review: design quality, edge cases, code clarity
