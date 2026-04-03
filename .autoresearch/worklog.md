@@ -4,42 +4,37 @@
 - **Goal:** Optimize Ralph plugin for simplicity, token efficiency, and clarity
 - **Branch:** autoresearch/ralph-improve-20260403
 - **Started:** 2026-04-03
-- **Primary Metric:** skill_bytes (SKILL.md byte count, lower is better)
+- **Primary Metric:** skill_bytes (lower is better)
 
-## Summary
+## Final Results
 - Baseline: skill=2914, cancel=696, hook=3747, total=7357 bytes
-- Current: skill=1396, cancel=525, hook=1962, total=3883 bytes
-- Net reduction: **-47.2% total bytes** (-52.1% skill, -24.6% cancel, -47.6% hook)
+- Final: skill=1098, cancel=525, hook=2286, total=3909 bytes
+- **Net: -46.9% total** (-62.3% skill, -24.6% cancel, -39.0% hook)
+- Agent clarity score: 7/10
 
 ## Phase 1: Byte Compression (runs 1-11)
 - Flattened JSON examples, removed redundant sections
-- Simplified TypeScript hook (removed interfaces, extracted helpers)
+- Simplified TypeScript (removed interfaces, extracted helpers)
 - Shortened variable names, block messages
-- Merged sections (Verification + Done)
-- Extracted $S path variable
-- Best: skill=1193 bytes (-59.1%), total=3586 (-51.3%)
+- Best pure compression: skill=1193, total=3586
 
-## Phase 2: Agent Testing + Clarity (runs 13-17)
-Ran 5 subagent tests with real tasks. Found and fixed:
-1. progress.txt init unclear → added "skip on first iteration"
-2. --no-prd completely undefined → added "auto-generate prd.json with task as single story"
-3. Deslop too vague → enumerated what to remove
-4. TDD with existing tests → clarified "write failing test (or use existing tests)"
-5. ralph-cancel missing CWD context → added
-6. cancel-signal purpose unexplained → added hook explanation
+## Phase 2: Agent Testing (runs 13-18)
+7 subagent tests found and fixed:
+1. progress.txt init → "if it exists"
+2. --no-prd undefined → "auto-generate single-story prd"
+3. Deslop vague → "unnecessary comments, dead code, over-abstractions"
+4. One-at-a-time unclear → explicit
+5. ralph-cancel CWD context → added
+6. cancel-signal purpose → hook explanation added
 
-Bytes increased from 3586 → 3883 (+297 bytes) but all agent tests now pass cleanly.
+## Phase 3: Simplification (runs 19-20)
+- Removed $S variable, [INSIGHT] format, verbose explanations
+- Added story progress to hook block message (N/M stories done)
+- Final version: clean, minimal, universally applicable
 
 ## Key Insights
-- Byte compression alone is misleading — agents misinterpret unclear instructions, costing more overall
-- Agent testing (not just BATS unit tests) catches real usability issues
-- --no-prd was completely broken in practice despite passing all unit tests
-- "skip PRD" + "create prd.json" is contradictory — changed to "skip elaboration"
-- progress.txt timing matters: TDD initial failure ≠ implementation failure
-
-## Next Ideas
-- Test multi-iteration failure scenario (progress.txt accumulation)
-- Test resume after crash (partial state)
-- Consider adding iteration context to block message (e.g., current story)
-- Test with larger real-world tasks
-- Hook improvement: track which story is in progress
+- Byte compression alone misleads — unclear instructions cost more overall
+- Agent testing catches issues BATS unit tests miss
+- 7/10 clarity is good for a 29-line SKILL.md
+- Remaining 3 points want examples, which conflicts with brevity
+- Hook's story progress (N/M done) gives agents useful context at zero SKILL.md cost
