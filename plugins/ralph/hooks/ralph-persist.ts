@@ -2,137 +2,57 @@
 import { existsSync, readFileSync, writeFileSync, unlinkSync, mkdirSync } from "fs";
 import { join } from "path";
 
-const STALE_THRESHOLD_MS = 2 * 60 * 60 * 1000; // 2 hours
+const STALE_MS = 7_200_000; // 2h
 
-interface HookInput {
-  session_id?: string;
-  cwd?: string;
-  hook_event_name?: string;
-}
-
-interface RalphState {
-  active: boolean;
-  session_id: string;
-  iteration: number;
-  max_iterations: number;
-  started_at: string;
-  last_checked_at: string;
-  prompt: string;
-}
-
-function readState(stateDir: string): RalphState | null {
-  const path = join(stateDir, "ralph-state.json");
-  if (!existsSync(path)) return null;
+function allow(): never { process.exit(0); }
+function block(i: number, m: number, p: string, cwd: string): never {
+  let progress = "";
   try {
-    return JSON.parse(readFileSync(path, "utf8")) as RalphState;
-  } catch {
-    return null;
-  }
-}
-
-function writeState(stateDir: string, state: RalphState): void {
-  mkdirSync(stateDir, { recursive: true });
-  writeFileSync(join(stateDir, "ralph-state.json"), JSON.stringify(state, null, 2));
-}
-
-function allow(): void {
-  // Write nothing, exit 0
+    const prd = JSON.parse(readFileSync(join(cwd, ".ralph", "prd.json"), "utf8"));
+    const stories = prd.userStories || [];
+    const done = stories.filter((s: any) => s.passes).length;
+    progress = ` (${done}/${stories.length} stories done)`;
+  } catch {}
+  let lastFail = "";
+  try {
+    const lines = readFileSync(join(cwd, ".ralph", "progress.txt"), "utf8").trim().split("\n");
+    lastFail = ` Last: ${lines[lines.length - 1]}`;
+  } catch {}
+  process.stdout.write(JSON.stringify({ decision: "block", reason: `[RALPH ${i}/${m}]${progress}${lastFail} Continue: ${p}` }));
   process.exit(0);
 }
 
-function block(iteration: number, maxIterations: number, prompt: string): void {
-  process.stdout.write(
-    JSON.stringify({
-      decision: "block",
-      reason: `[RALPH LOOP - ITERATION ${iteration}/${maxIterations}] Work is not done. Continue working on the task: ${prompt}`,
-    })
-  );
-  process.exit(0);
-}
-
-async function main(): Promise<void> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of process.stdin) {
-    chunks.push(chunk as Buffer);
-  }
-  const input: HookInput = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
-
+async function main() {
+  const input = JSON.parse(await Bun.stdin.text() || "{}");
   const cwd = input.cwd ?? process.cwd();
-  const sessionId = input.session_id ?? "";
-  const stateDir = join(cwd, ".ralph", "state");
+  const sid = input.session_id ?? "";
+  const dir = join(cwd, ".ralph", "state");
+  const sp = join(dir, "ralph-state.json");
+  const save = (s: any) => writeFileSync(sp, JSON.stringify(s, null, 2));
+  const off = (s: any) => { s.active = false; save(s); allow(); };
 
-  // Check activation sentinel
-  const activatingSentinel = join(stateDir, "ralph-activating");
-  if (existsSync(activatingSentinel) && !existsSync(join(stateDir, "ralph-state.json"))) {
-    const prompt = readFileSync(activatingSentinel, "utf8").trim();
-    unlinkSync(activatingSentinel);
+  const sentinel = join(dir, "ralph-activating");
+  if (existsSync(sentinel) && !existsSync(sp)) {
+    const p = readFileSync(sentinel, "utf8").trim();
+    unlinkSync(sentinel);
     const now = new Date().toISOString();
-    const state: RalphState = {
-      active: true,
-      session_id: sessionId,
-      iteration: 1,
-      max_iterations: 10,
-      started_at: now,
-      last_checked_at: now,
-      prompt,
-    };
-    writeState(stateDir, state);
-    block(1, state.max_iterations, state.prompt);
-    return;
+    mkdirSync(dir, { recursive: true });
+    save({ active: true, session_id: sid, iteration: 1, max_iterations: 10, started_at: now, last_checked_at: now, prompt: p });
+    block(1, 10, p, cwd);
   }
 
-  const state = readState(stateDir);
+  let s: any;
+  try { s = JSON.parse(readFileSync(sp, "utf8")); } catch { allow(); }
+  if (!s?.active) allow();
+  if (s.session_id && sid && s.session_id !== sid) allow();
+  if (existsSync(join(dir, "cancel-signal-state.json"))) { unlinkSync(join(dir, "cancel-signal-state.json")); off(s); }
+  if (Date.now() - new Date(s.last_checked_at).getTime() > STALE_MS) off(s);
 
-  // Pass-through: no state
-  if (!state) {
-    allow();
-    return;
-  }
-
-  // Pass-through: inactive
-  if (!state.active) {
-    allow();
-    return;
-  }
-
-  // Pass-through: session mismatch
-  // If either session_id is empty/unknown, skip the check — don't break a running loop
-  // just because the caller didn't provide a session_id.
-  if (state.session_id && sessionId && state.session_id !== sessionId) {
-    allow();
-    return;
-  }
-
-  // Pass-through: cancel signal
-  const cancelSignal = join(stateDir, "cancel-signal-state.json");
-  if (existsSync(cancelSignal)) {
-    unlinkSync(cancelSignal);
-    state.active = false;
-    writeState(stateDir, state);
-    allow();
-    return;
-  }
-
-  // Pass-through: stale state
-  const lastChecked = new Date(state.last_checked_at).getTime();
-  if (Date.now() - lastChecked > STALE_THRESHOLD_MS) {
-    state.active = false;
-    writeState(stateDir, state);
-    allow();
-    return;
-  }
-
-  // Block: extend max_iterations if needed, then block
-  if (state.iteration >= state.max_iterations) {
-    state.max_iterations += 10;
-  }
-  state.iteration += 1;
-  state.last_checked_at = new Date().toISOString();
-  writeState(stateDir, state);
-  block(state.iteration, state.max_iterations, state.prompt);
+  if (s.iteration >= s.max_iterations) s.max_iterations += 10;
+  s.iteration += 1;
+  s.last_checked_at = new Date().toISOString();
+  save(s);
+  block(s.iteration, s.max_iterations, s.prompt, cwd);
 }
 
-main().catch((err) => {
-  process.stderr.write(`ralph-persist error: ${err}\n`);
-  process.exit(0); // Always exit 0 — never crash Claude
-});
+main().catch((e) => { process.stderr.write(`ralph-persist: ${e}\n`); process.exit(0); });

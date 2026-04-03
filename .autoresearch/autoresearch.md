@@ -1,47 +1,36 @@
-# Autoresearch: create-pr token efficiency
+# Autoresearch: Ralph Plugin Optimization
 
 ## Objective
-Optimize the `plugins/me/skills/create-pr/` skill for token efficiency and correctness. SKILL.md is loaded into LLM context when invoked — fewer bytes = less cost. Scripts run at execution time and don't affect token cost, but must be correct.
+Optimize the `plugins/ralph/` plugin for simplicity and token efficiency. SKILL.md files are loaded into LLM context when invoked — fewer bytes = less cost. The hook (ralph-persist.ts) runs at OS level but should also be minimal and clean.
 
 ## Metrics
-- **Primary**: skill_bytes (bytes, lower is better) — SKILL.md byte count
-- **Secondary**: skill_lines, skill_words, script_bytes
+- **Primary**: skill_bytes (bytes, lower is better) — ralph/SKILL.md byte count
+- **Secondary**: skill_lines, cancel_bytes, hook_bytes, hook_lines, total_bytes
 
 ## How to Run
-`./.autoresearch/run.sh` — outputs `METRIC name=number` lines.
+`./.autoresearch/run.sh` — outputs `METRIC name=number` lines. Validates frontmatter, hooks.json, TS compilation, and BATS tests.
 
 ## Files in Scope
 | File | Purpose |
 |------|---------|
-| `plugins/me/skills/create-pr/SKILL.md` | Main skill definition (loaded into LLM context) |
-| `plugins/me/skills/create-pr/scripts/preflight-check.sh` | Pre-push checks + auto-sync |
-| `plugins/me/skills/create-pr/scripts/wait-for-merge.sh` | Wait for CI + merge |
+| `plugins/ralph/skills/ralph/SKILL.md` | Main skill (LLM context — primary target) |
+| `plugins/ralph/skills/ralph-cancel/SKILL.md` | Cancel skill (LLM context) |
+| `plugins/ralph/hooks/ralph-persist.ts` | Stop hook engine (Bun runtime) |
+| `plugins/ralph/hooks/hooks.json` | Hook registration config |
 
 ## Off Limits
-- Do not break the PR workflow
-- Exit codes must be preserved
+- Do not break the persistence loop workflow (activate → iterate → complete)
+- Cancel signal mechanism must work
+- Session isolation must be preserved
+- Stale state recovery must work
+- Always exit 0 (never crash Claude)
+- plugin.json metadata
 
 ## Constraints
-- Scripts must pass shellcheck
+- Tests must pass (ralph_persist.bats + ralph_hooks_json.bats)
 - SKILL.md must have valid frontmatter
-- Tests must pass (63/63)
+- hooks.json must be valid JSON
+- TypeScript must compile with bun
 
 ## What's Been Tried
-### Structural changes (big wins)
-- Removed unused verify-pr-status.sh (-1302 bytes)
-- Merged sync-with-base.sh into preflight-check.sh (-515 bytes)
-- Inlined lib.sh into preflight-check.sh (-461 bytes)
-
-### SKILL.md compression (medium wins)
-- Removed Overview, When to Use, Stop Conditions sections
-- Extracted S= path variable for script paths
-- Removed bold markdown markers, flattened sections
-
-### Test-driven fixes (increased bytes for correctness)
-- "scripts MUST be run" directive (+129 bytes) — agents were skipping scripts
-- auto-merge re-enable after CI fix (+60 bytes) — tested on PR #604
-- push -u in preflight — new branches had no upstream
-
-### Dead ends
-- Merging gh pr create + merge into one line — bytes increased
-- Further compression below ~700 bytes — losing essential information
+(Starting fresh — no experiments yet)
