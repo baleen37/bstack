@@ -13,7 +13,12 @@ function block(i: number, m: number, p: string, cwd: string): never {
     const done = stories.filter((s: any) => s.passes).length;
     progress = ` (${done}/${stories.length} stories done)`;
   } catch {}
-  process.stdout.write(JSON.stringify({ decision: "block", reason: `[RALPH ${i}/${m}]${progress} Continue: ${p}` }));
+  let lastFail = "";
+  try {
+    const lines = readFileSync(join(cwd, ".ralph", "progress.txt"), "utf8").trim().split("\n");
+    lastFail = ` Last: ${lines[lines.length - 1]}`;
+  } catch {}
+  process.stdout.write(JSON.stringify({ decision: "block", reason: `[RALPH ${i}/${m}]${progress}${lastFail} Continue: ${p}` }));
   process.exit(0);
 }
 
