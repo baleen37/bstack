@@ -23,9 +23,7 @@ function block(i: number, m: number, p: string, cwd: string): never {
 }
 
 async function main() {
-  const buf: Buffer[] = [];
-  for await (const c of process.stdin) buf.push(c as Buffer);
-  const input = JSON.parse(Buffer.concat(buf).toString() || "{}");
+  const input = JSON.parse(await Bun.stdin.text() || "{}");
   const cwd = input.cwd ?? process.cwd();
   const sid = input.session_id ?? "";
   const dir = join(cwd, ".ralph", "state");
