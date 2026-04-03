@@ -1,34 +1,33 @@
 ---
 name: ralph
-description: PRD-driven persistence loop — keeps Claude working until all user stories pass verification
+description: PRD-driven persistence loop — keeps Claude working until all user stories pass
 ---
 
 # Ralph Loop
 
-Stop hook keeps you running until you write the cancel signal file.
+Stop hook keeps you running until you write the cancel signal.
 
 ## Activation (first run)
 1. Parse task from `/ralph "task"`
-2. `mkdir -p .ralph/state/`
-3. Write `.ralph/state/ralph-activating` with task as content
+2. `mkdir -p .ralph/state/` → write `.ralph/state/ralph-activating` with task as content
 
 ## PRD (skip: `--no-prd`)
 Create `.ralph/prd.json`:
 ```json
-{"project":"name","description":"task","userStories":[{"id":"US-001","title":"...","acceptanceCriteria":["testable"],"priority":1,"passes":false}]}
+{"project":"x","userStories":[{"id":"US-001","title":"…","acceptanceCriteria":["testable"],"priority":1,"passes":false}]}
 ```
-Rules: testable criteria, dependency-ordered, small scope.
+Testable criteria, dependency-ordered, small scope.
 
-## Iteration Loop
-1. Read `.ralph/progress.txt` (learnings from past failures)
-2. Find highest-priority `passes: false` story in `.ralph/prd.json`
-3. All pass → Completion Verification
+## Loop
+1. Read `.ralph/progress.txt` (past failure learnings)
+2. Find highest-priority `passes:false` in `.ralph/prd.json`
+3. All pass → Verification
 4. TDD: failing test → implement → pass
-5. Run tests. Pass → `passes: true`. Fail → append `[ITER N] US-XXX: <reason>` to progress.txt
+5. Tests pass → `passes:true`. Fail → append `[ITER N] US-XXX: <reason>` to progress.txt
 
-## Completion Verification
+## Verification
 1. Architect review (skip: `--critic=none`)
-2. Deslop pass (skip: `--no-deslop`): remove AI boilerplate
+2. Deslop (skip: `--no-deslop`): remove AI boilerplate
 3. Full regression test run
 
 ## Done
