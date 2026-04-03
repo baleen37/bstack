@@ -18,7 +18,7 @@ Create `.ralph/prd.json`: `project`, `userStories[]` (each: `id`, `title`, `acce
 1. Read `.ralph/progress.txt` if it exists (skip on first iteration)
 2. Find highest-priority `passes:false` in `.ralph/prd.json`
 3. All pass → Verify & Done
-4. TDD: failing test → implement → pass
+4. TDD: write failing test (or use existing tests) → implement → pass
 5. Tests pass → `passes:true`. Tests still fail after implementation → append `[ITER N] US-XXX: <reason>` to progress.txt
 
 ## Verify & Done
@@ -28,4 +28,4 @@ Create `.ralph/prd.json`: `project`, `userStories[]` (each: `id`, `title`, `acce
 4. Write `$S/cancel-signal-state.json` (`{}`) then reply `<promise>COMPLETE</promise>`
 
 **Rules:** ALWAYS read progress.txt each iteration. NEVER skip regression tests or cancel signal.
-**Flags:** `--no-prd` skip PRD, create minimal prd.json with task as single story. `--critic=none` skip step 1. `--no-deslop` skip step 2.
+**Flags:** `--no-prd` skip elaboration, auto-generate prd.json with task as single story. `--critic=none` skip step 1. `--no-deslop` skip step 2.
