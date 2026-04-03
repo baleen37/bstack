@@ -19,7 +19,8 @@ Create `.ralph/prd.json`: `project`, `userStories[]` (each: `id`, `title`, `acce
 2. Find highest-priority `passes:false` in `.ralph/prd.json`
 3. All pass → Verify & Done
 4. TDD: write failing test (or use existing tests) → implement → pass
-5. Tests pass → `passes:true`. Tests still fail after implementation → append `[ITER N] US-XXX: <reason>` to progress.txt
+5. Tests pass → set this story's `passes:true` immediately. Fail → append to progress.txt:
+   `[ITER N] US-XXX: <reason>` and `[INSIGHT] <what to try differently>`
 
 ## Verify & Done
 1. Architect review: design quality, edge cases, code clarity
