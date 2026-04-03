@@ -1,47 +1,31 @@
-# Worklog: create-pr token efficiency
+# Worklog: Ralph Plugin Optimization
 
 ## Session Info
-- Started: 2026-04-02
-- Goal: Reduce token cost of create-pr skill while keeping it simple, correct, and effective
+- **Goal:** Optimize Ralph plugin for simplicity and token efficiency
+- **Branch:** autoresearch/ralph-improve-20260403
+- **Started:** 2026-04-03
+- **Primary Metric:** skill_bytes (SKILL.md byte count, lower is better)
 
----
-
-### Segment 0 (total_bytes): Runs 1-9
-Compressed all files from 9073→2884 bytes (-68.2%):
-- Removed verbose error messages/comments in scripts
-- Removed unused verify-pr-status.sh
-- Merged sync-with-base.sh into preflight-check.sh
-- Inlined lib.sh (only used by 1 script)
-
-### Segment 1 (skill_bytes): Runs 10-27
-Re-focused on SKILL.md only (what LLM reads). 1081→776 bytes (-28.2%):
-- Removed redundant sections, shortened description
-- Extracted `S=` path variable
-- Added "scripts MUST be run" directive (test-driven)
-- Added auto-merge re-enable after CI fix (test-driven)
-- Removed redundant "re-run preflight" instruction
-- Fixed broken tests (63/63 pass)
-
-### Subagent Tests (4 PRs)
-| PR | Scenario | Finding |
-|----|----------|---------|
-| #604 | basic optimized flow | push -u needed, auto-merge disabled after push |
-| #605 | main branch | agent skipped scripts → added MUST directive |
-| #606 | MUST directive | scripts executed correctly, stale tests found |
-| #607 | final validation | clean pass, 14 tool calls |
-
-### Bug Fixes Found Through Testing
-1. preflight push needs `-u` for new branches
-2. auto-merge disabled after force-push → added re-enable instruction
-3. agent skipping scripts → added "MUST be run" directive
-4. stale tests referencing deleted scripts → updated test suite
-5. `--delete-branch` in fallback merge inconsistent → removed
-
----
+## Current State
+- ralph/SKILL.md: 2914 bytes, 90 lines
+- ralph-cancel/SKILL.md: 696 bytes, 23 lines
+- ralph-persist.ts: 3747 bytes, 138 lines
+- Total: 7357 bytes
 
 ## Key Insights
-- SKILL.md is the only file that costs tokens — scripts don't load into context
-- "MUST run" directive is essential — without it agents reimplement script logic
-- Real testing (subagent PRs) found 5 bugs that static analysis missed
-- Byte reduction has diminishing returns below ~700 bytes for this skill
-- Code block format is the primary instruction channel for LLM agents
+- SKILL.md is loaded into LLM context — every byte matters
+- Hook runs in Bun (OS level) — doesn't cost tokens but should be clean
+- Plugin is already well-designed, optimization is about compression not redesign
+- Web best practices suggest: minimal resume context, semantic repetition detection, layered completion
+
+## Next Ideas
+- Compress SKILL.md prose (remove redundant sections, merge instructions)
+- Flatten PRD JSON example (reduce boilerplate in skill instructions)
+- Simplify flag documentation
+- Consider merging cancel into main skill (save separate skill overhead)
+- Remove verbose code block examples from SKILL.md
+- Compress hook TypeScript (remove unnecessary type annotations)
+
+---
+
+## Experiment Log
