@@ -2,51 +2,47 @@
 import { existsSync, readFileSync, writeFileSync, unlinkSync, mkdirSync } from "fs";
 import { join } from "path";
 
-const STALE_MS = 2 * 60 * 60 * 1000;
+const STALE_MS = 7_200_000; // 2h
 
 function allow(): never { process.exit(0); }
-function block(iter: number, max: number, prompt: string): never {
-  process.stdout.write(JSON.stringify({ decision: "block", reason: `[RALPH LOOP - ITERATION ${iter}/${max}] Work is not done. Continue: ${prompt}` }));
+function block(i: number, m: number, p: string): never {
+  process.stdout.write(JSON.stringify({ decision: "block", reason: `[RALPH ${i}/${m}] Continue: ${p}` }));
   process.exit(0);
 }
 
 async function main() {
-  const chunks: Buffer[] = [];
-  for await (const chunk of process.stdin) chunks.push(chunk as Buffer);
-  const input = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
-
+  const buf: Buffer[] = [];
+  for await (const c of process.stdin) buf.push(c as Buffer);
+  const input = JSON.parse(Buffer.concat(buf).toString() || "{}");
   const cwd = input.cwd ?? process.cwd();
   const sid = input.session_id ?? "";
   const dir = join(cwd, ".ralph", "state");
   const sp = join(dir, "ralph-state.json");
   const save = (s: any) => writeFileSync(sp, JSON.stringify(s, null, 2));
-  const deactivate = (s: any) => { s.active = false; save(s); allow(); };
+  const off = (s: any) => { s.active = false; save(s); allow(); };
 
-  // Activation
   const sentinel = join(dir, "ralph-activating");
   if (existsSync(sentinel) && !existsSync(sp)) {
-    const prompt = readFileSync(sentinel, "utf8").trim();
+    const p = readFileSync(sentinel, "utf8").trim();
     unlinkSync(sentinel);
     const now = new Date().toISOString();
     mkdirSync(dir, { recursive: true });
-    save({ active: true, session_id: sid, iteration: 1, max_iterations: 10, started_at: now, last_checked_at: now, prompt });
-    block(1, 10, prompt);
+    save({ active: true, session_id: sid, iteration: 1, max_iterations: 10, started_at: now, last_checked_at: now, prompt: p });
+    block(1, 10, p);
   }
 
-  let state: any;
-  try { state = JSON.parse(readFileSync(sp, "utf8")); } catch { allow(); }
-  if (!state?.active) allow();
-  if (state.session_id && sid && state.session_id !== sid) allow();
+  let s: any;
+  try { s = JSON.parse(readFileSync(sp, "utf8")); } catch { allow(); }
+  if (!s?.active) allow();
+  if (s.session_id && sid && s.session_id !== sid) allow();
+  if (existsSync(join(dir, "cancel-signal-state.json"))) { unlinkSync(join(dir, "cancel-signal-state.json")); off(s); }
+  if (Date.now() - new Date(s.last_checked_at).getTime() > STALE_MS) off(s);
 
-  const cancel = join(dir, "cancel-signal-state.json");
-  if (existsSync(cancel)) { unlinkSync(cancel); deactivate(state); }
-  if (Date.now() - new Date(state.last_checked_at).getTime() > STALE_MS) deactivate(state);
-
-  if (state.iteration >= state.max_iterations) state.max_iterations += 10;
-  state.iteration += 1;
-  state.last_checked_at = new Date().toISOString();
-  save(state);
-  block(state.iteration, state.max_iterations, state.prompt);
+  if (s.iteration >= s.max_iterations) s.max_iterations += 10;
+  s.iteration += 1;
+  s.last_checked_at = new Date().toISOString();
+  save(s);
+  block(s.iteration, s.max_iterations, s.prompt);
 }
 
-main().catch((e) => { process.stderr.write(`ralph-persist error: ${e}\n`); process.exit(0); });
+main().catch((e) => { process.stderr.write(`ralph-persist: ${e}\n`); process.exit(0); });
