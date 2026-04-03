@@ -28,9 +28,5 @@ Create `.ralph/prd.json`: `project`, `userStories[]` (each: `id`, `title`, `acce
 3. Full regression test run
 4. Write `$S/cancel-signal-state.json` (`{}`) → output `<promise>COMPLETE</promise>`
 
-## Rules
-- NEVER complete without writing cancel signal file
-- NEVER skip regression tests
-- ALWAYS read progress.txt each iteration
-
-Flags: `--no-prd` skip PRD, `--critic=none` skip review, `--no-deslop` skip deslop
+**Rules:** ALWAYS read progress.txt each iteration. NEVER skip regression tests or cancel signal.
+**Flags:** `--no-prd` `--critic=none` `--no-deslop`
