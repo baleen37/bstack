@@ -6,27 +6,24 @@ description: PRD-driven persistence loop — keeps Claude working until all user
 # Ralph Loop
 
 Stop hook keeps you running until you write the cancel signal.
-S=`.ralph/state/`
 
-## Activation (first run)
-1. `mkdir -p $S` → write `$S/ralph-activating` with the task description as content
+## Activation
+1. `mkdir -p .ralph/state/`
+2. Write `.ralph/state/ralph-activating` with the task description
 
-## PRD
-Create `.ralph/prd.json`: `project`, `userStories[]` (each: `id`, `title`, `acceptanceCriteria[]`, `priority`, `passes:false`). Testable, dependency-ordered, small.
+## PRD (`--no-prd` to skip → auto-generate single-story prd)
+Create `.ralph/prd.json`: `project`, `userStories[]` each with `id`, `title`, `acceptanceCriteria[]`, `priority`, `passes:false`. Small testable stories, dependency-ordered.
 
 ## Loop
-1. Read `.ralph/progress.txt` if it exists (skip on first iteration)
-2. Find highest-priority `passes:false` in `.ralph/prd.json`
-3. All pass → Verify & Done
-4. TDD: write failing test (or use existing tests) → implement → pass
-5. Tests pass → set this story's `passes:true` immediately. Fail → append to progress.txt:
-   `[ITER N] US-XXX: <reason>` and `[INSIGHT] <what to try differently>`
+1. Read `.ralph/progress.txt` if it exists
+2. Find highest-priority `passes:false` story
+3. All stories pass → go to Done
+4. Implement one story at a time, run tests
+5. Pass → set `passes:true`. Fail → append `[ITER N] US-XXX: <reason>` to `.ralph/progress.txt`
 
-## Verify & Done
-1. Architect review: design quality, edge cases, code clarity
-2. Deslop: remove unnecessary comments, abstractions, verbose error handling
-3. Full regression test run — must pass
-4. Write `$S/cancel-signal-state.json` (`{}`) then reply `<promise>COMPLETE</promise>`
-
-**Rules:** ALWAYS read progress.txt each iteration. NEVER skip regression tests or cancel signal.
-**Flags:** `--no-prd` skip elaboration, auto-generate prd.json with task as single story. `--critic=none` skip step 1. `--no-deslop` skip step 2.
+## Done
+1. Review code quality (`--critic=none` to skip)
+2. Remove slop: unnecessary comments, dead code, over-abstractions (`--no-deslop` to skip)
+3. Run full test suite — must pass
+4. Write `.ralph/state/cancel-signal-state.json` (`{}`)
+5. Reply `<promise>COMPLETE</promise>`
