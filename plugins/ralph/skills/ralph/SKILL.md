@@ -28,4 +28,4 @@ Create `.ralph/prd.json`: `project`, `userStories[]` (each: `id`, `title`, `acce
 4. Write `$S/cancel-signal-state.json` (`{}`) then reply `<promise>COMPLETE</promise>`
 
 **Rules:** ALWAYS read progress.txt each iteration. NEVER skip regression tests or cancel signal.
-**Flags:** `--no-prd` `--critic=none` `--no-deslop`
+**Flags:** `--no-prd` skip PRD, create minimal prd.json with task as single story. `--critic=none` skip step 1. `--no-deslop` skip step 2.
