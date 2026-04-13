@@ -25,7 +25,7 @@ Understand the project before testing.
 3. If on a feature branch: `git diff main...HEAD --name-only` to scope affected areas
 4. Decide a QA strategy for this project. State it briefly: "I will test X, Y, Z because..."
 
-For project-type-specific guidance, read `qa/references/exploration-guide.md`.
+For project-type-specific guidance, read `references/exploration-guide.md`.
 
 ## Phase 2: Explore + Report
 
@@ -38,13 +38,9 @@ Execute the strategy. Create output directory: `mkdir -p .qa/reports/evidence`
 
 **Web projects:** Use `/browse` skill for browser automation.
 
-**Rules:**
-- Evidence required for every issue. No exceptions.
-- Never include credentials — write `[REDACTED]`
-- Depth over breadth. 5-10 well-documented issues > 20 vague descriptions.
-- Show evidence to the user inline after capturing.
+**Rules:** Evidence required for every issue (no exceptions). Never include credentials (`[REDACTED]`). Depth over breadth — 5-10 well-documented issues > 20 vague ones.
 
-**Issue classification:** See `qa/references/issue-taxonomy.md` for severity levels and categories.
+**Issue classification:** See `references/issue-taxonomy.md` for severity levels and categories.
 
 ### Health Score
 
@@ -55,7 +51,7 @@ Assign weights summing to 100%. `score = sum(category_score * weight)`
 
 ### Write Report
 
-Use template from `qa/templates/qa-report-template.md`. Save to `.qa/reports/qa-report-{YYYY-MM-DD}.md`.
+Use template from `templates/qa-report-template.md`. Save to `.qa/reports/qa-report-{YYYY-MM-DD}.md`.
 
 Save `.qa/reports/baseline.json` with: date, target, healthScore, issues array (id/title/severity/category), categoryScores.
 
@@ -68,7 +64,5 @@ After the report:
 > B) Inline — 순차 수정 (`superpowers:executing-plans`)
 > C) 아니오 — 리포트만 남기고 종료"
 
-If A: invoke `superpowers:subagent-driven-development` with the report as input.
-If B: invoke `superpowers:executing-plans` with the report as input.
-If C: end.
+Invoke the chosen skill with the report as input. If C: end.
 
