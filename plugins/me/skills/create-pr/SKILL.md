@@ -13,7 +13,7 @@ git add <files> && git commit -m "type(scope): msg"
 git push -u origin HEAD
 gh pr create --title "$(git log -1 --pretty=%s)" --body "<body>"
 gh pr merge --auto --squash
-"$S/wait-for-merge.sh"           # 0=done 1=CI fail(prints run-id)
+"$S/wait-for-merge.sh"           # run_in_background:true — 0=done 1=CI fail(run-id)
 ```
 
 CI fail: `gh run view <run-id> --log-failed` → `me:pr-pass` → re-enable `gh pr merge --auto --squash`
