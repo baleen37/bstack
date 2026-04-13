@@ -1,9 +1,12 @@
 #!/usr/bin/env bats
+# Tests for eval-harness (EDD framework) and variant-compare (A/B comparison)
 
 load ../helpers/bats_helper
 
 SKILL_FILE="${PROJECT_ROOT}/plugins/me/skills/eval-harness/SKILL.md"
+VARIANT_FILE="${PROJECT_ROOT}/plugins/me/skills/variant-compare/SKILL.md"
 
+# eval-harness: EDD (Eval-Driven Development) framework
 @test "eval-harness: skill file exists" {
     [ -f "$SKILL_FILE" ]
 }
@@ -24,43 +27,62 @@ SKILL_FILE="${PROJECT_ROOT}/plugins/me/skills/eval-harness/SKILL.md"
     grep -q "^name: eval-harness$" "$SKILL_FILE"
 }
 
-@test "eval-harness: skill description starts with Use when" {
-    grep -q "^description: Use when" "$SKILL_FILE"
+@test "eval-harness: skill documents EDD philosophy" {
+    grep -qi "eval-driven development\|EDD" "$SKILL_FILE"
 }
 
-@test "eval-harness: skill documents worktree isolation" {
-    grep -qi "worktree" "$SKILL_FILE"
+@test "eval-harness: skill documents capability evals" {
+    grep -qi "capability eval" "$SKILL_FILE"
 }
 
-@test "eval-harness: skill documents parallel subagents" {
-    grep -qi "parallel" "$SKILL_FILE"
+@test "eval-harness: skill documents regression evals" {
+    grep -qi "regression eval" "$SKILL_FILE"
 }
 
 @test "eval-harness: skill documents model grader" {
-    grep -qi "model grader\|judge" "$SKILL_FILE"
+    grep -qi "model.based grader\|model grader\|judge" "$SKILL_FILE"
 }
 
 @test "eval-harness: skill documents code grader" {
-    grep -qi "code grader\|PASS/FAIL\|bats" "$SKILL_FILE"
+    grep -qi "code.based grader\|code grader\|PASS/FAIL" "$SKILL_FILE"
 }
 
-@test "eval-harness: skill documents VARIANT_A and VARIANT_B input" {
-    grep -q "VARIANT_A" "$SKILL_FILE"
-    grep -q "VARIANT_B" "$SKILL_FILE"
+@test "eval-harness: skill documents pass@k metrics" {
+    grep -q "pass@k\|pass@1\|pass@3" "$SKILL_FILE"
 }
 
-@test "eval-harness: skill documents winner output" {
-    grep -qi "winner\|Verdict\|Recommendation" "$SKILL_FILE"
+# variant-compare: A/B comparison (renamed from old eval-harness)
+@test "variant-compare: skill file exists" {
+    [ -f "$VARIANT_FILE" ]
 }
 
-@test "eval-harness: skill documents tie as possible outcome" {
-    grep -qi "tie\|Tie" "$SKILL_FILE"
+@test "variant-compare: skill has valid frontmatter" {
+    has_frontmatter_delimiter "$VARIANT_FILE"
+    has_frontmatter_field "$VARIANT_FILE" "name"
+    has_frontmatter_field "$VARIANT_FILE" "description"
 }
 
-@test "eval-harness: skill documents anonymization" {
-    grep -qi "Option 1\|Option 2\|anon" "$SKILL_FILE"
+@test "variant-compare: skill name is variant-compare" {
+    grep -q "^name: variant-compare$" "$VARIANT_FILE"
 }
 
-@test "eval-harness: skill documents cleanup" {
-    grep -qi "clean up\|cleanup" "$SKILL_FILE"
+@test "variant-compare: skill documents worktree isolation" {
+    grep -qi "worktree" "$VARIANT_FILE"
+}
+
+@test "variant-compare: skill documents parallel subagents" {
+    grep -qi "parallel" "$VARIANT_FILE"
+}
+
+@test "variant-compare: skill documents VARIANT_A and VARIANT_B" {
+    grep -q "VARIANT_A" "$VARIANT_FILE"
+    grep -q "VARIANT_B" "$VARIANT_FILE"
+}
+
+@test "variant-compare: skill documents anonymization" {
+    grep -qi "Option 1\|Option 2\|anon" "$VARIANT_FILE"
+}
+
+@test "variant-compare: skill documents cleanup" {
+    grep -qi "clean up\|cleanup" "$VARIANT_FILE"
 }
