@@ -57,16 +57,7 @@ Assign weights summing to 100%. `score = sum(category_score * weight)`
 
 Use template from `qa/templates/qa-report-template.md`. Save to `.qa/reports/qa-report-{YYYY-MM-DD}.md`.
 
-Save `baseline.json`:
-```json
-{
-  "date": "YYYY-MM-DD",
-  "target": "<what was tested>",
-  "healthScore": N,
-  "issues": [{ "id": "ISSUE-001", "title": "...", "severity": "...", "category": "..." }],
-  "categoryScores": { "category": N }
-}
-```
+Save `.qa/reports/baseline.json` with: date, target, healthScore, issues array (id/title/severity/category), categoryScores.
 
 ## Phase 3: Transition
 
@@ -81,8 +72,3 @@ If A: invoke `superpowers:subagent-driven-development` with the report as input.
 If B: invoke `superpowers:executing-plans` with the report as input.
 If C: end.
 
-## Completion Status
-
-- **DONE** — All steps completed. Evidence provided for each claim.
-- **BLOCKED** — Cannot proceed. State what is blocking.
-- **NEEDS_CONTEXT** — Missing information required to continue.
