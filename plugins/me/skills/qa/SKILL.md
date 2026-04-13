@@ -1,9 +1,7 @@
 ---
 name: qa
-description: Use when asked to "qa", "QA", "test this", or "find bugs". Proactively
-  suggest when user says a feature is ready for testing or asks "does this work?".
-  Explores a project like a real user, produces a structured report with health scores
-  and evidence.
+description: Use when asked to "qa", "QA", "test this", "find bugs", or "does this
+  work?". Proactively suggest when user says a feature is ready for testing.
 allowed-tools:
   - Bash
   - Read
