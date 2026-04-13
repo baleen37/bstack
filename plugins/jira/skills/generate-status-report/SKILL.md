@@ -1,11 +1,11 @@
 ---
 name: generate-status-report
 description: >
-  Generate project status reports from Jira issues with optional Confluence publishing.
+  Generate project status reports from Jira issues.
   When Claude needs to: (1) Create a status report for a project, (2) Summarize project progress or updates,
-  (3) Generate weekly/daily reports from Jira, (4) Publish status summaries to Confluence (optional),
-  or (5) Analyze project blockers and completion. Queries Jira issues, categorizes by status/priority,
-  and creates formatted reports for delivery managers and executives.
+  (3) Generate weekly/daily reports from Jira, or (4) Analyze project blockers and completion.
+  Queries Jira issues, categorizes by status/priority, and creates formatted reports for delivery managers
+  and executives.
 ---
 
 # Generate Status Report
@@ -14,24 +14,22 @@ description: >
 
 status report, project status, weekly update, daily standup, Jira report, project summary, blockers,
 progress update, sprint report, project update, team status, issue analysis, priority report,
-completion report, Confluence report, publish to Confluence
+completion report
 
-Automatically query Jira for project status, analyze issues, and generate formatted status reports
-with optional Confluence publishing.
+Automatically query Jira for project status, analyze issues, and generate formatted status reports.
 
 **CRITICAL**: This skill should be **interactive**. Always clarify scope (time period, audience) with
-the user before or after generating the report. If Confluence destination is mentioned, clarify the
-target space.
+the user before or after generating the report.
 
 ## Workflow
 
 Generating a status report follows these steps:
 
-1. **Identify scope** - Determine project, time period, target audience, and optional Confluence destination
+1. **Identify scope** - Determine project, time period, and target audience
 2. **Query Jira** - Fetch relevant issues using JQL queries
 3. **Analyze data** - Categorize issues and identify key insights
 4. **Format report** - Structure content based on audience and purpose
-5. **Deliver report** - Present, save, or optionally publish to Confluence
+5. **Deliver report** - Present or save for distribution
 
 ## Step 1: Identify Scope
 
@@ -55,13 +53,6 @@ Clarify these details:
 - **Executives/Delivery Managers**: High-level summary with key metrics and blockers
 - **Team-level**: Detailed breakdown with issue-by-issue status
 - **Daily standup**: Brief update on yesterday/today/blockers
-
-**Report destination (OPTIONAL):**
-
-- If user mentions Confluence, ask: "Which Confluence space should I use?"
-- If user says yes to Confluence publishing: Ask for space name or offer to list available spaces
-- Determine: New page or update existing page?
-- Ask about parent page if creating under a specific section
 
 ## Step 2: Query Jira
 
@@ -193,54 +184,6 @@ Present the formatted report to the user and offer options for delivery:
 - Save as a file for distribution
 - Format for copy-paste into other tools
 
-### OPTIONAL: Publish to Confluence
-
-If the user wants to publish to Confluence, use the `createConfluencePage` tool:
-
-**Page creation:**
-
-```text
-createConfluencePage(
-    cloudId="[obtained from getConfluenceSpaces or URL]",
-    spaceId="[numerical space ID]",
-    title="[Project Name] - Status Report - [Date]",
-    body="[formatted report in Markdown]",
-    contentFormat="markdown",
-    parentId="[optional - parent page ID if nesting under another page]"
-)
-```
-
-**Title format examples:**
-
-- "Project Phoenix - Weekly Status - Dec 3, 2025"
-- "Engineering Sprint 23 - Status Report"
-- "Q4 Initiatives - Status Update - Week 49"
-
-**Body formatting:**
-
-Write the report content in Markdown. The tool will convert it to Confluence format. Use:
-
-- Headers (`#`, `##`, `###`) for structure
-- Bullet points for lists
-- Bold (`**text**`) for emphasis
-- Tables for metrics if needed
-- Links to Jira issues: `[PROJ-123](https://yourinstance.atlassian.net/browse/PROJ-123)`
-
-**Finding the Right Space:**
-
-If the user doesn't specify a Confluence space:
-
-1. Use `getConfluenceSpaces` to list available spaces
-2. Look for spaces related to the project (matching project name or key)
-3. If unsure, ask the user which space to use
-
-**Updating Existing Reports:**
-
-If updating an existing page instead of creating new:
-
-1. Get the current page content with `getConfluencePage`
-2. Update the page with `updateConfluencePage`
-
 ## Complete Example Workflow
 
 **User request:** "Generate a status report for Project Phoenix"
@@ -295,22 +238,7 @@ Use Executive Summary Format from templates. Create concise report with metrics,
 
 **Step 5 - Deliver:**
 
-Present the formatted report and ask if user wants to save, modify, or optionally publish to Confluence.
-
-**Optional - Publish to Confluence:**
-
-```python
-# If user wants Confluence publishing
-getConfluenceSpaces(cloudId="...")
-
-createConfluencePage(
-    cloudId="...",
-    spaceId="12345",
-    title="Project Phoenix - Weekly Status - Dec 3, 2025",
-    body="[formatted markdown report]",
-    contentFormat="markdown"
-)
-```
+Present the formatted report and ask if user wants to save or modify.
 
 ## Tips for Quality Reports
 
