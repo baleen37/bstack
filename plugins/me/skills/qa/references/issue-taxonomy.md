@@ -61,4 +61,3 @@ Public-facing docs are wrong or missing.
 - Outdated or incorrect help text
 - Typos, placeholder text, truncated content
 - Missing or unhelpful empty states
-
