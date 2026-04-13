@@ -1,120 +1,268 @@
 ---
 name: eval-harness
-description: Use when comparing two variants (code, LLM prompts, CLI commands, or any executable) against defined criteria with the same inputs. Do NOT use when variants cannot produce observable, comparable output.
+description: Formal evaluation framework for Claude Code sessions implementing eval-driven development (EDD) principles
 ---
 
-# eval-harness
+# Eval Harness Skill
 
-A structured harness for comparing two variants using parallel subagent execution and model grader judgment. Works for any comparison where both sides produce observable output.
+A formal evaluation framework for Claude Code sessions, implementing eval-driven development (EDD) principles.
 
-## When to Use
+## When to Activate
 
-- Comparing two code implementations
-- Comparing two LLM prompts or model configs
-- Comparing CLI commands, API calls, or any executable
-- Any "same input → two approaches → compare output" scenario
+- Setting up eval-driven development (EDD) for AI-assisted workflows
+- Defining pass/fail criteria for Claude Code task completion
+- Measuring agent reliability with pass@k metrics
+- Creating regression test suites for prompt or agent changes
+- Benchmarking agent performance across model versions
 
-## Variant Types
+## Philosophy
 
-| Type | How it runs | Example |
-|------|-------------|---------|
-| `code` | Implement in isolated worktree, run tests | Refactoring, algorithm swap |
-| `llm` | Call LLM with given config against all INPUTS | Prompt A vs prompt B |
-| `command` | Run shell command against all INPUTS, capture stdout/stderr | CLI flag comparison |
-| `custom` | Freeform — subagent follows instructions literally | API call, config swap |
+Eval-Driven Development treats evals as the "unit tests of AI development":
+- Define expected behavior BEFORE implementation
+- Run evals continuously during development
+- Track regressions with each change
+- Use pass@k metrics for reliability measurement
 
-## Input Format
+## Eval Types
 
-| Field | Description | Default |
-|-------|-------------|---------|
-| TASK | What is being compared | (required) |
-| VARIANT_A | `type:` + config/instructions | `type: code, current code unchanged` |
-| VARIANT_B | `type:` + config/instructions | (required) |
-| INPUTS | Shared test inputs passed to both variants | (optional, but required for `llm`/`command`) |
-| Evals | Checklist of judgment criteria | (required) |
-| Grader | `auto` or `none` | `auto` |
-
-**Grader `auto`**: model grader always runs. Also runs `bats tests/` if either variant is `code`.
-
-**Worktree rule**: Create worktrees only for variants of type `code`. A `code` variant always runs in its own worktree; non-`code` variants do not.
-
-**Guard**: If VARIANT_A and VARIANT_B are textually identical, stop — do not proceed.
-
-## Process
-
-### Phase 0: Setup
-
-1. Parse all fields and identify variant types.
-2. For each variant of type `code`: create a worktree via Agent tool with `isolation: "worktree"`.
-3. Non-`code` variants need no worktree.
-
-### Phase 1: Parallel Collection (output only — no scoring)
-
-Launch two subagents in a **single parallel message**. Each subagent:
-
-1. Executes its variant:
-   - `code`: implement changes in worktree, run `bats tests/`, capture full output
-   - `llm`: call the model with the prompt config against each input, collect all responses
-   - `command`: run the command against each input, capture stdout/stderr
-   - `custom`: follow freeform instructions, capture all observable output
-2. **Does NOT score or judge** — raw collection only
-3. Returns:
-   - `VARIANT`: A or B
-   - `TYPE`: variant type
-   - `EXEC_SUMMARY`: what was run
-   - `OUTPUTS`: raw outputs per input (responses, stdout, test results)
-   - `NOTES`: errors, anomalies, or partial failures
-
-**On failure**: if a variant cannot execute, record the error in NOTES and return what was collected. Do not fabricate output.
-
-### Phase 2: Model Grader (when grader is `auto`)
-
-1. Anonymize before constructing the judge prompt:
-   - Count the second digit of the current minute (e.g. minute=47 → digit=7). If odd: A→Option 1, B→Option 2. If even: B→Option 1, A→Option 2.
-2. Judge prompt includes: TASK, INPUTS, Evals, both subagent raw outputs (anonymized)
-3. Judge evaluates each Eval criterion per option and returns:
-   - Per-criterion verdict: WIN / LOSE / TIE (with reasoning)
-   - Note if both options fail a criterion — do not force a winner for that criterion
-   - Overall winner or TIE
-
-### Phase 3: Reverse-Map and Report
-
-1. Reverse-map Option 1/2 back to VARIANT_A/B.
-2. Clean up all worktrees before outputting the report.
-3. Output:
-
-```
-## Eval-Harness Report
-
-**Task**: <task>
-**Variant A**: <type + description>
-**Variant B**: <type + description>
-
-### Execution Summary
-<EXEC_SUMMARY per variant; errors if any>
-
-### Per-Criterion Breakdown
-| Criterion | Variant A | Variant B |
-|-----------|-----------|-----------|
-| ...       | WIN/LOSE/TIE | WIN/LOSE/TIE |
-
-### Model Grader Verdict
-Winner: <Variant A | Variant B | Tie>
-
-### Reasoning
-<Judge's reasoning>
-
-### Recommendation
-<Which variant to adopt and why; if a variant failed to execute, say so explicitly>
+### Capability Evals
+Test if Claude can do something it couldn't before:
+```markdown
+[CAPABILITY EVAL: feature-name]
+Task: Description of what Claude should accomplish
+Success Criteria:
+  - [ ] Criterion 1
+  - [ ] Criterion 2
+  - [ ] Criterion 3
+Expected Output: Description of expected result
 ```
 
-If grader is `none`: omit Model Grader Verdict and Reasoning sections; include only Execution Summary and raw outputs.
+### Regression Evals
+Ensure changes don't break existing functionality:
+```markdown
+[REGRESSION EVAL: feature-name]
+Baseline: SHA or checkpoint name
+Tests:
+  - existing-test-1: PASS/FAIL
+  - existing-test-2: PASS/FAIL
+  - existing-test-3: PASS/FAIL
+Result: X/Y passed (previously Y/Y)
+```
 
-## Key Rules
+## Grader Types
 
-- Phase 1 subagents MUST run in parallel (single message)
-- Phase 1 collects output only — all scoring happens in Phase 2
-- Always anonymize before judge; always reverse-map before showing the user
-- A tie is a valid outcome — do not force a winner
-- Worktree cleanup happens before the report, not after
-- Never fabricate output — execution failure is a valid result
+### 1. Code-Based Grader
+Deterministic checks using code:
+```bash
+# Check if file contains expected pattern
+grep -q "export function handleAuth" src/auth.ts && echo "PASS" || echo "FAIL"
+
+# Check if tests pass
+npm test -- --testPathPattern="auth" && echo "PASS" || echo "FAIL"
+
+# Check if build succeeds
+npm run build && echo "PASS" || echo "FAIL"
+```
+
+### 2. Model-Based Grader
+Use Claude to evaluate open-ended outputs:
+```markdown
+[MODEL GRADER PROMPT]
+Evaluate the following code change:
+1. Does it solve the stated problem?
+2. Is it well-structured?
+3. Are edge cases handled?
+4. Is error handling appropriate?
+
+Score: 1-5 (1=poor, 5=excellent)
+Reasoning: [explanation]
+```
+
+### 3. Human Grader
+Flag for manual review:
+```markdown
+[HUMAN REVIEW REQUIRED]
+Change: Description of what changed
+Reason: Why human review is needed
+Risk Level: LOW/MEDIUM/HIGH
+```
+
+## Metrics
+
+### pass@k
+"At least one success in k attempts"
+- pass@1: First attempt success rate
+- pass@3: Success within 3 attempts
+- Typical target: pass@3 > 90%
+
+### pass^k
+"All k trials succeed"
+- Higher bar for reliability
+- pass^3: 3 consecutive successes
+- Use for critical paths
+
+## Eval Workflow
+
+### 1. Define (Before Coding)
+```markdown
+## EVAL DEFINITION: feature-xyz
+
+### Capability Evals
+1. Can create new user account
+2. Can validate email format
+3. Can hash password securely
+
+### Regression Evals
+1. Existing login still works
+2. Session management unchanged
+3. Logout flow intact
+
+### Success Metrics
+- pass@3 > 90% for capability evals
+- pass^3 = 100% for regression evals
+```
+
+### 2. Implement
+Write code to pass the defined evals.
+
+### 3. Evaluate
+```bash
+# Run capability evals
+[Run each capability eval, record PASS/FAIL]
+
+# Run regression evals
+npm test -- --testPathPattern="existing"
+
+# Generate report
+```
+
+### 4. Report
+```markdown
+EVAL REPORT: feature-xyz
+========================
+
+Capability Evals:
+  create-user:     PASS (pass@1)
+  validate-email:  PASS (pass@2)
+  hash-password:   PASS (pass@1)
+  Overall:         3/3 passed
+
+Regression Evals:
+  login-flow:      PASS
+  session-mgmt:    PASS
+  logout-flow:     PASS
+  Overall:         3/3 passed
+
+Metrics:
+  pass@1: 67% (2/3)
+  pass@3: 100% (3/3)
+
+Status: READY FOR REVIEW
+```
+
+## Integration Patterns
+
+### Pre-Implementation
+```
+/eval define feature-name
+```
+Creates eval definition file at `.claude/evals/feature-name.md`
+
+### During Implementation
+```
+/eval check feature-name
+```
+Runs current evals and reports status
+
+### Post-Implementation
+```
+/eval report feature-name
+```
+Generates full eval report
+
+## Eval Storage
+
+Store evals in project:
+```
+.claude/
+  evals/
+    feature-xyz.md      # Eval definition
+    feature-xyz.log     # Eval run history
+    baseline.json       # Regression baselines
+```
+
+## Best Practices
+
+1. **Define evals BEFORE coding** - Forces clear thinking about success criteria
+2. **Run evals frequently** - Catch regressions early
+3. **Track pass@k over time** - Monitor reliability trends
+4. **Use code graders when possible** - Deterministic > probabilistic
+5. **Human review for security** - Never fully automate security checks
+6. **Keep evals fast** - Slow evals don't get run
+7. **Version evals with code** - Evals are first-class artifacts
+
+## Example: Adding Authentication
+
+```markdown
+## EVAL: add-authentication
+
+### Phase 1: Define (10 min)
+Capability Evals:
+- [ ] User can register with email/password
+- [ ] User can login with valid credentials
+- [ ] Invalid credentials rejected with proper error
+- [ ] Sessions persist across page reloads
+- [ ] Logout clears session
+
+Regression Evals:
+- [ ] Public routes still accessible
+- [ ] API responses unchanged
+- [ ] Database schema compatible
+
+### Phase 2: Implement (varies)
+[Write code]
+
+### Phase 3: Evaluate
+Run: /eval check add-authentication
+
+### Phase 4: Report
+EVAL REPORT: add-authentication
+==============================
+Capability: 5/5 passed (pass@3: 100%)
+Regression: 3/3 passed (pass^3: 100%)
+Status: SHIP IT
+```
+
+## Product Evals (v1.8)
+
+Use product evals when behavior quality cannot be captured by unit tests alone.
+
+### Grader Types
+
+1. Code grader (deterministic assertions)
+2. Rule grader (regex/schema constraints)
+3. Model grader (LLM-as-judge rubric)
+4. Human grader (manual adjudication for ambiguous outputs)
+
+### pass@k Guidance
+
+- `pass@1`: direct reliability
+- `pass@3`: practical reliability under controlled retries
+- `pass^3`: stability test (all 3 runs must pass)
+
+Recommended thresholds:
+- Capability evals: pass@3 >= 0.90
+- Regression evals: pass^3 = 1.00 for release-critical paths
+
+### Eval Anti-Patterns
+
+- Overfitting prompts to known eval examples
+- Measuring only happy-path outputs
+- Ignoring cost and latency drift while chasing pass rates
+- Allowing flaky graders in release gates
+
+### Minimal Eval Artifact Layout
+
+- `.claude/evals/<feature>.md` definition
+- `.claude/evals/<feature>.log` run history
+- `docs/releases/<version>/eval-summary.md` release snapshot
