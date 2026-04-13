@@ -3,18 +3,6 @@
 
 load '../helpers/bats_helper'
 
-# agent-eval skill tests
-@test "agent-eval SKILL.md exists" {
-  [ -f "${PROJECT_ROOT}/plugins/me/skills/agent-eval/SKILL.md" ]
-}
-
-@test "agent-eval has valid frontmatter" {
-  local file="${PROJECT_ROOT}/plugins/me/skills/agent-eval/SKILL.md"
-  head -1 "$file" | grep -q "^---"
-  grep -q "^name: agent-eval" "$file"
-  grep -q "^description:" "$file"
-}
-
 # eval-harness skill tests
 @test "eval-harness SKILL.md exists" {
   [ -f "${PROJECT_ROOT}/plugins/me/skills/eval-harness/SKILL.md" ]
