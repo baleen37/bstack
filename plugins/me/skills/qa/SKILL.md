@@ -44,10 +44,7 @@ Execute the strategy. Create output directory: `mkdir -p .qa/reports/evidence`
 
 ### Health Score
 
-Pick categories relevant to the project (see issue-taxonomy.md). Each starts at 100, deduct per finding:
-- Critical: -25, High: -15, Medium: -8, Low: -3 (min 0)
-
-Assign weights summing to 100%. `score = sum(category_score * weight)`
+Pick project-relevant categories (see issue-taxonomy.md). Each starts at 100; deduct Critical: -25, High: -15, Medium: -8, Low: -3 (min 0). Assign weights summing to 100%: `score = sum(category_score * weight)`
 
 ### Write Report
 
