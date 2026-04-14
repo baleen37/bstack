@@ -13,22 +13,9 @@ E2e verification confirms that a complete user-visible flow works across all tou
 
 ## When to Use
 
-```dot
-digraph decide {
-  "Changes touch multiple components?" [shape=diamond];
-  "Service boundaries changed?" [shape=diamond];
-  "Data flow altered?" [shape=diamond];
-  "Skip e2e" [shape=box];
-  "Run e2e verification" [shape=box];
+하나라도 해당하면 e2e 필요: 2+ 컴포넌트 통신 변경 → API 계약 변경 → 데이터 플로우 변경. 모두 아니면 skip.
 
-  "Changes touch multiple components?" -> "Run e2e verification" [label="yes"];
-  "Changes touch multiple components?" -> "Service boundaries changed?" [label="no"];
-  "Service boundaries changed?" -> "Run e2e verification" [label="yes"];
-  "Service boundaries changed?" -> "Data flow altered?" [label="no"];
-  "Data flow altered?" -> "Run e2e verification" [label="yes"];
-  "Data flow altered?" -> "Skip e2e" [label="no"];
-}
-```
+**vs `me:qa`:** e2e는 특정 변경사항의 서비스 연결 검증. qa는 기능/품질 관점에서 버그 탐색 + 리포트 (QA 엔지니어 역할). 배포 전 서비스 연결 확인이면 e2e, 광범위 버그 탐색이면 qa.
 
 **Needs e2e:**
 - Changes span 2+ services/components that communicate
