@@ -1,33 +1,34 @@
-# QA Report: {PROJECT_NAME}
+# QA Verification Report: {PROJECT_NAME}
 
-| Field | Value |
-|-------|-------|
-| **Date** | {DATE} |
-| **Target** | {what was tested} |
-| **Branch** | {BRANCH} |
-| **Commit** | {COMMIT_SHA} |
-| **Scope** | {SCOPE or "Full project"} |
-| **Duration** | {DURATION} |
+## Verdict: {PASS | PARTIAL | FAIL}
 
-## Health Score: {SCORE}/100
+## Scope
 
-| Category | Weight | Score |
-|----------|--------|-------|
-| {category} | {weight}% | {0-100} |
+- **Target:** {what was verified}
+- **Scope source:** {plan | branch | user override}
+- **Branch:** {BRANCH}
+- **Commit:** {COMMIT_SHA}
+- **Duration:** {DURATION}
 
-## Top Issues
+## Verification Summary
 
-1. **ISSUE-NNN: {title}** — {one-line description}
+### Golden path
+- {scenario} — PASS / PARTIAL / FAIL
 
-## Summary
+### Key edge cases
+- {scenario} — PASS / PARTIAL / FAIL
 
-| Severity | Count |
-|----------|-------|
-| Critical | 0 |
-| High | 0 |
-| Medium | 0 |
-| Low | 0 |
-| **Total** | **0** |
+### Obvious regressions
+- {scenario} — PASS / PARTIAL / FAIL
+
+## Failed / Incomplete Scenarios
+
+- {scenario} — {why it failed or remains incomplete}
+
+## Evidence
+
+- {path to log, screenshot, or HTTP response}
+- {key command output or reproduction note}
 
 ## Issues
 
@@ -36,14 +37,13 @@
 | Field | Value |
 |-------|-------|
 | **Severity** | critical / high / medium / low |
-| **Category** | {category} |
-| **Location** | {where the issue was found} |
+| **Category** | correctness / error-handling / edge-case / usability / performance / security / documentation |
+| **Location** | {where it was observed} |
 
-**Description:** {What is wrong, expected vs actual.}
+**Description:** {What is wrong and why it matters to the verdict.}
 
-**Repro Steps:**
+## Next Actions
 
-1. {Action}
-2. **Observe:** {what goes wrong}
-
-**Evidence:** {link to evidence file or inline quote}
+- {what to fix next}
+- {what to re-verify next}
+- {what remains before `/ship`}

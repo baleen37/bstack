@@ -11,8 +11,8 @@ Stop hook keeps you running until you write the cancel signal.
 1. `mkdir -p .ralph/state/`
 2. Write `.ralph/state/ralph-activating` with the task description
 
-## PRD (`--no-prd` to skip → auto-generate single-story prd)
-Create `.ralph/prd.json`: `project`, `userStories[]` each with `id`, `title`, `acceptanceCriteria[]`, `priority`, `passes:false`. Small testable stories, dependency-ordered.
+## PRD (`--no-prd` → auto-generate single-story prd)
+Create `.ralph/prd.json`: `project`, `userStories[]` with `id`, `title`, `acceptanceCriteria[]`, `priority`, `passes:false`. Keep stories small and dependency-ordered.
 
 ## Loop
 1. Read `.ralph/progress.txt` if it exists
