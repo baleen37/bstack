@@ -35,6 +35,17 @@ load ../helpers/bats_helper
     grep -q "git rev-parse.*git-dir" "$script"
 }
 
+@test "me: ship skill exists with required files" {
+    [ -f "${PROJECT_ROOT}/plugins/me/skills/ship/SKILL.md" ]
+    [ -f "${PROJECT_ROOT}/plugins/me/skills/ship/references/ship-checklist.md" ]
+}
+
+@test "me: ship skill has proper frontmatter" {
+    local skill_file="${PROJECT_ROOT}/plugins/me/skills/ship/SKILL.md"
+    has_frontmatter_delimiter "$skill_file"
+    has_frontmatter_field "$skill_file" "name"
+    has_frontmatter_field "$skill_file" "description"
+}
 
 @test "me: release-with-github-app doc uses bun release flow" {
     local release_doc="${PROJECT_ROOT}/docs/release-with-github-app.yml"
