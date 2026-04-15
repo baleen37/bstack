@@ -1,6 +1,6 @@
 {
   "name": "autoresearch",
-  "version": "16.7.3",
+  "version": "16.7.4",
   "description": "Autonomous experiment loop — iteratively optimize any metric with git-tracked experiments",
   "author": {
     "name": "Kyle (obra)"
