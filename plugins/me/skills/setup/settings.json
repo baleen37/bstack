@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "permissions": {
+    "allow": [
+      "Bash",
+      "WebFetch(domain:*)",
+      "WebSearch",
+      "Write",
+      "MultiEdit",
+      "Edit",
+      "NotebookRead",
+      "NotebookEdit",
+      "Glob",
+      "Grep",
+      "LS",
+      "Read",
+      "Task",
+      "mcp__context7__*"
+    ],
+    "deny": [],
+    "defaultMode": "auto"
+  },
+  "enableAllProjectMcpServers": true,
+  "statusLine": {
+    "type": "command",
+    "command": "~/.claude/statusline.sh"
+  },
+  "enabledPlugins": {
+    "superpowers@superpowers-marketplace": true,
+    "typescript-lsp@claude-plugins-official": false,
+    "csharp-lsp@claude-plugins-official": false,
+    "clangd-lsp@claude-plugins-official": false,
+    "lua-lsp@claude-plugins-official": true,
+    "pyright-lsp@claude-plugins-official": true,
+    "atlassian@claude-plugins-official": true,
+    "context7@claude-plugins-official": true,
+    "slack@claude-plugins-official": true,
+    "autoresearch@bstack": true,
+    "bstack@bstack": true,
+    "core@bstack": true,
+    "jira@bstack": true,
+    "ralph@bstack": true,
+    "ks-amplitude@search-claude-code-plugins": true,
+    "ks-databricks@search-claude-code-plugins": true,
+    "ks-git-guard@search-claude-code-plugins": true,
+    "ks-grafana@search-claude-code-plugins": true,
+    "ks-onboarding@search-claude-code-plugins": true,
+    "ks-opensearch@search-claude-code-plugins": true,
+    "gopls-lsp@claude-plugins-official": true,
+    "rust-analyzer-lsp@claude-plugins-official": true,
+    "jdtls-lsp@claude-plugins-official": true,
+    "php-lsp@claude-plugins-official": true,
+    "swift-lsp@claude-plugins-official": true,
+    "kotlin-lsp@claude-plugins-official": true,
+    "ruby-lsp@claude-plugins-official": true,
+    "elixir-ls-lsp@claude-plugins-official": true,
+    "superpowers@claude-plugins-official": true,
+    "ks-langfuse@search-claude-code-plugins": true,
+    "ks-internal@search-claude-code-plugins": true,
+    "notion@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {
+    "search-claude-code-plugins": {
+      "source": {
+        "source": "github",
+        "repo": "croquiscom/search-claude-code-plugins"
+      }
+    },
+    "bstack": {
+      "source": {
+        "source": "github",
+        "repo": "baleen37/bstack"
+      },
+      "autoUpdate": true
+    }
+  },
+  "alwaysThinkingEnabled": false,
+  "tui": "default",
+  "skipDangerousModePermissionPrompt": true,
+  "skipAutoPermissionPrompt": true,
+  "installMethod": "native",
+  "rejectedMcpServers": [],
+  "feedbackSurveyState": {
+    "lastShownTime": 1755225425616
+  }
+}
