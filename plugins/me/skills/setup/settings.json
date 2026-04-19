@@ -81,6 +81,19 @@
       "autoUpdate": true
     }
   },
+  "hooks": {
+    "WorktreeCreate": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/setup-worktree.sh"
+          }
+        ]
+      }
+    ]
+  },
   "alwaysThinkingEnabled": false,
   "tui": "default",
   "skipDangerousModePermissionPrompt": true,
