@@ -1,6 +1,6 @@
 ---
 name: setup
-description: Use when setting up Claude Code global configuration on a new machine — CLAUDE.md, settings.json, statusline.sh
+description: Use when setting up Claude Code global configuration on a new machine — CLAUDE.md, settings.json, statusline.sh, worktree configuration
 ---
 
 # Global Setup
@@ -14,6 +14,7 @@ description: Use when setting up Claude Code global configuration on a new machi
 | `CLAUDE.md` | `~/.claude/CLAUDE.md` | 전역 행동 지침 |
 | `settings.json` | `~/.claude/settings.json` | 권한, 플러그인, 상태바 설정 |
 | `statusline.sh` | `~/.claude/statusline.sh` | 상태바 스크립트 |
+| `setup-worktree.sh` | (WorktreeCreate 훅에서 자동 실행) | 워크트리 초기화 |
 
 ## How to Use
 
@@ -49,6 +50,10 @@ touch ~/.claude/local.md
 ### statusline.sh
 - [ ] 실행 권한: `chmod +x ~/.claude/statusline.sh`
 - [ ] `settings.json`의 `statusLine.command` 경로와 일치
+
+### Worktree
+- [ ] `WorktreeCreate` 훅이 `setup-worktree.sh`를 가리킴 (bstack 플러그인에서 관리)
+- [ ] `.worktrees/` 디렉토리가 `.gitignore`에 포함됨
 
 ## settings.json 주요 섹션
 
