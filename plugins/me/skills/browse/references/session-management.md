@@ -1,38 +1,26 @@
-# Session Management
+# Browser Session Management
 
-Multiple isolated browser sessions with state persistence and concurrent browsing.
+Run multiple isolated browser sessions concurrently with state persistence.
 
-**Related**: [authentication.md](authentication.md) for login patterns, [SKILL.md](../SKILL.md) for quick start.
+## Named Browser Sessions
 
-## Contents
-
-- [Named Sessions](#named-sessions)
-- [Session Isolation Properties](#session-isolation-properties)
-- [Session State Persistence](#session-state-persistence)
-- [Common Patterns](#common-patterns)
-- [Default Session](#default-session)
-- [Session Cleanup](#session-cleanup)
-- [Best Practices](#best-practices)
-
-## Named Sessions
-
-Use `--session` flag to isolate browser contexts:
+Use `-s` flag to isolate browser contexts:
 
 ```bash
-# Session 1: Authentication flow
-agent-browser --session auth open https://app.example.com/login
+# Browser 1: Authentication flow
+playwright-cli -s=auth open https://app.example.com/login
 
-# Session 2: Public browsing (separate cookies, storage)
-agent-browser --session public open https://example.com
+# Browser 2: Public browsing (separate cookies, storage)
+playwright-cli -s=public open https://example.com
 
-# Commands are isolated by session
-agent-browser --session auth fill @e1 "user@example.com"
-agent-browser --session public get text body
+# Commands are isolated by browser session
+playwright-cli -s=auth fill e1 "user@example.com"
+playwright-cli -s=public snapshot
 ```
 
-## Session Isolation Properties
+## Browser Session Isolation Properties
 
-Each session has independent:
+Each browser session has independent:
 - Cookies
 - LocalStorage / SessionStorage
 - IndexedDB
@@ -40,63 +28,37 @@ Each session has independent:
 - Browsing history
 - Open tabs
 
-## Session State Persistence
-
-### Save Session State
+## Browser Session Commands
 
 ```bash
-# Save cookies, storage, and auth state
-agent-browser state save /path/to/auth-state.json
+# List all browser sessions
+playwright-cli list
+
+# Stop a browser session (close the browser)
+playwright-cli close                # stop the default browser
+playwright-cli -s=mysession close   # stop a named browser
+
+# Stop all browser sessions
+playwright-cli close-all
+
+# Forcefully kill all daemon processes (for stale/zombie processes)
+playwright-cli kill-all
+
+# Delete browser session user data (profile directory)
+playwright-cli delete-data                # delete default browser data
+playwright-cli -s=mysession delete-data   # delete named browser data
 ```
 
-### Load Session State
+## Environment Variable
+
+Set a default browser session name via environment variable:
 
 ```bash
-# Restore saved state
-agent-browser state load /path/to/auth-state.json
-
-# Continue with authenticated session
-agent-browser open https://app.example.com/dashboard
-```
-
-### State File Contents
-
-```json
-{
-  "cookies": [...],
-  "localStorage": {...},
-  "sessionStorage": {...},
-  "origins": [...]
-}
+export PLAYWRIGHT_CLI_SESSION="mysession"
+playwright-cli open example.com  # Uses "mysession" automatically
 ```
 
 ## Common Patterns
-
-### Authenticated Session Reuse
-
-```bash
-#!/bin/bash
-# Save login state once, reuse many times
-
-STATE_FILE="/tmp/auth-state.json"
-
-# Check if we have saved state
-if [[ -f "$STATE_FILE" ]]; then
-    agent-browser state load "$STATE_FILE"
-    agent-browser open https://app.example.com/dashboard
-else
-    # Perform login
-    agent-browser open https://app.example.com/login
-    agent-browser snapshot -i
-    agent-browser fill @e1 "$USERNAME"
-    agent-browser fill @e2 "$PASSWORD"
-    agent-browser click @e3
-    agent-browser wait --load networkidle
-
-    # Save for future use
-    agent-browser state save "$STATE_FILE"
-fi
-```
 
 ### Concurrent Scraping
 
@@ -104,90 +66,144 @@ fi
 #!/bin/bash
 # Scrape multiple sites concurrently
 
-# Start all sessions
-agent-browser --session site1 open https://site1.com &
-agent-browser --session site2 open https://site2.com &
-agent-browser --session site3 open https://site3.com &
+# Start all browsers
+playwright-cli -s=site1 open https://site1.com &
+playwright-cli -s=site2 open https://site2.com &
+playwright-cli -s=site3 open https://site3.com &
 wait
 
-# Extract from each
-agent-browser --session site1 get text body > site1.txt
-agent-browser --session site2 get text body > site2.txt
-agent-browser --session site3 get text body > site3.txt
+# Take snapshots from each
+playwright-cli -s=site1 snapshot
+playwright-cli -s=site2 snapshot
+playwright-cli -s=site3 snapshot
 
 # Cleanup
-agent-browser --session site1 close
-agent-browser --session site2 close
-agent-browser --session site3 close
+playwright-cli close-all
 ```
 
 ### A/B Testing Sessions
 
 ```bash
 # Test different user experiences
-agent-browser --session variant-a open "https://app.com?variant=a"
-agent-browser --session variant-b open "https://app.com?variant=b"
+playwright-cli -s=variant-a open "https://app.com?variant=a"
+playwright-cli -s=variant-b open "https://app.com?variant=b"
 
 # Compare
-agent-browser --session variant-a screenshot /tmp/variant-a.png
-agent-browser --session variant-b screenshot /tmp/variant-b.png
+playwright-cli -s=variant-a screenshot
+playwright-cli -s=variant-b screenshot
 ```
 
-## Default Session
+### Persistent Profile
 
-When `--session` is omitted, commands use the default session:
+By default, browser profile is kept in memory only. Use `--persistent` flag on `open` to persist the browser profile to disk:
 
 ```bash
-# These use the same default session
-agent-browser open https://example.com
-agent-browser snapshot -i
-agent-browser close  # Closes default session
+# Use persistent profile (auto-generated location)
+playwright-cli open https://example.com --persistent
+
+# Use persistent profile with custom directory
+playwright-cli open https://example.com --profile=/path/to/profile
 ```
 
-## Session Cleanup
+## Attaching to a Running Browser
+
+Use `attach` to connect to a browser that is already running, instead of launching a new one.
+
+### Attach by channel name
+
+Connect to a running Chrome or Edge instance by its channel name. The browser must have remote debugging enabled — navigate to `chrome://inspect/#remote-debugging` in the target browser and check "Allow remote debugging for this browser instance".
 
 ```bash
-# Close specific session
-agent-browser --session auth close
+# Attach to Chrome
+playwright-cli attach --cdp=chrome
 
-# List active sessions
-agent-browser session list
+# Attach to Chrome Canary
+playwright-cli attach --cdp=chrome-canary
+
+# Attach to Microsoft Edge
+playwright-cli attach --cdp=msedge
+
+# Attach to Edge Dev
+playwright-cli attach --cdp=msedge-dev
+```
+
+Supported channels: `chrome`, `chrome-beta`, `chrome-dev`, `chrome-canary`, `msedge`, `msedge-beta`, `msedge-dev`, `msedge-canary`.
+
+### Attach via CDP endpoint
+
+Connect to a browser that exposes a Chrome DevTools Protocol endpoint:
+
+```bash
+playwright-cli attach --cdp=http://localhost:9222
+```
+
+### Attach via browser extension
+
+Connect to a browser with the Playwright extension installed:
+
+```bash
+playwright-cli attach --extension
+```
+
+## Default Browser Session
+
+When `-s` is omitted, commands use the default browser session:
+
+```bash
+# These use the same default browser session
+playwright-cli open https://example.com
+playwright-cli snapshot
+playwright-cli close  # Stops default browser
+```
+
+## Browser Session Configuration
+
+Configure a browser session with specific settings when opening:
+
+```bash
+# Open with config file
+playwright-cli open https://example.com --config=.playwright/my-cli.json
+
+# Open with specific browser
+playwright-cli open https://example.com --browser=firefox
+
+# Open in headed mode
+playwright-cli open https://example.com --headed
+
+# Open with persistent profile
+playwright-cli open https://example.com --persistent
 ```
 
 ## Best Practices
 
-### 1. Name Sessions Semantically
+### 1. Name Browser Sessions Semantically
 
 ```bash
 # GOOD: Clear purpose
-agent-browser --session github-auth open https://github.com
-agent-browser --session docs-scrape open https://docs.example.com
+playwright-cli -s=github-auth open https://github.com
+playwright-cli -s=docs-scrape open https://docs.example.com
 
 # AVOID: Generic names
-agent-browser --session s1 open https://github.com
+playwright-cli -s=s1 open https://github.com
 ```
 
 ### 2. Always Clean Up
 
 ```bash
-# Close sessions when done
-agent-browser --session auth close
-agent-browser --session scrape close
+# Stop browsers when done
+playwright-cli -s=auth close
+playwright-cli -s=scrape close
+
+# Or stop all at once
+playwright-cli close-all
+
+# If browsers become unresponsive or zombie processes remain
+playwright-cli kill-all
 ```
 
-### 3. Handle State Files Securely
+### 3. Delete Stale Browser Data
 
 ```bash
-# Don't commit state files (contain auth tokens!)
-echo "*.auth-state.json" >> .gitignore
-
-# Delete after use
-rm /tmp/auth-state.json
-```
-
-### 4. Timeout Long Sessions
-
-```bash
-# Set timeout for automated scripts
-timeout 60 agent-browser --session long-task get text body
+# Remove old browser data to free disk space
+playwright-cli -s=oldsession delete-data
 ```
