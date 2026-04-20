@@ -100,9 +100,19 @@ Use `references/issue-taxonomy.md` only as a supporting classification system, n
 
 ## Transition
 
-After the report:
+Branch on the verdict:
 
-> "검증 결과는 PASS/PARTIAL/FAIL입니다. 수정 후 다시 검증하시겠습니까?"
+### PASS
+
+Report the verdict and end. Do not ask whether to fix anything — there is nothing to fix.
+
+Optionally point to the natural next step (for example `/ship` for release-readiness review), but never present "수정 후 재검증" options.
+
+### PARTIAL / FAIL
+
+Ask how to proceed:
+
+> "검증 결과는 PARTIAL/FAIL입니다. 수정 후 다시 검증하시겠습니까?"
 > A) Subagent-driven — 수정 후 재검증 (`superpowers:subagent-driven-development`)
 > B) Inline — 순차 수정 후 재검증 (`superpowers:executing-plans`)
 > C) 아니오 — 리포트만 남기고 종료
