@@ -23,13 +23,21 @@ jobs:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      - name: Sync marketplace.json version
-        run: bash scripts/sync-marketplace-version.sh
+      - name: Sync marketplace artifacts
+        run: |
+          bash scripts/sync-marketplace-version.sh
+          bash scripts/sync-codex-artifacts.sh
 
       - name: Check for changes
         id: check_changes
         run: |
-          if git diff --quiet .claude-plugin/marketplace.json; then
+          if git diff --quiet -- \
+            .claude-plugin/marketplace.json \
+            .agents/plugins/marketplace.json \
+            plugins/autoresearch/.codex-plugin/plugin.json \
+            plugins/jira/.codex-plugin/plugin.json \
+            plugins/me/.codex-plugin/plugin.json \
+            plugins/ralph/.codex-plugin/plugin.json; then
             echo "changed=false" >> $GITHUB_OUTPUT
           else
             echo "changed=true" >> $GITHUB_OUTPUT
@@ -40,6 +48,12 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .claude-plugin/marketplace.json
-          git commit -m "chore: sync marketplace.json version"
+          git add \
+            .claude-plugin/marketplace.json \
+            .agents/plugins/marketplace.json \
+            plugins/autoresearch/.codex-plugin/plugin.json \
+            plugins/jira/.codex-plugin/plugin.json \
+            plugins/me/.codex-plugin/plugin.json \
+            plugins/ralph/.codex-plugin/plugin.json
+          git commit -m "chore: sync marketplace artifacts"
           git push

@@ -30,6 +30,9 @@ jobs:
       - name: Install yq
         uses: mikefarah/yq@v4.40.1
 
+      - name: Sync Codex artifacts
+        run: bash scripts/sync-codex-artifacts.sh
+
       - name: Setup Bats and bats libs
         id: setup-bats
         uses: bats-core/bats-action@6709b66533837d44e32f014ef4152e31e0047a17
@@ -44,6 +47,10 @@ jobs:
           BATS_LIB_PATH: ${{ steps.setup-bats.outputs.lib-path }}
           TERM: xterm
         run: bash tests/run-all-tests.sh
+
+      - name: Check Codex artifact drift
+        shell: bash
+        run: bash scripts/check-codex-artifacts.sh
 
       # Create a GitHub status for branch protection
       - name: Report status
