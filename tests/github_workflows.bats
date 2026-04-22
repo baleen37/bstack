@@ -114,9 +114,10 @@ job_has_if_condition() {
 @test "Marketplace sync workflow calls sync script" {
     ensure_yaml_validator
     local sync_command
-    sync_command=$(yaml_get "${WORKFLOW_DIR}/sync-marketplace.yml" ".jobs.sync-marketplace.steps[] | select(.name == \"Sync marketplace.json version\") | .run")
+    sync_command=$(yaml_get "${WORKFLOW_DIR}/sync-marketplace.yml" ".jobs.sync-marketplace.steps[] | select(.name == \"Sync marketplace artifacts\") | .run")
 
-    [[ "$sync_command" == "bash scripts/sync-marketplace-version.sh" ]]
+    [[ "$sync_command" == *"bash scripts/sync-marketplace-version.sh"* ]]
+    [[ "$sync_command" == *"bash scripts/sync-codex-artifacts.sh"* ]]
 }
 
 @test "Release workflow has infinite loop prevention" {
