@@ -49,6 +49,7 @@ jobs:
         run: bash tests/run-all-tests.sh
 
       - name: Check Codex artifact drift
+        id: check_drift
         shell: bash
         run: bash scripts/check-codex-artifacts.sh
 
@@ -58,7 +59,9 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const state = '${{ steps.run_tests.outcome }}' === 'success' ? 'success' : 'failure';
+            const state = '${{ steps.run_tests.outcome }}' === 'success' && '${{ steps.check_drift.outcome }}' === 'success'
+              ? 'success'
+              : 'failure';
             // For pull_request_target, use the PR head SHA instead of context.sha
             const sha = context.eventName === 'pull_request_target'
               ? context.payload.pull_request.head.sha
