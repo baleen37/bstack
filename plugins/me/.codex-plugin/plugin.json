@@ -1,0 +1,22 @@
+{
+  "name": "me",
+  "version": "16.12.0",
+  "description": "AI coding assistant toolkit - git workflow protection, session handoff, context management, and development automation",
+  "author": {
+    "name": "baleen37",
+    "email": "git@baleen.me"
+  },
+  "license": "MIT",
+  "keywords": [
+    "git",
+    "workflow",
+    "automation",
+    "tdd",
+    "debugging",
+    "handoff",
+    "memory",
+    "context",
+    "compacting"
+  ],
+  "skills": "./skills/"
+}
