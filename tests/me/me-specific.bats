@@ -2,6 +2,8 @@
 # Consolidated plugin structure tests
 # Tests for components that were previously in the me plugin
 
+bats_require_minimum_version 1.5.0
+
 load ../helpers/bats_helper
 
 
@@ -50,10 +52,17 @@ load ../helpers/bats_helper
 @test "me: release-with-github-app doc uses bun release flow" {
     local release_doc="${PROJECT_ROOT}/docs/release-with-github-app.yml"
 
-    run ! grep -q "actions/setup-node" "$release_doc"
-    run ! grep -q "npm ci" "$release_doc"
-    run ! grep -q "npx semantic-release" "$release_doc"
-    run ! grep -q "node -p" "$release_doc"
+    run grep -q "actions/setup-node" "$release_doc"
+    assert_failure
+
+    run grep -q "npm ci" "$release_doc"
+    assert_failure
+
+    run grep -q "npx semantic-release" "$release_doc"
+    assert_failure
+
+    run grep -q "node -p" "$release_doc"
+    assert_failure
 
     grep -q "oven-sh/setup-bun" "$release_doc"
     grep -q "bun install" "$release_doc"

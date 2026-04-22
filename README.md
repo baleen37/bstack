@@ -25,6 +25,20 @@ claude plugin marketplace add https://github.com/baleen37/bstack
 claude plugin install bstack
 ```
 
+## Codex Compatibility
+
+This repository keeps Claude Code metadata as the source of truth and generates Codex plugin artifacts from it.
+
+- Generated files: `plugins/*/.codex-plugin/plugin.json`, `.agents/plugins/marketplace.json`
+- Shared content: `plugins/*/skills/**`
+- Do not edit generated Codex files directly
+
+To refresh the committed Codex artifacts locally:
+
+```bash
+bun run sync:codex
+```
+
 ## Project Structure
 
 ```text

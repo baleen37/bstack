@@ -1,6 +1,6 @@
 {
   "name": "me",
-  "version": "16.14.0",
+  "version": "16.13.0",
   "description": "AI coding assistant toolkit - git workflow protection, session handoff, context management, and development automation",
   "author": {
     "name": "baleen37",
@@ -17,5 +17,6 @@
     "memory",
     "context",
     "compacting"
-  ]
+  ],
+  "skills": "./skills/"
 }

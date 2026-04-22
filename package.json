@@ -9,7 +9,9 @@
     "commit": "git-cz",
     "build": "echo 'No modules to build'",
     "test": "bash tests/run-all-tests.sh",
-    "test:bats": "bash tests/run-all-tests.sh"
+    "test:bats": "bash tests/run-all-tests.sh",
+    "sync:codex": "bash scripts/sync-codex-artifacts.sh",
+    "check:codex": "bash scripts/check-codex-artifacts.sh"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.6.1",

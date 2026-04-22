@@ -143,6 +143,19 @@ Validates individual `.claude-plugin/plugin.json` files:
 - Only allowed fields are used
 - Field types are correct
 
+### Codex Artifact Validation
+
+Codex compatibility is validated as committed generated output, not as hand-maintained files.
+
+- `bats tests/codex_plugin_json.bats`
+- `bats tests/codex_marketplace_json.bats`
+- `bash scripts/check-codex-artifacts.sh`
+
+The check script regenerates Codex artifacts and fails if git diff remains in:
+
+- `.agents/plugins/marketplace.json`
+- `plugins/*/.codex-plugin/plugin.json`
+
 ### validate_paths.bats
 
 Validates that no hardcoded absolute paths exist:
