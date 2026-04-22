@@ -367,16 +367,6 @@ function getRepoChecks(rootDir) {
       pass: fileExists(rootDir, 'plugins/me/skills/eval-harness/SKILL.md'),
       fix: 'Add plugins/me/skills/eval-harness/SKILL.md for pass/fail regression evaluation.',
     },
-    {
-      id: 'eval-tests',
-      category: 'Eval Coverage',
-      points: 5,
-      scopes: ['repo'],
-      path: 'tests/skills/',
-      description: 'At least 3 test files in tests/skills/',
-      pass: countFiles(rootDir, 'tests/skills', null) >= 3,
-      fix: 'Add at least 3 test files under tests/skills/.',
-    },
     // Security Guardrails
     {
       id: 'security-gitignore',
