@@ -25,6 +25,8 @@ Focus on the current work context:
 
 Default to change-centered verification, not exhaustive QA.
 
+`/qa` is the default verification path. If cross-service or multi-layer flow integrity is the main risk, add `/e2e`.
+
 ## Scope resolution
 
 Decide scope in this order unless the user explicitly overrides it:
@@ -66,9 +68,16 @@ For each verified scenario:
 
 Web projects: use `/browse` for browser automation.
 
-## Boundaries with `/ship`
+## Boundaries with `/e2e` and `/ship`
 
-`/qa` verifies implementation behavior. It does **not** decide:
+`/qa` is the default verification path for implementation behavior.
+
+It does **not** replace `/e2e` when the main question is whether a full flow still connects across:
+- a service boundary
+- multiple layers
+- an external integration
+
+It does **not** decide:
 - rollout readiness
 - rollback readiness
 - monitoring readiness

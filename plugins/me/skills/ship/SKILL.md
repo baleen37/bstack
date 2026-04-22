@@ -26,6 +26,14 @@ You are a shipping readiness reviewer. `/ship` is a launch gate, not a deploy ex
 - Do not create or merge PRs
 - Do not take ownership of versioning or release automation
 
+## Relationship to `/qa` and `/e2e`
+
+- `/qa` provides default behavior verification
+- `/e2e` provides cross-boundary flow verification when needed
+- `/ship` consumes that verification evidence and judges release readiness
+
+`/ship` does not re-verify feature behavior that belongs to `/qa` or `/e2e`.
+
 ## Candidate under review
 
 Default to the current working change.
@@ -33,7 +41,7 @@ Default to the current working change.
 Use whatever evidence is available in the repository to understand scope:
 - current branch state
 - `main...HEAD` diff when available
-- recent test or verification evidence
+- recent `/qa` or `/e2e` verification evidence
 
 If the scope is unclear, say so and downgrade the decision.
 

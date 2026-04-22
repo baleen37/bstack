@@ -7,15 +7,19 @@ description: Use when changes span multiple components, services, or layers and 
 
 ## Overview
 
-E2e verification confirms that a complete user-visible flow works across all touched components. Unit and integration tests verify parts; e2e verification confirms they connect correctly.
+`/e2e` is a special-purpose verification skill. It confirms that a complete user-visible flow still connects correctly across all touched components. Unit and integration tests verify parts; `/e2e` verifies the full path when the main risk lives at the boundary between those parts.
 
-**Core principle:** If your changes cross a service boundary, data layer, or user-facing interface, verify the full path — not just the individual pieces.
+**Core principle:** If your change crosses a service boundary, multiple layers, or an external integration, verify the full path and not just the individual pieces.
 
 ## When to Use
 
-하나라도 해당하면 e2e 필요: 2+ 컴포넌트 통신 변경 → API 계약 변경 → 데이터 플로우 변경. 모두 아니면 skip.
+Default to `/qa`. Add `/e2e` only when one or more of the following are true:
 
-**vs `me:qa`:** e2e는 특정 변경사항의 서비스 연결 검증. qa는 기능/품질 관점에서 버그 탐색 + 리포트 (QA 엔지니어 역할). 배포 전 서비스 연결 확인이면 e2e, 광범위 버그 탐색이면 qa.
+- the main risk is at a service boundary
+- the flow crosses multiple layers
+- an external integration changed
+
+`/e2e` does not replace general feature verification. The default verification still belongs to `/qa`.
 
 **Needs e2e:**
 - Changes span 2+ services/components that communicate
@@ -28,6 +32,12 @@ E2e verification confirms that a complete user-visible flow works across all tou
 - Isolated utility functions with comprehensive unit tests
 - Documentation-only changes
 - Single-component changes fully covered by integration tests
+
+## Relationship to `/qa` and `/ship`
+
+- `/qa` provides default behavior verification
+- `/e2e` provides cross-boundary flow verification when needed
+- `/ship` uses verification evidence to decide release readiness
 
 ## The Pattern: Trace, Criteria, Execute, Report
 
