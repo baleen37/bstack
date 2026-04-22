@@ -746,7 +746,7 @@ validate_plugin_manifest_comprehensive() {
 #     echo "All plugins are valid!"
 #   fi
 check_all_plugin_manifests() {
-    local output_file="${1:-/dev/stderr}"
+    local output_file="${1:-}"
     local plugin_dirs
     local total=0
     local valid=0
@@ -765,18 +765,31 @@ check_all_plugin_manifests() {
             rm -f "$result_file"
         else
             ((invalid++))
-            cat "$result_file" >> "$output_file"
+            if [ -n "$output_file" ]; then
+                cat "$result_file" >> "$output_file"
+            else
+                cat "$result_file" >&2
+            fi
             rm -f "$result_file"
         fi
     done <<< "$plugin_dirs"
 
     if [ "$invalid" -gt 0 ]; then
-        echo "" >> "$output_file"
-        echo "Plugin validation summary: $valid/$total valid, $invalid invalid" >> "$output_file"
+        if [ -n "$output_file" ]; then
+            echo "" >> "$output_file"
+            echo "Plugin validation summary: $valid/$total valid, $invalid invalid" >> "$output_file"
+        else
+            echo "" >&2
+            echo "Plugin validation summary: $valid/$total valid, $invalid invalid" >&2
+        fi
         return 1
     fi
 
-    echo "Plugin validation summary: all $total plugins valid" >> "$output_file"
+    if [ -n "$output_file" ]; then
+        echo "Plugin validation summary: all $total plugins valid" >> "$output_file"
+    else
+        echo "Plugin validation summary: all $total plugins valid" >&2
+    fi
     return 0
 }
 
