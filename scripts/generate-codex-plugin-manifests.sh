@@ -33,9 +33,9 @@ while IFS= read -r plugin_name; do
   claude_manifest="${plugin_dir}/.claude-plugin/plugin.json"
   codex_dir="${plugin_dir}/.codex-plugin"
   codex_manifest="${codex_dir}/plugin.json"
-  tmp_file="$(mktemp "${codex_manifest}.tmp.XXXXXX")"
 
   mkdir -p "${codex_dir}"
+  tmp_file="$(mktemp "${codex_manifest}.tmp.XXXXXX")"
   render_manifest "${claude_manifest}" > "${tmp_file}"
 
   if [ ! -f "${codex_manifest}" ] || ! cmp -s "${tmp_file}" "${codex_manifest}"; then
