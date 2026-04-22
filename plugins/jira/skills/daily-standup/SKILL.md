@@ -108,6 +108,49 @@ Format and print the final report using the template in `references/standup-temp
 
 ---
 
+### Step 5: (macOS만) Slack용 클립보드 복사 제안
+
+**플랫폼 체크:** `uname -s` 가 `Darwin` 이 아니면 Step 5 전체를 건너뛰고 워크플로우를 종료합니다. 사용자에게 언급할 필요도 없음 (macOS pasteboard 전용 기능이라 다른 OS에서는 의미 없음).
+
+리포트를 출력한 뒤 사용자에게 한 줄로 물어봅니다:
+
+```
+Slack에 붙여넣기 좋게 클립보드로 복사할까요? (이슈 키가 하이퍼링크로 변환됩니다) [y/N]
+```
+
+**승인으로 간주하는 응답:** `y`, `yes`, `ㅇ`, `예`, `네`, `응` (대소문자 무시).
+그 외는 거부로 간주하고 아무 동작도 하지 않고 종료.
+
+**승인 시 실행:** Step 4에서 출력한 리포트 본문(섹션 빈 줄 포함 전체)을 heredoc으로 스크립트에 stdin 전달. **heredoc 본문은 플레이스홀더 문구가 아니라 Step 4에서 실제로 출력했던 리포트 그대로** 붙여넣어야 합니다.
+
+스크립트 경로 결정 순서:
+1. `$CLAUDE_PLUGIN_ROOT` 가 설정되어 있으면 `"$CLAUDE_PLUGIN_ROOT/scripts/copy-standup-to-clipboard.py"` 사용
+2. 아니면 `git rev-parse --show-toplevel` 결과로 `<repo>/plugins/jira/scripts/copy-standup-to-clipboard.py` 구성
+3. 둘 다 실패하면 사용자에게 "스크립트 경로를 찾을 수 없습니다"로 보고하고 Step 5 포기 (임의로 추측 금지)
+
+실행 예 (실제 리포트 내용으로 본문을 채워야 함):
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT:-$(git rev-parse --show-toplevel)/plugins/jira}/scripts/copy-standup-to-clipboard.py" <<'STANDUP_EOF'
+어제 한 업무는 무엇인가요?
+어제 한 업무
+  - SEARCH-13040 [BE] product-traits-v4 — 기존 단일 메인 인덱스 제거 (Phase 2)
+
+
+
+오늘 할 일을 적어보아요
+- SEARCH-13037 리뷰 색인 실패 수정 요청
+STANDUP_EOF
+```
+
+**결과 확인:**
+- 스크립트는 성공 시 `Copied standup to clipboard (HTML + plain). Paste into Slack.` 출력, 종료 코드 0.
+- 비정상 종료(stdin 비어있음, osascript 실패)는 stderr에 에러 표시 후 비-0 종료 — 이 경우 사용자에게 에러를 그대로 전달.
+- 스크립트가 클립보드에 `public.html` + `public.utf8-plain-text`를 동시 세팅하므로, Slack 메시지창에 `Cmd+V` 하면 `SEARCH-*` 이슈 키가 자동 하이퍼링크됨.
+- Jira base URL은 스크립트 상수(`JIRA_BASE`)에 하드코딩 — 조직이 다르면 스크립트 파일을 직접 수정.
+
+---
+
 ## Edge Cases
 
 ### 어제 한 일이 없을 때
