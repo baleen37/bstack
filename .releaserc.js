@@ -1,5 +1,6 @@
-import { readFileSync, writeFileSync, readdirSync } from 'fs';
+import { readFileSync, writeFileSync, readdirSync, existsSync } from 'fs';
 import { resolve } from 'path';
+import { execSync } from 'child_process';
 
 /**
  * Custom plugin to update version in all plugin.json files and marketplace.json.
@@ -59,9 +60,25 @@ function updatePluginJsons() {
       const marketplace = JSON.parse(readFileSync(marketplacePath, 'utf8'));
       marketplace.plugins = marketplace.plugins.map((plugin) => ({ ...plugin, version }));
       writeFileSync(marketplacePath, JSON.stringify(marketplace, null, 2) + '\n');
+
+      const syncScript = resolve(process.cwd(), 'scripts/sync-codex-artifacts.sh');
+      if (existsSync(syncScript)) {
+        execSync(`bash ${syncScript}`, { stdio: 'inherit' });
+      }
     },
   };
 }
+
+const codexPluginAssets = readdirSync(resolve(process.cwd(), 'plugins'), { withFileTypes: true })
+  .filter((d) => d.isDirectory())
+  .map((d) => `plugins/${d.name}/.codex-plugin/plugin.json`)
+  .filter((p) => existsSync(resolve(process.cwd(), p)))
+  .sort();
+
+const codexMarketplacePath = '.agents/plugins/marketplace.json';
+const codexMarketplaceAsset = existsSync(resolve(process.cwd(), codexMarketplacePath))
+  ? [codexMarketplacePath]
+  : [];
 
 const pluginsDir = resolve(process.cwd(), 'plugins');
 const pluginAssets = readdirSync(pluginsDir, { withFileTypes: true })
@@ -91,7 +108,12 @@ const plugins = [
   [
     '@semantic-release/git',
     {
-      assets: [...pluginAssets, '.claude-plugin/marketplace.json'],
+      assets: [
+        ...pluginAssets,
+        '.claude-plugin/marketplace.json',
+        ...codexPluginAssets,
+        ...codexMarketplaceAsset,
+      ],
       message: 'chore(release): ${nextRelease.version}\n\n${nextRelease.notes}',
     },
   ],
