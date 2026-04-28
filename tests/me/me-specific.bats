@@ -39,7 +39,8 @@ load ../helpers/bats_helper
 
 @test "me: ship skill exists with required files" {
     [ -f "${PROJECT_ROOT}/plugins/me/skills/ship/SKILL.md" ]
-    [ -f "${PROJECT_ROOT}/plugins/me/skills/ship/references/ship-checklist.md" ]
+    [ -f "${PROJECT_ROOT}/plugins/me/skills/ship/references/curation-rules.md" ]
+    [ -f "${PROJECT_ROOT}/plugins/me/skills/ship/references/launch-playbook.md" ]
 }
 
 @test "me: ship skill has proper frontmatter" {
