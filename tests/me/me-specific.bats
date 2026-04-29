@@ -37,9 +37,13 @@ load ../helpers/bats_helper
     grep -q "git rev-parse.*git-dir" "$script"
 }
 
-@test "me: ship skill exists with required files" {
-    [ -f "${PROJECT_ROOT}/plugins/me/skills/ship/SKILL.md" ]
-    [ -f "${PROJECT_ROOT}/plugins/me/skills/ship/references/ship-checklist.md" ]
+@test "me: ship skill is self-contained" {
+    local skill_file="${PROJECT_ROOT}/plugins/me/skills/ship/SKILL.md"
+
+    [ -f "$skill_file" ]
+    grep -q "Risk classification" "$skill_file"
+    grep -q "Readiness dashboard" "$skill_file"
+    grep -q "Do not initiate QA or E2E runs" "$skill_file"
 }
 
 @test "me: ship skill has proper frontmatter" {
