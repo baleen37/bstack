@@ -11,7 +11,7 @@ allowed-tools:
 
 Save the current session's context to `~/.claude/handoff/YYYY-MM-DD-HHmm-<topic>.md` as a structured markdown file. Runs only when the user explicitly asks for it.
 
-There is no resume logic. The next session picks up context when the user pastes the file path or contents — Claude reads the frontmatter and the Resume Prompt section and takes it from there.
+There is no resume logic in this skill. The next session picks up context either by invoking `/pickup` (which reads the most recent file from `~/.claude/handoff/`) or by pasting the file path or contents directly — Claude reads the frontmatter and the Resume Prompt section and takes it from there.
 
 ## What `/handoff` does
 
