@@ -1,6 +1,6 @@
 ---
 name: verify
-description: Prove the change works. Reproduces unexpected behavior with systematic debugging, then validates browser-runtime behavior with Chrome DevTools MCP. Composes the `debugging-and-error-recovery` and `browser-testing-with-devtools` skills.
+description: Prove the change works. Reproduces unexpected behavior with systematic debugging, then validates browser-runtime behavior with playwright-cli. Composes the `debugging-and-error-recovery` and `browse` skills.
 disable-model-invocation: true
 ---
 
@@ -13,7 +13,7 @@ The two underlying skills:
 | Skill | What it does | Use when |
 | --- | --- | --- |
 | [`debugging-and-error-recovery`](../debugging-and-error-recovery/SKILL.md) | Five-step triage: reproduce, localize, reduce, fix, guard. Stop-the-line rule, safe fallbacks. | Tests fail, builds break, or behavior is unexpected. |
-| [`browser-testing-with-devtools`](../browser-testing-with-devtools/SKILL.md) | Chrome DevTools MCP for live runtime data — DOM inspection, console logs, network traces, performance profiling. | Building or debugging anything that runs in a browser. |
+| [`browse`](../browse/SKILL.md) | playwright-cli for live runtime data — DOM inspection, console logs, network traces, performance profiling. | Building or debugging anything that runs in a browser. |
 
 ## When to run `/verify`
 
@@ -37,9 +37,9 @@ If the change is greenfield (no existing failure to reproduce), still run steps 
 
 **Stop-the-line rule.** If at any step a *different* defect surfaces (unexpected console error, unrelated test fail), stop and triage it before continuing — do not silence or work around it.
 
-## Phase 2 — Runtime pass (`browser-testing-with-devtools`)
+## Phase 2 — Runtime pass (`browse`)
 
-If the change runs in a browser, invoke the `browser-testing-with-devtools` skill and use Chrome DevTools MCP to verify against live runtime data:
+If the change runs in a browser, invoke the `browse` skill and use playwright-cli to verify against live runtime data:
 
 - **DOM** — confirm the rendered structure matches the expectation, not just the source JSX/HTML.
 - **Console** — zero unhandled errors or warnings introduced by this change.
@@ -61,7 +61,7 @@ Produce a single output the user (or downstream skill like `/ship`) can read:
 - Fix scope: [files/functions touched]
 - Regression guard: [test name + result after fix]
 
-### Runtime pass (browser-testing-with-devtools)
+### Runtime pass (browse)
 - DOM: [observation]
 - Console: [error/warning count]
 - Network: [requests verified]
