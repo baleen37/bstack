@@ -78,11 +78,8 @@ bstack/
 | `commit` | Conventional Commits 형식으로 커밋 |
 | `research` | 코드베이스 탐색 및 버그 조사 |
 | `e2e` | 다수 컴포넌트에 걸친 E2E 검증 |
-| `eval-harness` | 두 변형을 정의된 기준으로 비교 평가 |
 | `iterate` | 반복 단일 변경 사이클로 점진적 개선 |
 | `competitive-agents` | 병렬 경쟁 에이전트로 설계 탐색 |
-| `tmux-workers` | tmux 분할 창에서 병렬 AI 에이전트 실행 |
-| `claude-code-rules` | `.claude/rules/` 규칙 파일 생성/관리 |
 | `remembering-conversations` | 이전 대화 컨텍스트 검색 및 적용 |
 | `review-claudemd` | CLAUDE.md 개선사항 발굴 |
 | `reddit-fetch` | WebFetch 차단 시 Reddit 콘텐츠 가져오기 |
