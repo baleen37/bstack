@@ -2,7 +2,7 @@
 
 ## Source
 
-- Repository: https://github.com/DataDog/pup
+- Repository: <https://github.com/DataDog/pup>
 - Path within repo: `skills/`
 - Mirrored at commit: `e3f0af522230608f44680656610afe6c4edf736f`
 
@@ -32,7 +32,9 @@ Revisit these when the corresponding workflows become relevant.
 Each mirrored `SKILL.md`:
 
 1. Body — copied verbatim from upstream (everything after the closing `---` of the frontmatter).
-2. Frontmatter — only `name:` and `description:` are kept. Both values are copied verbatim from upstream. The upstream `metadata:` block (version, author, repository, tags, globs, alwaysApply) is removed to match the bstack convention used by other plugins.
+2. Frontmatter — only `name:` and `description:` are kept. Both values are copied verbatim
+   from upstream. The upstream `metadata:` block (version, author, repository, tags, globs,
+   alwaysApply) is removed to match the bstack convention used by other plugins.
 
 ## Re-sync Procedure
 

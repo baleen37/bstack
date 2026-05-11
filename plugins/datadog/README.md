@@ -10,7 +10,7 @@ Install `pup`:
 brew tap datadog-labs/pack && brew install datadog-labs/pack/pup
 ```
 
-Other install options (cargo, prebuilt binaries) are documented at https://github.com/DataDog/pup.
+Other install options (cargo, prebuilt binaries) are documented at <https://github.com/DataDog/pup>.
 
 ## Authentication
 
@@ -40,4 +40,6 @@ export DD_SITE=datadoghq.com   # or datadoghq.eu, etc.
 
 ## Upstream
 
-Skill bodies are mirrored verbatim from [`DataDog/pup`](https://github.com/DataDog/pup) (`skills/` directory). Only the frontmatter is adjusted to match bstack's `name` + `description` convention. See `SYNC.md` for the upstream commit SHA and re-sync procedure.
+Skill bodies are mirrored verbatim from [`DataDog/pup`](https://github.com/DataDog/pup)
+(`skills/` directory). Only the frontmatter is adjusted to match bstack's `name` +
+`description` convention. See `SYNC.md` for the upstream commit SHA and re-sync procedure.
