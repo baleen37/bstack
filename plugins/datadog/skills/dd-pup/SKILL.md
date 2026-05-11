@@ -318,4 +318,3 @@ pup auth status
 | EU1 | `datadoghq.eu` |
 | AP1 | `ap1.datadoghq.com` |
 | US1-FED | `ddog-gov.com` |
-

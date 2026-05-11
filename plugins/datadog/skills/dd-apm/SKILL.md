@@ -214,4 +214,3 @@ pup apm service-library-config get --service-name my-service --mixed
 - [APM Setup](https://docs.datadoghq.com/tracing/)
 - [Trace Search](https://docs.datadoghq.com/tracing/trace_explorer/)
 - [Retention Filters](https://docs.datadoghq.com/tracing/trace_pipeline/trace_retention/)
-

@@ -32,6 +32,8 @@ Revisit these when the corresponding workflows become relevant.
 Each mirrored `SKILL.md`:
 
 1. Body — copied verbatim from upstream (everything after the closing `---` of the frontmatter).
+   Trailing whitespace and end-of-file newlines are normalized by pre-commit hooks; this is
+   a cosmetic-only divergence from upstream.
 2. Frontmatter — only `name:` and `description:` are kept. Both values are copied verbatim
    from upstream. The upstream `metadata:` block (version, author, repository, tags, globs,
    alwaysApply) is removed to match the bstack convention used by other plugins.

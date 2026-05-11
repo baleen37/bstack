@@ -128,11 +128,11 @@ def safe_mark_monitor_for_deletion(monitor_id: str, client) -> bool:
     """Mark monitor instead of deleting."""
     monitor = client.get_monitor(monitor_id)
     name = monitor.get("name", "")
-    
+
     if "[MARKED FOR DELETION]" in name:
         print(f"Already marked: {name}")
         return False
-    
+
     new_name = f"[MARKED FOR DELETION] {name}"
     client.update_monitor(monitor_id, {"name": new_name})
     print(f"✓ Marked: {new_name}")
@@ -187,4 +187,3 @@ pup downtime create --file downtime.json
 - [Monitor Types](https://docs.datadoghq.com/monitors/types/)
 - [Alerting Best Practices](https://docs.datadoghq.com/monitors/guide/)
 - [SLO Monitors](https://docs.datadoghq.com/service_management/service_level_objectives/)
-

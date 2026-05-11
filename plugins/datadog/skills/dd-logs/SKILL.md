@@ -184,4 +184,3 @@ def sanitize_log(message: str) -> str:
 - [Pipelines](https://docs.datadoghq.com/logs/log_configuration/pipelines/)
 - [Exclusion Filters](https://docs.datadoghq.com/logs/indexes/#exclusion-filters)
 - [Archives](https://docs.datadoghq.com/logs/archives/)
-
