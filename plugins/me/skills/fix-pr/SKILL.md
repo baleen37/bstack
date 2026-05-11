@@ -1,9 +1,9 @@
 ---
-name: pr-pass
+name: fix-pr
 description: Use when a PR is broken and needs to be fixed — CI failures, merge conflicts, BEHIND base branch, or failing tests.
 ---
 
-# PR Pass
+# Fix PR
 
 Diagnose and fix a broken PR.
 

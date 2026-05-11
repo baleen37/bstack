@@ -14,11 +14,11 @@ git push -u origin HEAD
 gh pr create --title "$(git log -1 --pretty=%s)" --body "<body>"
 # Auto merge: only if user explicitly requests it
 # gh pr merge --auto --squash
-# IMPORTANT: run with run_in_background:true so you can do other work while CI runs
+# REQUIRED: run with run_in_background:true so you can inspect the result later
 # "$S/wait-for-merge.sh"           # 0=done 1=CI fail(run-id printed)
 ```
 
-If user requests auto merge: `gh pr merge --auto --squash` → `"$S/wait-for-merge.sh"` (run_in_background:true)
-CI fail: `gh run view <run-id> --log-failed` → `me:pr-pass` → re-enable `gh pr merge --auto --squash`
-→ re-run wait. Stop if unclear/×2.
+If user requests auto merge: `gh pr merge --auto --squash` → `"$S/wait-for-merge.sh"` (run_in_background:true). When the background task finishes, read its output and report merged/awaiting-review/failure.
+CI fail: `gh run view <run-id> --log-failed` → `me:fix-pr` once → re-enable `gh pr merge --auto --squash`
+→ re-run wait in background. Stop if unclear or still failing.
 PR body: fill PR template if exists, else summary+changes+tests.
