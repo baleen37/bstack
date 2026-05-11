@@ -7,10 +7,10 @@
   [ -x "$script" ]
 }
 
-@test "create-pr: auto-merge waits in background and fixes CI once" {
+@test "create-pr: auto-merge uses Monitor and fixes CI once" {
   local skill="${BATS_TEST_DIRNAME}/../../plugins/me/skills/create-pr/SKILL.md"
 
-  grep -q 'run_in_background:true' "$skill"
+  grep -q 'Monitor' "$skill"
   grep -q 'fix-pr' "$skill"
   grep -q 'once' "$skill"
 }
