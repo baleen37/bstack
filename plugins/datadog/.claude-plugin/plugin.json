@@ -1,0 +1,18 @@
+{
+  "name": "datadog",
+  "version": "0.1.0",
+  "description": "Datadog observability skills for Claude Code via the pup CLI - logs, monitors, APM, and docs lookup",
+  "author": {
+    "name": "baleen37",
+    "email": "git@baleen.me"
+  },
+  "license": "MIT",
+  "keywords": [
+    "datadog",
+    "observability",
+    "monitoring",
+    "logs",
+    "apm",
+    "pup"
+  ]
+}

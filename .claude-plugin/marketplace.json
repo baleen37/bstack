@@ -63,6 +63,21 @@
         "automation"
       ],
       "version": "17.4.0"
+    },
+    {
+      "name": "datadog",
+      "description": "Datadog observability skills for Claude Code via the pup CLI",
+      "source": "./plugins/datadog",
+      "category": "development",
+      "tags": [
+        "datadog",
+        "observability",
+        "monitoring",
+        "logs",
+        "apm",
+        "pup"
+      ],
+      "version": "0.1.0"
     }
   ]
 }
