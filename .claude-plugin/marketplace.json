@@ -22,7 +22,7 @@
         "memory",
         "context"
       ],
-      "version": "17.1.2"
+      "version": "17.2.0"
     },
     {
       "name": "jira",
@@ -35,7 +35,7 @@
         "confluence",
         "project-management"
       ],
-      "version": "17.1.2"
+      "version": "17.2.0"
     },
     {
       "name": "autoresearch",
@@ -48,7 +48,7 @@
         "autonomous",
         "research"
       ],
-      "version": "17.1.2"
+      "version": "17.2.0"
     },
     {
       "name": "ralph",
@@ -62,7 +62,7 @@
         "prd",
         "automation"
       ],
-      "version": "17.1.2"
+      "version": "17.2.0"
     }
   ]
 }
