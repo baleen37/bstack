@@ -74,7 +74,7 @@ bstack/
 | `handoff` | 세션 종료 시 다음 세션을 위한 인계 문서 생성 |
 | `pickup` | 이전 세션의 인계 문서 로드 |
 | `create-pr` | 커밋, 푸시, PR 생성 통합 워크플로우 |
-| `pr-pass` | CI 실패, 머지 충돌 등 깨진 PR 수정 |
+| `fix-pr` | CI 실패, 머지 충돌 등 깨진 PR 수정 |
 | `commit` | Conventional Commits 형식으로 커밋 |
 | `research` | 코드베이스 탐색 및 버그 조사 |
 | `e2e` | 다수 컴포넌트에 걸친 E2E 검증 |

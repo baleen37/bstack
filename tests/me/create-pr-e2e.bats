@@ -6,3 +6,18 @@
   [ -f "$script" ]
   [ -x "$script" ]
 }
+
+@test "create-pr: auto-merge waits in background and fixes CI once" {
+  local skill="${BATS_TEST_DIRNAME}/../../plugins/me/skills/create-pr/SKILL.md"
+
+  grep -q 'run_in_background:true' "$skill"
+  grep -q 'fix-pr' "$skill"
+  grep -q 'once' "$skill"
+}
+
+@test "fix-pr: skill exists under the new name" {
+  local skill="${BATS_TEST_DIRNAME}/../../plugins/me/skills/fix-pr/SKILL.md"
+
+  [ -f "$skill" ]
+  grep -q '^name: fix-pr$' "$skill"
+}
