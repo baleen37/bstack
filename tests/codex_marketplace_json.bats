@@ -36,7 +36,7 @@ setup() {
 @test "codex marketplace plugin entries use relative local paths and default policy" {
     local plugin_count
     plugin_count=$(jq -r '.plugins | length' "$MARKETPLACE_JSON")
-    [ "$plugin_count" -eq 4 ]
+    [ "$plugin_count" -eq 5 ]
 
     jq -e '
       .plugins
