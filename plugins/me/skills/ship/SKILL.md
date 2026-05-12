@@ -1,6 +1,8 @@
 ---
 name: ship
-description: Run the pre-launch checklist via parallel fan-out to specialist personas, then synthesize a go/no-go decision with a rollback plan. Use when asked to "ship", "release", "deploy", or "is this ready to go live?".
+description: >-
+  Run the pre-launch checklist via parallel fan-out to specialist personas, then synthesize a go/no-go decision with a
+  rollback plan. Use when asked to "ship", "release", "deploy", or "is this ready to go live?".
 disable-model-invocation: true
 ---
 
@@ -13,12 +15,14 @@ then merges their reports into a single go/no-go decision with a rollback plan. 
 no shared state, no ordering — which is what makes parallel execution safe and useful here.
 
 For the underlying pre-launch checklists, see the `shipping-and-launch` skill. That includes security, performance,
-accessibility, feature flag lifecycle, staged rollout, monitoring, and rollback procedure.
+accessibility, CI/check status, migrations/config/env readiness, feature flag lifecycle, staged rollout, monitoring and
+alerts, documentation, post-launch verification, and rollback procedure.
 
 ## Phase A — Parallel fan-out
 
-Spawn three subagents concurrently using the Agent tool. **Issue all three Agent tool calls in a single assistant turn**
-so they execute in parallel — sequential calls defeat the purpose of this skill.
+For non-trivial production-bound changes, spawn three subagents concurrently using the Agent tool. **Issue all three
+Agent tool calls in a single assistant turn** so they execute in parallel — sequential calls defeat the purpose of this
+skill.
 
 In Claude Code, each call passes `subagent_type` matching the persona's `name` field:
 
@@ -36,8 +40,8 @@ Constraints (from Claude Code's subagent model):
 
 - Subagents cannot spawn other subagents — do not let one persona delegate to another.
 - Each subagent gets its own context window and returns only its report to this main session.
-- If a persona is not installed in the current environment, fall back to running that persona's pass yourself in the main
-  context and label the section accordingly. Do not silently skip it.
+- If a persona is not installed in the current environment, fall back to running that persona's pass yourself in the
+  main context and label the section accordingly. Do not silently skip it.
 
 **Persona resolution.** This plugin includes default `code-reviewer`, `security-auditor`, and `test-engineer` personas.
 If you've defined your own versions in `.claude/agents/` or `~/.claude/agents/`, those take precedence — `/ship` picks
@@ -48,15 +52,16 @@ priority table, so user-level definitions win by design.
 
 Once all three reports are back, the main agent (not a sub-persona) synthesizes them:
 
-1. **Code Quality** — Aggregate Critical/Important findings from `code-reviewer` and any failing tests, lint, or build
-   output. Resolve duplicates between reviewers.
+1. **Code Quality** — Aggregate Critical/Important findings from `code-reviewer` and any failing tests, lint, build, or
+   CI/check output. Resolve duplicates between reviewers.
 2. **Security** — Promote any Critical/High `security-auditor` findings to launch blockers. Cross-reference with
    `code-reviewer`'s security axis.
 3. **Performance** — Pull from `code-reviewer`'s performance axis; cross-check Core Web Vitals if applicable.
 4. **Accessibility** — Verify keyboard nav, screen reader support, and contrast directly or with the accessibility
    checklist.
-5. **Infrastructure** — Env vars, migrations, monitoring, feature flags. Verify directly.
-6. **Documentation** — README, ADRs, changelog. Verify directly.
+5. **Infrastructure** — Verify CI/checks, migrations, config/env, feature flags, monitoring/alerts, staged rollout, and
+   rollback triggers/procedure directly.
+6. **Documentation** — Verify README, ADRs, changelog, runbooks, and post-launch verification steps directly.
 
 ## Phase C — Decision and rollback
 
@@ -74,9 +79,14 @@ Produce a single output:
 ### Acknowledged risks (shipping anyway)
 - [Risk + mitigation]
 
+### Observability and rollout
+- Monitoring/alerts: [dashboards, alerts, owners]
+- Staged rollout: [flag/ramp plan and stop criteria]
+- Post-launch verification: [checks to run after release]
+
 ### Rollback plan
-- Trigger conditions: [what signals would prompt rollback]
-- Rollback procedure: [exact steps]
+- Trigger conditions: [metrics, alerts, logs, or user-impact signals that prompt rollback]
+- Rollback procedure: [exact steps and owner]
 - Recovery time objective: [target]
 
 ### Specialist reports (full)
@@ -89,9 +99,12 @@ Produce a single output:
 
 1. The three Phase A personas run in parallel — never sequentially.
 2. Personas do not call each other. The main agent merges in Phase B.
-3. The rollback plan is mandatory before any GO decision.
-4. If any persona returns a Critical finding, the default verdict is NO-GO unless the user explicitly accepts the risk.
-5. **Skip the fan-out only if all of the following are true:** the change touches 2 files or fewer, the diff is under
+3. The rollback plan is mandatory before any GO decision, including rollback trigger and procedure.
+4. Default to NO-GO for any Critical security finding, failing required test/build/check/CI status, missing rollback
+   plan, or unverifiable production risk. Only override if the user explicitly accepts the risk.
+5. A GO decision must include observability coverage, monitoring/alert ownership, staged rollout or feature-flag plan,
+   and post-launch verification steps.
+6. **Skip the fan-out only if all of the following are true:** the change touches 2 files or fewer, the diff is under
    50 lines, and it does not touch auth, payments, data access, or config/env. Otherwise, default to fan-out. `/ship`
-   is designed for production-bound changes — when the blast radius is non-trivial, run the parallel review even if the
-   diff looks small.
+   is designed for production-bound changes — when the blast radius is non-trivial, run the parallel `code-reviewer`,
+   `security-auditor`, and `test-engineer` review even if the diff looks small.
