@@ -1,41 +1,6 @@
 {
   "description": "Everything Agent - unified hooks for all features",
   "hooks": {
-    "SessionStart": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/lsp-typescript-check-install.sh &>/dev/null &"
-          },
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/lsp-python-check-install.sh &>/dev/null &"
-          },
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/lsp-go-check-install.sh &>/dev/null &"
-          },
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/lsp-kotlin-check-install.sh &>/dev/null &"
-          },
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/lsp-lua-check-install.sh &>/dev/null &"
-          },
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/lsp-terraform-check-install.sh &>/dev/null &"
-          },
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/lsp-nix-check-install.sh &>/dev/null &"
-          }
-        ]
-      }
-    ],
     "WorktreeCreate": [
       {
         "matcher": "*",
