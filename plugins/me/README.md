@@ -17,12 +17,14 @@ Personal Claude Code workflow toolkit for git safety, session continuity, verifi
 
 ### Build
 
+- `build` — Incrementally implement features or fixes with tests and subagent validation.
 - `setup` — Bootstrap global Claude Code configuration on a new machine.
 - `git-workflow-and-versioning` — Manage branch, commit, conflict, and worktree workflows.
 - `deprecation-and-migration` — Remove old systems and migrate users safely.
 
 ### Verify
 
+- `test` — Design, run, and improve tests using local conventions and `test-engineer`.
 - `qa` — Verify implementation scope and report `PASS`, `PARTIAL`, or `FAIL` with evidence.
 - `verify` — Compose debugging and browser/runtime verification.
 - `e2e` — Verify flows across multiple components, services, or layers.
@@ -31,6 +33,7 @@ Personal Claude Code workflow toolkit for git safety, session continuity, verifi
 
 ### Review
 
+- `review` — Review code with specialist subagents for correctness, tests, security, and architecture.
 - `fix-pr` — Repair broken PRs, CI failures, conflicts, and test failures.
 
 ### Ship

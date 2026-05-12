@@ -8,6 +8,8 @@ __pycache__/
 *.so
 .Python
 build/
+!plugins/*/skills/build/
+!plugins/*/skills/build/SKILL.md
 develop-eggs/
 dist/
 downloads/

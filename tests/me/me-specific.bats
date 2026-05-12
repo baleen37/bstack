@@ -37,11 +37,21 @@ load ../helpers/bats_helper
     grep -q "git rev-parse.*git-dir" "$script"
 }
 
-@test "me: ship skill has proper frontmatter" {
-    local skill_file="${PROJECT_ROOT}/plugins/me/skills/ship/SKILL.md"
-    has_frontmatter_delimiter "$skill_file"
-    has_frontmatter_field "$skill_file" "name"
-    has_frontmatter_field "$skill_file" "description"
+@test "me: lifecycle skills include build, test, review, and ship" {
+    for skill in build test review ship; do
+        [ -f "${PROJECT_ROOT}/plugins/me/skills/${skill}/SKILL.md" ]
+    done
+}
+
+@test "me: lifecycle skills have proper frontmatter" {
+    for skill in build test review ship; do
+        local skill_file="${PROJECT_ROOT}/plugins/me/skills/${skill}/SKILL.md"
+        has_frontmatter_delimiter "$skill_file"
+        has_frontmatter_field "$skill_file" "name"
+        has_frontmatter_field "$skill_file" "description"
+        run grep -q "^disable-model-invocation: true$" "$skill_file"
+        assert_success
+    done
 }
 
 @test "me: release-with-github-app doc uses bun release flow" {
