@@ -8,38 +8,53 @@ disable-model-invocation: true
 
 # /ship: parallel fan-out launch review
 
-`/ship` is a **fan-out orchestrator**. It runs three specialist personas in parallel against the current change, then merges their reports into a single go/no-go decision with a rollback plan. The personas operate independently — no shared state, no ordering — which is what makes parallel execution safe and useful here.
+`/ship` is a **fan-out orchestrator**. It runs three specialist personas in parallel against the current change,
+then merges their reports into a single go/no-go decision with a rollback plan. The personas operate independently —
+no shared state, no ordering — which is what makes parallel execution safe and useful here.
 
-For the underlying pre-launch checklists (security, performance, accessibility, feature flag lifecycle, staged rollout, monitoring, rollback procedure), see the `shipping-and-launch` skill.
+For the underlying pre-launch checklists, see the `shipping-and-launch` skill. That includes security, performance,
+accessibility, feature flag lifecycle, staged rollout, monitoring, and rollback procedure.
 
 ## Phase A — Parallel fan-out
 
-Spawn three subagents concurrently using the Agent tool. **Issue all three Agent tool calls in a single assistant turn so they execute in parallel** — sequential calls defeat the purpose of this skill.
+Spawn three subagents concurrently using the Agent tool. **Issue all three Agent tool calls in a single assistant turn**
+so they execute in parallel — sequential calls defeat the purpose of this skill.
 
 In Claude Code, each call passes `subagent_type` matching the persona's `name` field:
 
-1. **`code-reviewer`** — Run a five-axis review (correctness, readability, architecture, security, performance) on the staged changes or recent commits. Output the standard review template.
-2. **`security-auditor`** — Run a vulnerability and threat-model pass. Check OWASP Top 10, secrets handling, auth/authz, dependency CVEs. Output the standard audit report.
-3. **`test-engineer`** — Analyze test coverage for the change. Identify gaps in happy path, edge cases, error paths, and concurrency scenarios. Output the standard coverage analysis.
+1. **`code-reviewer`** — Run a five-axis review: correctness, readability, architecture, security, and performance.
+   Output the standard review template.
+2. **`security-auditor`** — Run a vulnerability and threat-model pass. Check OWASP Top 10, secrets handling,
+   auth/authz, and dependency CVEs. Output the standard audit report.
+3. **`test-engineer`** — Analyze test coverage for the change. Identify gaps in happy path, edge cases, error paths,
+   and concurrency scenarios. Output the standard coverage analysis.
 
-In other harnesses without an Agent tool, invoke each persona's system prompt sequentially and treat their outputs as if returned in parallel — the merge phase still works.
+In other harnesses without an Agent tool, invoke each persona's system prompt sequentially and treat their outputs as if
+returned in parallel — the merge phase still works.
 
 Constraints (from Claude Code's subagent model):
 
 - Subagents cannot spawn other subagents — do not let one persona delegate to another.
 - Each subagent gets its own context window and returns only its report to this main session.
-- If a persona is not installed in the current environment (e.g., no `security-auditor` agent registered), fall back to running that persona's pass yourself in the main context and label the section accordingly. Do not silently skip it.
+- If a persona is not installed in the current environment, fall back to running that persona's pass yourself in the main
+  context and label the section accordingly. Do not silently skip it.
 
-**Persona resolution.** If you've defined your own `code-reviewer`, `security-auditor`, or `test-engineer` in `.claude/agents/` or `~/.claude/agents/`, those take precedence over this plugin's versions — `/ship` picks up your customizations automatically. This is intentional: plugin subagents sit at the bottom of Claude Code's scope priority table, so user-level definitions win by design.
+**Persona resolution.** This plugin includes default `code-reviewer`, `security-auditor`, and `test-engineer` personas.
+If you've defined your own versions in `.claude/agents/` or `~/.claude/agents/`, those take precedence — `/ship` picks
+up your customizations automatically. This is intentional: plugin subagents sit at the bottom of Claude Code's scope
+priority table, so user-level definitions win by design.
 
 ## Phase B — Merge in main context
 
 Once all three reports are back, the main agent (not a sub-persona) synthesizes them:
 
-1. **Code Quality** — Aggregate Critical/Important findings from `code-reviewer` and any failing tests, lint, or build output. Resolve duplicates between reviewers.
-2. **Security** — Promote any Critical/High `security-auditor` findings to launch blockers. Cross-reference with `code-reviewer`'s security axis.
+1. **Code Quality** — Aggregate Critical/Important findings from `code-reviewer` and any failing tests, lint, or build
+   output. Resolve duplicates between reviewers.
+2. **Security** — Promote any Critical/High `security-auditor` findings to launch blockers. Cross-reference with
+   `code-reviewer`'s security axis.
 3. **Performance** — Pull from `code-reviewer`'s performance axis; cross-check Core Web Vitals if applicable.
-4. **Accessibility** — Verify keyboard nav, screen reader support, contrast (not covered by the three personas — handle directly here, or invoke the accessibility checklist).
+4. **Accessibility** — Verify keyboard nav, screen reader support, and contrast directly or with the accessibility
+   checklist.
 5. **Infrastructure** — Env vars, migrations, monitoring, feature flags. Verify directly.
 6. **Documentation** — README, ADRs, changelog. Verify directly.
 
@@ -76,4 +91,7 @@ Produce a single output:
 2. Personas do not call each other. The main agent merges in Phase B.
 3. The rollback plan is mandatory before any GO decision.
 4. If any persona returns a Critical finding, the default verdict is NO-GO unless the user explicitly accepts the risk.
-5. **Skip the fan-out only if all of the following are true:** the change touches 2 files or fewer, the diff is under 50 lines, and it does not touch auth, payments, data access, or config/env. Otherwise, default to fan-out. `/ship` is designed for production-bound changes — when the blast radius is non-trivial, run the parallel review even if the diff looks small.
+5. **Skip the fan-out only if all of the following are true:** the change touches 2 files or fewer, the diff is under
+   50 lines, and it does not touch auth, payments, data access, or config/env. Otherwise, default to fan-out. `/ship`
+   is designed for production-bound changes — when the blast radius is non-trivial, run the parallel review even if the
+   diff looks small.
