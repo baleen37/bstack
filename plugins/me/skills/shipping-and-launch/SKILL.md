@@ -7,7 +7,58 @@ description: Prepares production launches. Use when preparing to deploy to produ
 
 ## Overview
 
-Ship with confidence. The goal is not just to deploy — it's to deploy safely, with monitoring in place, a rollback plan ready, and a clear understanding of what success looks like. Every launch should be reversible, observable, and incremental.
+Ship with confidence. The goal is not just to deploy — it's to deploy safely, with monitoring in place,
+a rollback plan ready, and a clear understanding of what success looks like. Every launch should be
+reversible, observable, and incremental.
+
+## Automation Policy
+
+Act first on safe read-only checks and local reversible work. Automatically inspect git status, diffs,
+recent commits, changed files, PR status, and CI status before asking the user for context when those
+checks can answer the question.
+
+Automatically run local verification when appropriate, including tests, lint, type checks, builds,
+audits, and focused smoke checks. Automatically draft rollout plans, rollback plans, monitoring
+checklists, post-launch verification checklists, and release notes for user review.
+
+Automatically identify missing owners, dashboards, feature flags, environment variables, documentation,
+and runbooks. Classify findings as `AUTO-COMPLETED`, `NEEDS_APPROVAL`, `BLOCKED`, or
+`READY_FOR_SHIP_REVIEW` so the user can quickly see what is done, what needs a decision, what is
+blocked, and what is ready for final ship review.
+
+You must ask for approval before any operation that changes shared or external state: push, PR creation,
+merge, release tagging, package publishing, staging or production deploys, release workflows,
+infrastructure changes, feature flag changes, production config changes, secrets, environment variables,
+DNS, SSL, databases, external notifications, Slack messages, GitHub comments, status page updates,
+customer announcements, rollbacks, destructive commands, data migrations, or irreversible cleanup.
+
+## Execution Workflow
+
+1. Identify the launch type, changed files, blast radius, and whether production systems are affected.
+2. Run safe automatic checks first: local verification, CI/PR status reads, dependency/security audits when
+   available, and documentation checks.
+3. Draft launch artifacts that can be prepared locally: rollout stages, rollback triggers/procedure,
+   monitoring targets, owners, and post-launch checks.
+4. Classify every item as `AUTO-COMPLETED`, `NEEDS_APPROVAL`, `BLOCKED`, or `READY_FOR_SHIP_REVIEW`.
+5. If any `BLOCKED` items exist, stop and report the exact evidence.
+6. Ask the user before taking any `NEEDS_APPROVAL` action.
+7. When preparation is complete and the change is production-bound, hand off to `/ship` for the final GO/NO-GO decision.
+
+## Decision Categories
+
+- `AUTO-COMPLETED`: Safe checks or drafts completed locally with evidence.
+- `NEEDS_APPROVAL`: Risky, externally visible, shared-state, or hard-to-reverse actions that require user
+  approval.
+- `BLOCKED`: Launch blocker such as failing tests, missing rollback path, unknown owner, missing
+  monitoring, unresolved security risk, or unverifiable production impact.
+- `READY_FOR_SHIP_REVIEW`: Launch preparation is complete enough for `/ship` to run specialist review and
+  produce GO/NO-GO.
+
+## Relationship to /ship
+
+`shipping-and-launch` prepares launch artifacts and performs safe automatic checks. Use `/ship` when
+deciding whether the current change can go live. `/ship` performs specialist fan-out review and final
+GO/NO-GO synthesis. This skill prepares the evidence that `/ship` consumes.
 
 ## When to Use
 
@@ -93,7 +144,7 @@ return null;
 
 **Feature flag lifecycle:**
 
-```
+```text
 1. DEPLOY with flag OFF     → Code is in production but inactive
 2. ENABLE for team/beta     → Internal testing in production environment
 3. GRADUAL ROLLOUT          → 5% → 25% → 50% → 100% of users
@@ -102,6 +153,7 @@ return null;
 ```
 
 **Rules:**
+
 - Every feature flag has an owner and an expiration date
 - Clean up flags within 2 weeks of full rollout
 - Don't nest feature flags (creates exponential combinations)
@@ -111,7 +163,7 @@ return null;
 
 ### The Rollout Sequence
 
-```
+```text
 1. DEPLOY to staging
    └── Full test suite in staging environment
    └── Manual smoke test of critical flows
@@ -153,6 +205,7 @@ Use these thresholds to decide whether to advance, hold, or roll back at each st
 ### When to Roll Back
 
 Roll back immediately if:
+
 - Error rate increases by more than 2x baseline
 - P95 latency increases by more than 50%
 - User-reported issues spike
@@ -163,7 +216,7 @@ Roll back immediately if:
 
 ### What to Monitor
 
-```
+```text
 Application metrics:
 ├── Error rate (total and by endpoint)
 ├── Response time (p50, p95, p99)
@@ -226,7 +279,7 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 
 In the first hour after launch:
 
-```
+```text
 1. Check health endpoint returns 200
 2. Check error monitoring dashboard (no new error types)
 3. Check latency dashboard (no regression)
@@ -263,6 +316,7 @@ Every deployment needs a rollback plan before it happens:
 - Redeploy previous version: < 5 minutes
 - Database rollback: < 15 minutes
 ```
+
 ## See Also
 
 - For security pre-launch checks, see `references/security-checklist.md`
