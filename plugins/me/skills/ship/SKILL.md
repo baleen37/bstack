@@ -3,7 +3,6 @@ name: ship
 description: >-
   Run the pre-launch checklist via parallel fan-out to specialist personas, then synthesize a go/no-go decision with a
   rollback plan. Use when asked to "ship", "release", "deploy", or "is this ready to go live?".
-disable-model-invocation: true
 ---
 
 <!-- Adapted from https://github.com/addyosmani/agent-skills/blob/main/.claude/commands/ship.md -->

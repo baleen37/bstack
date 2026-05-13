@@ -1,7 +1,6 @@
 ---
 name: build
 description: Incrementally build a feature or fix using small changes, tests, verification, and subagent review.
-disable-model-invocation: true
 ---
 
 <!-- Adapted from https://github.com/addyosmani/agent-skills/tree/main -->
