@@ -1,34 +1,34 @@
 ---
 name: research
-description: Use when exploring unfamiliar codebases, investigating bugs, or learning new technologies before acting
+description: Use when exploring unfamiliar codebases, investigating bugs, checking external documentation, or learning unfamiliar technology before acting
 ---
 
 # Research
 
-Evidence-based exploration: **Observe → Explore → Verify → Summarize**.
+Use the shallowest investigation that can answer safely: **Observe → Explore → Verify → Summarize**.
 
-**Reading code is NOT research. Testing behavior IS research.**
+## Depth Selection
 
-## Tool Selection
-
-| Scenario | Tool | Note |
+| Need | Use | Stop When |
 | :--- | :--- | :--- |
-| Codebase | `Task: subagent_type="Explore"` | NEVER manual Grep/Glob |
-| Web | `Task: subagent_type="core:web-researcher"` | haiku built-in |
-| Hybrid | Both in parallel | synthesize in main session |
-
-Use `model="haiku"` for simple Explore tasks.
+| Quick lookup | Direct `Read`, grep, or LSP | You can cite the exact file/line or source |
+| Codebase map | `Agent: subagent_type="Explore"` | Search spans many files, naming variants, or 3+ queries |
+| Bug/behavior | Reproduce with a targeted command or test | Execution output and code explain the cause |
+| Web/current docs | Context7 first; `Agent: subagent_type="me:web-researcher"` for broader web research | Official or recent sources answer the question |
+| Hybrid | Code and web research in parallel | Main session synthesizes both evidence sets |
 
 ## Evidence Standards
 
-- **3+ independent sources** before concluding
-- **Sufficient:** `lib/state.sh:45 validates regex + tested empty input → exits code 1`
-- **Insufficient:** "Read the code, it does X" — did you RUN it?
-- **Negative evidence:** document what's NOT there
+- Match evidence depth to risk.
+- Quick lookups need one cited source.
+- Bug causes, recommendations, comparisons, and external facts need 2-3 independent signals when available.
+- Behavior claims need observed output, not code reading alone.
+- Negative evidence: say where you searched and what was absent.
 
 ## Red Flags — STOP
 
-- "Read code, that's enough" → must RUN and TEST
-- "Found one good source" → need 3+
-- "Confident based on experience" → experience ≠ evidence
-- Listing "possible bugs" without testing → speculation
+- Doing 3-source research for a simple file-location question.
+- Using broad manual search when `Explore` would be faster.
+- Calling web research for repo-only questions.
+- Claiming behavior from code only when a runnable check exists.
+- Treating outdated or unsourced web content as fact.
