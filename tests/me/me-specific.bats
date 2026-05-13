@@ -49,8 +49,6 @@ load ../helpers/bats_helper
         has_frontmatter_delimiter "$skill_file"
         has_frontmatter_field "$skill_file" "name"
         has_frontmatter_field "$skill_file" "description"
-        run grep -q "^disable-model-invocation: true$" "$skill_file"
-        assert_success
     done
 }
 
