@@ -3,7 +3,6 @@ name: review
 description: >-
   Review code changes for correctness, readability, architecture, security, performance, and test coverage using
   subagents.
-disable-model-invocation: true
 ---
 
 <!-- Adapted from https://github.com/addyosmani/agent-skills/tree/main -->

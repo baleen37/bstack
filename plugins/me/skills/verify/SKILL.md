@@ -1,7 +1,6 @@
 ---
 name: verify
 description: Prove the change works. Reproduces unexpected behavior with systematic debugging, then validates browser-runtime behavior with playwright-cli. Composes the `debugging-and-error-recovery` and `browse` skills.
-disable-model-invocation: true
 ---
 
 # /verify: prove it works
@@ -78,4 +77,3 @@ Produce a single output the user (or downstream skill like `/ship`) can read:
 2. The verification report is mandatory — a `PASS` claim without the report is invalid.
 3. `/verify` does not modify code on its own. If Phase 1 surfaces a fix, apply the fix in a separate step and re-run `/verify`.
 4. If either phase returns `FAIL`, the overall verdict is `FAIL` regardless of the other phase.
-5. `/verify` is intentionally explicit-only (`disable-model-invocation: true`) — the user invokes it via `/verify`, it does not auto-trigger.

@@ -1,7 +1,6 @@
 ---
 name: test
 description: Design, run, and improve tests for a change using project conventions and subagent verification.
-disable-model-invocation: true
 ---
 
 <!-- Adapted from https://github.com/addyosmani/agent-skills/tree/main -->
