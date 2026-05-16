@@ -38,8 +38,7 @@ Personal Claude Code workflow toolkit for git safety, session continuity, verifi
 
 ### Ship
 
-- `ship` — Fan out launch review to specialist personas and synthesize a go/no-go decision.
-- `shipping-and-launch` — Prepare staged rollout, monitoring, rollback, and production launch checks.
+- `ship` — Prepare staged rollout, monitoring, rollback, and production launch checks.
 - `ci-cd-and-automation` — Design CI/CD pipelines, quality gates, and deployment automation.
 - `create-pr` — Commit, push, create a PR, and optionally wait for checks or merge.
 
