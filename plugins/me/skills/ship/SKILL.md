@@ -1,48 +1,74 @@
 ---
 name: ship
-description: Prepares production launches. Use when preparing to deploy to production, asked to "ship", "release", or "deploy". Use when you need a pre-launch checklist, when setting up monitoring, when planning a staged rollout, or when you need a rollback strategy.
+description: Use when preparing to deploy to production, asked to "ship", "release", or "deploy", or when you need to verify a deploy succeeded or plan a rollback. Covers the full flow: pre-deploy checks, the deploy itself, and post-deploy verification with rollback on failure.
 ---
 
 # Ship
 
 ## Overview
 
-Ship with confidence. The goal is not just to deploy — it's to deploy safely, with monitoring in place,
-a rollback plan ready, and a clear understanding of what success looks like. Every launch should be
-reversible, observable, and incremental.
+Deploy safely, observably, reversibly. Every launch goes through three phases: **pre-deploy → deploy →
+post-deploy**. Don't skip phases.
 
 ## Automation Policy
 
-Act first on safe read-only checks and local reversible work. Automatically inspect git status, diffs,
-recent commits, changed files, PR status, and CI status before asking the user for context when those
-checks can answer the question.
+Run safe read-only checks and local reversible work automatically (git/CI status, tests, lint, audits,
+drafting rollout/rollback plans). Classify each finding `AUTO-COMPLETED`, `NEEDS_APPROVAL`, `BLOCKED`,
+or `READY_FOR_SHIP_REVIEW`.
 
-Automatically run local verification when appropriate, including tests, lint, type checks, builds,
-audits, and focused smoke checks. Automatically draft rollout plans, rollback plans, monitoring
-checklists, post-launch verification checklists, and release notes for user review.
+Ask for approval before anything that changes shared or external state: pushes, PR creation/merge,
+releases, deploys, infra/flag/config/secret/DB changes, external notifications, rollbacks, destructive
+commands, data migrations.
 
-Automatically identify missing owners, dashboards, feature flags, environment variables, documentation,
-and runbooks. Classify findings as `AUTO-COMPLETED`, `NEEDS_APPROVAL`, `BLOCKED`, or
-`READY_FOR_SHIP_REVIEW` so the user can quickly see what is done, what needs a decision, what is
-blocked, and what is ready for final ship review.
+### When to Delegate to Subagents
 
-You must ask for approval before any operation that changes shared or external state: push, PR creation,
-merge, release tagging, package publishing, staging or production deploys, release workflows,
-infrastructure changes, feature flag changes, production config changes, secrets, environment variables,
-DNS, SSL, databases, external notifications, Slack messages, GitHub comments, status page updates,
-customer announcements, rollbacks, destructive commands, data migrations, or irreversible cleanup.
+Fan-out is a tool, not a requirement.
+
+- **Delegate** when 2+ independent analyses can run in parallel, a specialist fits
+  (`me:security-auditor`, `me:test-engineer`, `Explore`), or output would pollute main context.
+- **Run directly** when a single command answers it, the result must be reasoned about immediately,
+  or blast radius is small.
+
+When delegating, batch independent calls in one message so they run in parallel.
 
 ## Execution Workflow
 
-1. Identify the launch type, changed files, blast radius, and whether production systems are affected.
-2. Run safe automatic checks first: local verification, CI/PR status reads, dependency/security audits when
-   available, and documentation checks.
-3. Draft launch artifacts that can be prepared locally: rollout stages, rollback triggers/procedure,
-   monitoring targets, owners, and post-launch checks.
-4. Classify every item as `AUTO-COMPLETED`, `NEEDS_APPROVAL`, `BLOCKED`, or `READY_FOR_SHIP_REVIEW`.
-5. If any `BLOCKED` items exist, stop and report the exact evidence.
-6. Ask the user before taking any `NEEDS_APPROVAL` action.
-7. When preparation is complete and the change is production-bound, present a final GO/NO-GO decision with the rollback plan.
+Three phases: **pre-deploy → deploy → post-deploy**. Do not skip phases.
+
+**First, classify the change:**
+
+- **Deployable** (touches code/infra that runs in production) → full three-phase flow.
+- **Non-deployable** (docs, skills, internal scripts, CI config without runtime effect) → run
+  Phase 1 checks (tests/lint relevant to the change), commit/PR per normal flow, skip Phases 2–3.
+  State explicitly: "Non-deployable change, skipping deploy/verify phases."
+
+If unsure, ask the user once. Don't invent a deploy step for a doc change.
+
+### Phase 1 — Pre-deploy (배포 전 점검)
+
+1. **Identify scope** — launch type, changed files, blast radius, production systems touched.
+2. **Read the deploy convention** — see "Reading Deploy Convention" below. If the project has none,
+   ask once and offer to record the answer.
+3. **Run checks** — local verification (tests, lint, type, build), CI/PR status, dependency/security
+   audits, docs. For non-trivial changes consider fanning out per "When to Delegate".
+4. **Draft artifacts** — rollout stages, rollback triggers/procedure, monitoring targets, owners,
+   post-deploy checks.
+5. **Classify and decide** — mark each item `AUTO-COMPLETED`, `NEEDS_APPROVAL`, `BLOCKED`, or
+   `READY_FOR_SHIP_REVIEW`. Stop and report evidence if anything is `BLOCKED`. Present GO/NO-GO with
+   the rollback plan.
+
+### Phase 2 — Deploy (배포)
+
+6. **Execute deploy** — run the command from the deploy convention. This is `NEEDS_APPROVAL`; never
+   run without the user's explicit go-ahead.
+
+### Phase 3 — Post-deploy (배포 후 점검)
+
+7. **Verify** — run the checks from "Post-Deploy Verification" below. Delegate to subagents only when
+   criteria in "When to Delegate" are met.
+8. **On failure** — collect evidence, draft the rollback command from the deploy convention, present
+   as `NEEDS_APPROVAL`. Do not auto-rollback.
+9. **Report** — what shipped, what was verified, what to watch.
 
 ## Decision Categories
 
@@ -53,6 +79,55 @@ customer announcements, rollbacks, destructive commands, data migrations, or irr
   monitoring, unresolved security risk, or unverifiable production impact.
 - `READY_FOR_SHIP_REVIEW`: Launch preparation is complete enough to produce a GO/NO-GO decision.
 
+## Reading Deploy Convention
+
+Deploy commands and verification endpoints live with the project, not in this skill. Before deploying,
+look for a deployment section in the project's own documentation. If none exists, ask the user.
+
+Look for:
+
+- **Deploy command(s)** — e.g. `bun run deploy:staging`, `bun run deploy:prod`
+- **Health check URL** — endpoint that returns 200 when the deploy is healthy
+- **Error/log inspection command** — how to check recent errors after deploy
+- **Rollback command** — exact command or procedure to revert
+- **Smoke flows** — critical user journeys to verify (especially for UI changes)
+
+If any of these are missing, ask the user once and offer to record the answers in the project's
+docs so future runs are reproducible. If the user cannot provide a deploy command, mark the deploy
+step `BLOCKED` and stop — do not invent one.
+
+Also use the project's own verify commands (test, lint, build) when documented. If they conflict
+with the defaults in Phase 1 step 3, the project wins.
+
+Example convention block to suggest:
+
+```markdown
+## Deployment
+- Staging: `bun run deploy:staging`
+- Production: `bun run deploy:prod`
+- Health check: https://api.example.com/health
+- Error scan: `bun run logs:errors --since 5m`
+- Rollback: `git revert HEAD && bun run deploy:prod`
+- Smoke flows:
+  - Login → dashboard
+  - Create item → confirm in list
+```
+
+## Post-Deploy Verification
+
+Run these checks immediately after deploy. Each is `AUTO-COMPLETED` on success; any failure becomes
+`BLOCKED` and triggers the rollback flow in the Execution Workflow.
+
+1. **Health check** — hit the health URL from the deploy convention. Expect 200 with the expected body.
+2. **Error/log scan** — run the project's error scan command. Compare error rate to the baseline noted
+   before deploy.
+3. **UI smoke (when UI changed)** — run the smoke flows from the deploy convention. Delegate to
+   `me:browse` / `me:verify` for browser-runtime checks rather than re-implementing browser automation.
+4. **Critical user flow** — for production-bound changes, walk through the primary user path end-to-end.
+
+Report each as `OK` with evidence (status code, log excerpt, screenshot path) or `FAIL` with the exact
+output that failed. Do not claim success without evidence.
+
 ## When to Use
 
 - Deploying a feature to production for the first time
@@ -61,260 +136,42 @@ customer announcements, rollbacks, destructive commands, data migrations, or irr
 - Opening a beta or early access program
 - Any deployment that carries risk (all of them)
 
-## The Pre-Launch Checklist
+## Pre-Launch Checklist
 
-### Code Quality
+For the heavy categories, delegate rather than re-implement:
 
-- [ ] All tests pass (unit, integration, e2e)
-- [ ] Build succeeds with no warnings
-- [ ] Lint and type checking pass
-- [ ] Code reviewed and approved
-- [ ] No TODO comments that should be resolved before launch
-- [ ] No `console.log` debugging statements in production code
-- [ ] Error handling covers expected failure modes
+- **Code quality** — tests pass, lint/type/build clean, code reviewed (use `me:review`, `me:test`)
+- **Security** — no secrets, audit clean, auth/CORS/rate limits in place (use `me:security-auditor`)
+- **Performance / a11y** — see `references/performance-checklist.md`, `references/accessibility-checklist.md`
+- **Infra / docs** — env vars set, migrations ready, health endpoint exists, docs/changelog updated
 
-### Security
+## Feature Flags
 
-- [ ] No secrets in code or version control
-- [ ] `npm audit` shows no critical or high vulnerabilities
-- [ ] Input validation on all user-facing endpoints
-- [ ] Authentication and authorization checks in place
-- [ ] Security headers configured (CSP, HSTS, etc.)
-- [ ] Rate limiting on authentication endpoints
-- [ ] CORS configured to specific origins (not wildcard)
-
-### Performance
-
-- [ ] Core Web Vitals within "Good" thresholds
-- [ ] No N+1 queries in critical paths
-- [ ] Images optimized (compression, responsive sizes, lazy loading)
-- [ ] Bundle size within budget
-- [ ] Database queries have appropriate indexes
-- [ ] Caching configured for static assets and repeated queries
-
-### Accessibility
-
-- [ ] Keyboard navigation works for all interactive elements
-- [ ] Screen reader can convey page content and structure
-- [ ] Color contrast meets WCAG 2.1 AA (4.5:1 for text)
-- [ ] Focus management correct for modals and dynamic content
-- [ ] Error messages are descriptive and associated with form fields
-- [ ] No accessibility warnings in axe-core or Lighthouse
-
-### Infrastructure
-
-- [ ] Environment variables set in production
-- [ ] Database migrations applied (or ready to apply)
-- [ ] DNS and SSL configured
-- [ ] CDN configured for static assets
-- [ ] Logging and error reporting configured
-- [ ] Health check endpoint exists and responds
-
-### Documentation
-
-- [ ] README updated with any new setup requirements
-- [ ] API documentation current
-- [ ] ADRs written for any architectural decisions
-- [ ] Changelog updated
-- [ ] User-facing documentation updated (if applicable)
-
-## Feature Flag Strategy
-
-Ship behind feature flags to decouple deployment from release:
-
-```typescript
-// Feature flag check
-const flags = await getFeatureFlags(userId);
-
-if (flags.taskSharing) {
-  // New feature: task sharing
-  return <TaskSharingPanel task={task} />;
-}
-
-// Default: existing behavior
-return null;
-```
-
-**Feature flag lifecycle:**
-
-```text
-1. DEPLOY with flag OFF     → Code is in production but inactive
-2. ENABLE for team/beta     → Internal testing in production environment
-3. GRADUAL ROLLOUT          → 5% → 25% → 50% → 100% of users
-4. MONITOR at each stage    → Watch error rates, performance, user feedback
-5. CLEAN UP                 → Remove flag and dead code path after full rollout
-```
-
-**Rules:**
-
-- Every feature flag has an owner and an expiration date
-- Clean up flags within 2 weeks of full rollout
-- Don't nest feature flags (creates exponential combinations)
-- Test both flag states (on and off) in CI
+Ship behind a flag to decouple deploy from release. Each flag has an owner and expiration. Clean up
+within 2 weeks of full rollout. Don't nest flags. Test both states in CI.
 
 ## Staged Rollout
 
-### The Rollout Sequence
+Sequence: **staging → prod (flag OFF) → team → 5% canary → 25% → 50% → 100% → clean up flag**.
+Monitor at each step against baseline; advance, hold, or roll back per the thresholds below.
 
-```text
-1. DEPLOY to staging
-   └── Full test suite in staging environment
-   └── Manual smoke test of critical flows
+| Metric | Advance | Hold | Roll back |
+|--------|---------|------|-----------|
+| Error rate | Within 10% of baseline | 10-100% above | >2x baseline |
+| P95 latency | Within 20% | 20-50% above | >50% above |
+| Client JS errors | No new types | New at <0.1% sessions | New at >0.1% |
+| Business metrics | Neutral/positive | Decline <5% | Decline >5% |
 
-2. DEPLOY to production (feature flag OFF)
-   └── Verify deployment succeeded (health check)
-   └── Check error monitoring (no new errors)
+## Rollback
 
-3. ENABLE for team (flag ON for internal users)
-   └── Team uses the feature in production
-   └── 24-hour monitoring window
-
-4. CANARY rollout (flag ON for 5% of users)
-   └── Monitor error rates, latency, user behavior
-   └── Compare metrics: canary vs. baseline
-   └── 24-48 hour monitoring window
-   └── Advance only if all thresholds pass (see table below)
-
-5. GRADUAL increase (25% -> 50% -> 100%)
-   └── Same monitoring at each step
-   └── Ability to roll back to previous percentage at any point
-
-6. FULL rollout (flag ON for all users)
-   └── Monitor for 1 week
-   └── Clean up feature flag
-```
-
-### Rollout Decision Thresholds
-
-Use these thresholds to decide whether to advance, hold, or roll back at each stage:
-
-| Metric | Advance (green) | Hold and investigate (yellow) | Roll back (red) |
-|--------|-----------------|-------------------------------|-----------------|
-| Error rate | Within 10% of baseline | 10-100% above baseline | >2x baseline |
-| P95 latency | Within 20% of baseline | 20-50% above baseline | >50% above baseline |
-| Client JS errors | No new error types | New errors at <0.1% of sessions | New errors at >0.1% of sessions |
-| Business metrics | Neutral or positive | Decline <5% (may be noise) | Decline >5% |
-
-### When to Roll Back
-
-Roll back immediately if:
-
-- Error rate increases by more than 2x baseline
-- P95 latency increases by more than 50%
-- User-reported issues spike
-- Data integrity issues detected
-- Security vulnerability discovered
-
-## Monitoring and Observability
-
-### What to Monitor
-
-```text
-Application metrics:
-├── Error rate (total and by endpoint)
-├── Response time (p50, p95, p99)
-├── Request volume
-├── Active users
-└── Key business metrics (conversion, engagement)
-
-Infrastructure metrics:
-├── CPU and memory utilization
-├── Database connection pool usage
-├── Disk space
-├── Network latency
-└── Queue depth (if applicable)
-
-Client metrics:
-├── Core Web Vitals (LCP, INP, CLS)
-├── JavaScript errors
-├── API error rates from client perspective
-└── Page load time
-```
-
-### Error Reporting
-
-```typescript
-// Set up error boundary with reporting
-class ErrorBoundary extends React.Component {
-  componentDidCatch(error: Error, info: React.ErrorInfo) {
-    // Report to error tracking service
-    reportError(error, {
-      componentStack: info.componentStack,
-      userId: getCurrentUser()?.id,
-      page: window.location.pathname,
-    });
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return <ErrorFallback onRetry={() => this.setState({ hasError: false })} />;
-    }
-    return this.props.children;
-  }
-}
-
-// Server-side error reporting
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  reportError(err, {
-    method: req.method,
-    url: req.url,
-    userId: req.user?.id,
-  });
-
-  // Don't expose internals to users
-  res.status(500).json({
-    error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' },
-  });
-});
-```
-
-### Post-Launch Verification
-
-In the first hour after launch:
-
-```text
-1. Check health endpoint returns 200
-2. Check error monitoring dashboard (no new error types)
-3. Check latency dashboard (no regression)
-4. Test the critical user flow manually
-5. Verify logs are flowing and readable
-6. Confirm rollback mechanism works (dry run if possible)
-```
-
-## Rollback Strategy
-
-Every deployment needs a rollback plan before it happens:
-
-```markdown
-## Rollback Plan for [Feature/Release]
-
-### Trigger Conditions
-- Error rate > 2x baseline
-- P95 latency > [X]ms
-- User reports of [specific issue]
-
-### Rollback Steps
-1. Disable feature flag (if applicable)
-   OR
-1. Deploy previous version: `git revert <commit> && git push`
-2. Verify rollback: health check, error monitoring
-3. Communicate: notify team of rollback
-
-### Database Considerations
-- Migration [X] has a rollback: `npx prisma migrate rollback`
-- Data inserted by new feature: [preserved / cleaned up]
-
-### Time to Rollback
-- Feature flag: < 1 minute
-- Redeploy previous version: < 5 minutes
-- Database rollback: < 15 minutes
-```
+Never auto-rollback. On verification failure: **collect evidence → draft rollback command from the
+deploy convention → present as `NEEDS_APPROVAL`**. Rollback changes production state and warrants the
+same approval gate as the deploy itself. Database migrations may need their own rollback path —
+check before deploying, not after.
 
 ## See Also
 
-- For security pre-launch checks, see `references/security-checklist.md`
-- For performance pre-launch checklist, see `references/performance-checklist.md`
-- For accessibility verification before launch, see `references/accessibility-checklist.md`
+- `references/security-checklist.md`, `references/performance-checklist.md`, `references/accessibility-checklist.md`
 
 ## Common Rationalizations
 
@@ -338,19 +195,6 @@ Every deployment needs a rollback plan before it happens:
 
 ## Verification
 
-Before deploying:
-
-- [ ] Pre-launch checklist completed (all sections green)
-- [ ] Feature flag configured (if applicable)
-- [ ] Rollback plan documented
-- [ ] Monitoring dashboards set up
-- [ ] Team notified of deployment
-
-After deploying:
-
-- [ ] Health check returns 200
-- [ ] Error rate is normal
-- [ ] Latency is normal
-- [ ] Critical user flow works
-- [ ] Logs are flowing
-- [ ] Rollback tested or verified ready
+- **Before deploying:** Pre-Launch Checklist sections green, rollback plan drafted, feature flag
+  configured if applicable.
+- **After deploying:** see "Post-Deploy Verification" above.
