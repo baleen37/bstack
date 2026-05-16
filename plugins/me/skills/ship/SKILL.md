@@ -1,109 +1,356 @@
 ---
 name: ship
-description: >-
-  Run the pre-launch checklist via parallel fan-out to specialist personas, then synthesize a go/no-go decision with a
-  rollback plan. Use when asked to "ship", "release", "deploy", or "is this ready to go live?".
+description: Prepares production launches. Use when preparing to deploy to production, asked to "ship", "release", or "deploy". Use when you need a pre-launch checklist, when setting up monitoring, when planning a staged rollout, or when you need a rollback strategy.
 ---
 
-<!-- Adapted from https://github.com/addyosmani/agent-skills/blob/main/.claude/commands/ship.md -->
+# Ship
 
-# /ship: parallel fan-out launch review
+## Overview
 
-`/ship` is a **fan-out orchestrator**. It runs three specialist personas in parallel against the current change,
-then merges their reports into a single go/no-go decision with a rollback plan. The personas operate independently —
-no shared state, no ordering — which is what makes parallel execution safe and useful here.
+Ship with confidence. The goal is not just to deploy — it's to deploy safely, with monitoring in place,
+a rollback plan ready, and a clear understanding of what success looks like. Every launch should be
+reversible, observable, and incremental.
 
-For the underlying pre-launch checklists, see the `shipping-and-launch` skill. That includes security, performance,
-accessibility, CI/check status, migrations/config/env readiness, feature flag lifecycle, staged rollout, monitoring and
-alerts, documentation, post-launch verification, and rollback procedure.
+## Automation Policy
 
-## Phase A — Parallel fan-out
+Act first on safe read-only checks and local reversible work. Automatically inspect git status, diffs,
+recent commits, changed files, PR status, and CI status before asking the user for context when those
+checks can answer the question.
 
-For non-trivial production-bound changes, spawn three subagents concurrently using the Agent tool. **Issue all three
-Agent tool calls in a single assistant turn** so they execute in parallel — sequential calls defeat the purpose of this
-skill.
+Automatically run local verification when appropriate, including tests, lint, type checks, builds,
+audits, and focused smoke checks. Automatically draft rollout plans, rollback plans, monitoring
+checklists, post-launch verification checklists, and release notes for user review.
 
-In Claude Code, each call passes `subagent_type` matching the persona's `name` field:
+Automatically identify missing owners, dashboards, feature flags, environment variables, documentation,
+and runbooks. Classify findings as `AUTO-COMPLETED`, `NEEDS_APPROVAL`, `BLOCKED`, or
+`READY_FOR_SHIP_REVIEW` so the user can quickly see what is done, what needs a decision, what is
+blocked, and what is ready for final ship review.
 
-1. **`code-reviewer`** — Run a five-axis review: correctness, readability, architecture, security, and performance.
-   Output the standard review template.
-2. **`security-auditor`** — Run a vulnerability and threat-model pass. Check OWASP Top 10, secrets handling,
-   auth/authz, and dependency CVEs. Output the standard audit report.
-3. **`test-engineer`** — Analyze test coverage for the change. Identify gaps in happy path, edge cases, error paths,
-   and concurrency scenarios. Output the standard coverage analysis.
+You must ask for approval before any operation that changes shared or external state: push, PR creation,
+merge, release tagging, package publishing, staging or production deploys, release workflows,
+infrastructure changes, feature flag changes, production config changes, secrets, environment variables,
+DNS, SSL, databases, external notifications, Slack messages, GitHub comments, status page updates,
+customer announcements, rollbacks, destructive commands, data migrations, or irreversible cleanup.
 
-In other harnesses without an Agent tool, invoke each persona's system prompt sequentially and treat their outputs as if
-returned in parallel — the merge phase still works.
+## Execution Workflow
 
-Constraints (from Claude Code's subagent model):
+1. Identify the launch type, changed files, blast radius, and whether production systems are affected.
+2. Run safe automatic checks first: local verification, CI/PR status reads, dependency/security audits when
+   available, and documentation checks.
+3. Draft launch artifacts that can be prepared locally: rollout stages, rollback triggers/procedure,
+   monitoring targets, owners, and post-launch checks.
+4. Classify every item as `AUTO-COMPLETED`, `NEEDS_APPROVAL`, `BLOCKED`, or `READY_FOR_SHIP_REVIEW`.
+5. If any `BLOCKED` items exist, stop and report the exact evidence.
+6. Ask the user before taking any `NEEDS_APPROVAL` action.
+7. When preparation is complete and the change is production-bound, present a final GO/NO-GO decision with the rollback plan.
 
-- Subagents cannot spawn other subagents — do not let one persona delegate to another.
-- Each subagent gets its own context window and returns only its report to this main session.
-- If a persona is not installed in the current environment, fall back to running that persona's pass yourself in the
-  main context and label the section accordingly. Do not silently skip it.
+## Decision Categories
 
-**Persona resolution.** This plugin includes default `code-reviewer`, `security-auditor`, and `test-engineer` personas.
-If you've defined your own versions in `.claude/agents/` or `~/.claude/agents/`, those take precedence — `/ship` picks
-up your customizations automatically. This is intentional: plugin subagents sit at the bottom of Claude Code's scope
-priority table, so user-level definitions win by design.
+- `AUTO-COMPLETED`: Safe checks or drafts completed locally with evidence.
+- `NEEDS_APPROVAL`: Risky, externally visible, shared-state, or hard-to-reverse actions that require user
+  approval.
+- `BLOCKED`: Launch blocker such as failing tests, missing rollback path, unknown owner, missing
+  monitoring, unresolved security risk, or unverifiable production impact.
+- `READY_FOR_SHIP_REVIEW`: Launch preparation is complete enough to produce a GO/NO-GO decision.
 
-## Phase B — Merge in main context
+## When to Use
 
-Once all three reports are back, the main agent (not a sub-persona) synthesizes them:
+- Deploying a feature to production for the first time
+- Releasing a significant change to users
+- Migrating data or infrastructure
+- Opening a beta or early access program
+- Any deployment that carries risk (all of them)
 
-1. **Code Quality** — Aggregate Critical/Important findings from `code-reviewer` and any failing tests, lint, build, or
-   CI/check output. Resolve duplicates between reviewers.
-2. **Security** — Promote any Critical/High `security-auditor` findings to launch blockers. Cross-reference with
-   `code-reviewer`'s security axis.
-3. **Performance** — Pull from `code-reviewer`'s performance axis; cross-check Core Web Vitals if applicable.
-4. **Accessibility** — Verify keyboard nav, screen reader support, and contrast directly or with the accessibility
-   checklist.
-5. **Infrastructure** — Verify CI/checks, migrations, config/env, feature flags, monitoring/alerts, staged rollout, and
-   rollback triggers/procedure directly.
-6. **Documentation** — Verify README, ADRs, changelog, runbooks, and post-launch verification steps directly.
+## The Pre-Launch Checklist
 
-## Phase C — Decision and rollback
+### Code Quality
 
-Produce a single output:
+- [ ] All tests pass (unit, integration, e2e)
+- [ ] Build succeeds with no warnings
+- [ ] Lint and type checking pass
+- [ ] Code reviewed and approved
+- [ ] No TODO comments that should be resolved before launch
+- [ ] No `console.log` debugging statements in production code
+- [ ] Error handling covers expected failure modes
 
-```markdown
-## Ship Decision: GO | NO-GO
+### Security
 
-### Blockers (must fix before ship)
-- [Source persona: Critical finding + file:line]
+- [ ] No secrets in code or version control
+- [ ] `npm audit` shows no critical or high vulnerabilities
+- [ ] Input validation on all user-facing endpoints
+- [ ] Authentication and authorization checks in place
+- [ ] Security headers configured (CSP, HSTS, etc.)
+- [ ] Rate limiting on authentication endpoints
+- [ ] CORS configured to specific origins (not wildcard)
 
-### Recommended fixes (should fix before ship)
-- [Source persona: Important finding + file:line]
+### Performance
 
-### Acknowledged risks (shipping anyway)
-- [Risk + mitigation]
+- [ ] Core Web Vitals within "Good" thresholds
+- [ ] No N+1 queries in critical paths
+- [ ] Images optimized (compression, responsive sizes, lazy loading)
+- [ ] Bundle size within budget
+- [ ] Database queries have appropriate indexes
+- [ ] Caching configured for static assets and repeated queries
 
-### Observability and rollout
-- Monitoring/alerts: [dashboards, alerts, owners]
-- Staged rollout: [flag/ramp plan and stop criteria]
-- Post-launch verification: [checks to run after release]
+### Accessibility
 
-### Rollback plan
-- Trigger conditions: [metrics, alerts, logs, or user-impact signals that prompt rollback]
-- Rollback procedure: [exact steps and owner]
-- Recovery time objective: [target]
+- [ ] Keyboard navigation works for all interactive elements
+- [ ] Screen reader can convey page content and structure
+- [ ] Color contrast meets WCAG 2.1 AA (4.5:1 for text)
+- [ ] Focus management correct for modals and dynamic content
+- [ ] Error messages are descriptive and associated with form fields
+- [ ] No accessibility warnings in axe-core or Lighthouse
 
-### Specialist reports (full)
-- [code-reviewer report]
-- [security-auditor report]
-- [test-engineer report]
+### Infrastructure
+
+- [ ] Environment variables set in production
+- [ ] Database migrations applied (or ready to apply)
+- [ ] DNS and SSL configured
+- [ ] CDN configured for static assets
+- [ ] Logging and error reporting configured
+- [ ] Health check endpoint exists and responds
+
+### Documentation
+
+- [ ] README updated with any new setup requirements
+- [ ] API documentation current
+- [ ] ADRs written for any architectural decisions
+- [ ] Changelog updated
+- [ ] User-facing documentation updated (if applicable)
+
+## Feature Flag Strategy
+
+Ship behind feature flags to decouple deployment from release:
+
+```typescript
+// Feature flag check
+const flags = await getFeatureFlags(userId);
+
+if (flags.taskSharing) {
+  // New feature: task sharing
+  return <TaskSharingPanel task={task} />;
+}
+
+// Default: existing behavior
+return null;
 ```
 
-## Rules
+**Feature flag lifecycle:**
 
-1. The three Phase A personas run in parallel — never sequentially.
-2. Personas do not call each other. The main agent merges in Phase B.
-3. The rollback plan is mandatory before any GO decision, including rollback trigger and procedure.
-4. Default to NO-GO for any Critical security finding, failing required test/build/check/CI status, missing rollback
-   plan, or unverifiable production risk. Only override if the user explicitly accepts the risk.
-5. A GO decision must include observability coverage, monitoring/alert ownership, staged rollout or feature-flag plan,
-   and post-launch verification steps.
-6. **Skip the fan-out only if all of the following are true:** the change touches 2 files or fewer, the diff is under
-   50 lines, and it does not touch auth, payments, data access, or config/env. Otherwise, default to fan-out. `/ship`
-   is designed for production-bound changes — when the blast radius is non-trivial, run the parallel `code-reviewer`,
-   `security-auditor`, and `test-engineer` review even if the diff looks small.
+```text
+1. DEPLOY with flag OFF     → Code is in production but inactive
+2. ENABLE for team/beta     → Internal testing in production environment
+3. GRADUAL ROLLOUT          → 5% → 25% → 50% → 100% of users
+4. MONITOR at each stage    → Watch error rates, performance, user feedback
+5. CLEAN UP                 → Remove flag and dead code path after full rollout
+```
+
+**Rules:**
+
+- Every feature flag has an owner and an expiration date
+- Clean up flags within 2 weeks of full rollout
+- Don't nest feature flags (creates exponential combinations)
+- Test both flag states (on and off) in CI
+
+## Staged Rollout
+
+### The Rollout Sequence
+
+```text
+1. DEPLOY to staging
+   └── Full test suite in staging environment
+   └── Manual smoke test of critical flows
+
+2. DEPLOY to production (feature flag OFF)
+   └── Verify deployment succeeded (health check)
+   └── Check error monitoring (no new errors)
+
+3. ENABLE for team (flag ON for internal users)
+   └── Team uses the feature in production
+   └── 24-hour monitoring window
+
+4. CANARY rollout (flag ON for 5% of users)
+   └── Monitor error rates, latency, user behavior
+   └── Compare metrics: canary vs. baseline
+   └── 24-48 hour monitoring window
+   └── Advance only if all thresholds pass (see table below)
+
+5. GRADUAL increase (25% -> 50% -> 100%)
+   └── Same monitoring at each step
+   └── Ability to roll back to previous percentage at any point
+
+6. FULL rollout (flag ON for all users)
+   └── Monitor for 1 week
+   └── Clean up feature flag
+```
+
+### Rollout Decision Thresholds
+
+Use these thresholds to decide whether to advance, hold, or roll back at each stage:
+
+| Metric | Advance (green) | Hold and investigate (yellow) | Roll back (red) |
+|--------|-----------------|-------------------------------|-----------------|
+| Error rate | Within 10% of baseline | 10-100% above baseline | >2x baseline |
+| P95 latency | Within 20% of baseline | 20-50% above baseline | >50% above baseline |
+| Client JS errors | No new error types | New errors at <0.1% of sessions | New errors at >0.1% of sessions |
+| Business metrics | Neutral or positive | Decline <5% (may be noise) | Decline >5% |
+
+### When to Roll Back
+
+Roll back immediately if:
+
+- Error rate increases by more than 2x baseline
+- P95 latency increases by more than 50%
+- User-reported issues spike
+- Data integrity issues detected
+- Security vulnerability discovered
+
+## Monitoring and Observability
+
+### What to Monitor
+
+```text
+Application metrics:
+├── Error rate (total and by endpoint)
+├── Response time (p50, p95, p99)
+├── Request volume
+├── Active users
+└── Key business metrics (conversion, engagement)
+
+Infrastructure metrics:
+├── CPU and memory utilization
+├── Database connection pool usage
+├── Disk space
+├── Network latency
+└── Queue depth (if applicable)
+
+Client metrics:
+├── Core Web Vitals (LCP, INP, CLS)
+├── JavaScript errors
+├── API error rates from client perspective
+└── Page load time
+```
+
+### Error Reporting
+
+```typescript
+// Set up error boundary with reporting
+class ErrorBoundary extends React.Component {
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    // Report to error tracking service
+    reportError(error, {
+      componentStack: info.componentStack,
+      userId: getCurrentUser()?.id,
+      page: window.location.pathname,
+    });
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <ErrorFallback onRetry={() => this.setState({ hasError: false })} />;
+    }
+    return this.props.children;
+  }
+}
+
+// Server-side error reporting
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  reportError(err, {
+    method: req.method,
+    url: req.url,
+    userId: req.user?.id,
+  });
+
+  // Don't expose internals to users
+  res.status(500).json({
+    error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' },
+  });
+});
+```
+
+### Post-Launch Verification
+
+In the first hour after launch:
+
+```text
+1. Check health endpoint returns 200
+2. Check error monitoring dashboard (no new error types)
+3. Check latency dashboard (no regression)
+4. Test the critical user flow manually
+5. Verify logs are flowing and readable
+6. Confirm rollback mechanism works (dry run if possible)
+```
+
+## Rollback Strategy
+
+Every deployment needs a rollback plan before it happens:
+
+```markdown
+## Rollback Plan for [Feature/Release]
+
+### Trigger Conditions
+- Error rate > 2x baseline
+- P95 latency > [X]ms
+- User reports of [specific issue]
+
+### Rollback Steps
+1. Disable feature flag (if applicable)
+   OR
+1. Deploy previous version: `git revert <commit> && git push`
+2. Verify rollback: health check, error monitoring
+3. Communicate: notify team of rollback
+
+### Database Considerations
+- Migration [X] has a rollback: `npx prisma migrate rollback`
+- Data inserted by new feature: [preserved / cleaned up]
+
+### Time to Rollback
+- Feature flag: < 1 minute
+- Redeploy previous version: < 5 minutes
+- Database rollback: < 15 minutes
+```
+
+## See Also
+
+- For security pre-launch checks, see `references/security-checklist.md`
+- For performance pre-launch checklist, see `references/performance-checklist.md`
+- For accessibility verification before launch, see `references/accessibility-checklist.md`
+
+## Common Rationalizations
+
+| Rationalization | Reality |
+|---|---|
+| "It works in staging, it'll work in production" | Production has different data, traffic patterns, and edge cases. Monitor after deploy. |
+| "We don't need feature flags for this" | Every feature benefits from a kill switch. Even "simple" changes can break things. |
+| "Monitoring is overhead" | Not having monitoring means you discover problems from user complaints instead of dashboards. |
+| "We'll add monitoring later" | Add it before launch. You can't debug what you can't see. |
+| "Rolling back is admitting failure" | Rolling back is responsible engineering. Shipping a broken feature is the failure. |
+
+## Red Flags
+
+- Deploying without a rollback plan
+- No monitoring or error reporting in production
+- Big-bang releases (everything at once, no staging)
+- Feature flags with no expiration or owner
+- No one monitoring the deploy for the first hour
+- Production environment configuration done by memory, not code
+- "It's Friday afternoon, let's ship it"
+
+## Verification
+
+Before deploying:
+
+- [ ] Pre-launch checklist completed (all sections green)
+- [ ] Feature flag configured (if applicable)
+- [ ] Rollback plan documented
+- [ ] Monitoring dashboards set up
+- [ ] Team notified of deployment
+
+After deploying:
+
+- [ ] Health check returns 200
+- [ ] Error rate is normal
+- [ ] Latency is normal
+- [ ] Critical user flow works
+- [ ] Logs are flowing
+- [ ] Rollback tested or verified ready
