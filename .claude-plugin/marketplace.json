@@ -38,19 +38,6 @@
       "version": "17.11.0"
     },
     {
-      "name": "autoresearch",
-      "description": "Autonomous experiment loop — iteratively optimize any metric with git-tracked experiments",
-      "source": "./plugins/autoresearch",
-      "category": "development",
-      "tags": [
-        "experiments",
-        "optimization",
-        "autonomous",
-        "research"
-      ],
-      "version": "17.11.0"
-    },
-    {
       "name": "ralph",
       "description": "PRD-driven persistence loop — keeps Claude working until all user stories pass",
       "source": "./plugins/ralph",
