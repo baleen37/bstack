@@ -43,7 +43,6 @@
     "atlassian@claude-plugins-official": true,
     "context7@claude-plugins-official": true,
     "slack@claude-plugins-official": true,
-    "autoresearch@bstack": true,
     "bstack@bstack": true,
     "core@bstack": true,
     "jira@bstack": true,
