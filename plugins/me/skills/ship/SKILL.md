@@ -32,6 +32,12 @@ infrastructure changes, feature flag changes, production config changes, secrets
 DNS, SSL, databases, external notifications, Slack messages, GitHub comments, status page updates,
 customer announcements, rollbacks, destructive commands, data migrations, or irreversible cleanup.
 
+**Exception — PR flow inside ship:** when ship needs to push, open a PR, or merge as part of the launch,
+do it automatically without prompting. Always squash-merge via `gh pr merge --auto --squash` (delegate
+to `me:create-pr`, which already defaults to squash auto-merge). The user invoked ship to drive the
+release end-to-end; pausing on each git step defeats the purpose. Other risky actions in the list above
+still require approval.
+
 ## Execution Workflow
 
 1. Identify the launch type, changed files, blast radius, and whether production systems are affected.
