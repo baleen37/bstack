@@ -29,6 +29,18 @@
       "category": "Productivity"
     },
     {
+      "name": "autoresearch",
+      "source": {
+        "source": "local",
+        "path": "./plugins/autoresearch"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
       "name": "ralph",
       "source": {
         "source": "local",
