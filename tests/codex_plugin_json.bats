@@ -7,7 +7,7 @@ setup() {
 }
 
 @test "codex plugin manifests exist for skill plugins only" {
-    local expected_plugins=("jira" "me" "ralph")
+    local expected_plugins=("autoresearch" "jira" "me" "ralph")
 
     for plugin in "${expected_plugins[@]}"; do
         assert_file_exists "${PROJECT_ROOT}/plugins/${plugin}/.codex-plugin/plugin.json"
@@ -17,7 +17,7 @@ setup() {
 }
 
 @test "codex plugin manifests are valid JSON" {
-    local expected_plugins=("jira" "me" "ralph")
+    local expected_plugins=("autoresearch" "jira" "me" "ralph")
 
     for plugin in "${expected_plugins[@]}"; do
         validate_json "${PROJECT_ROOT}/plugins/${plugin}/.codex-plugin/plugin.json"
@@ -25,7 +25,7 @@ setup() {
 }
 
 @test "codex plugin manifests point to shared skills directory" {
-    local expected_plugins=("jira" "me" "ralph")
+    local expected_plugins=("autoresearch" "jira" "me" "ralph")
 
     for plugin in "${expected_plugins[@]}"; do
         local manifest="${PROJECT_ROOT}/plugins/${plugin}/.codex-plugin/plugin.json"
@@ -37,7 +37,7 @@ setup() {
 }
 
 @test "codex plugin manifests copy core metadata from claude manifests" {
-    local expected_plugins=("jira" "me" "ralph")
+    local expected_plugins=("autoresearch" "jira" "me" "ralph")
 
     for plugin in "${expected_plugins[@]}"; do
         local claude_manifest="${PROJECT_ROOT}/plugins/${plugin}/.claude-plugin/plugin.json"
