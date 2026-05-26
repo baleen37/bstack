@@ -34,7 +34,6 @@ jobs:
           if git diff --quiet -- \
             .claude-plugin/marketplace.json \
             .agents/plugins/marketplace.json \
-            plugins/autoresearch/.codex-plugin/plugin.json \
             plugins/jira/.codex-plugin/plugin.json \
             plugins/me/.codex-plugin/plugin.json \
             plugins/ralph/.codex-plugin/plugin.json; then
@@ -51,7 +50,6 @@ jobs:
           git add \
             .claude-plugin/marketplace.json \
             .agents/plugins/marketplace.json \
-            plugins/autoresearch/.codex-plugin/plugin.json \
             plugins/jira/.codex-plugin/plugin.json \
             plugins/me/.codex-plugin/plugin.json \
             plugins/ralph/.codex-plugin/plugin.json

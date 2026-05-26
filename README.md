@@ -50,10 +50,6 @@ bstack/
 │   ├── ralph/                 # Ralph Loop plugin
 │   │   ├── hooks/             # Ralph persistence hooks
 │   │   └── skills/            # ralph, ralph-cancel
-│   ├── autoresearch/          # Autonomous experiment loop plugin
-│   │   ├── commands/
-│   │   ├── hooks/
-│   │   └── skills/            # autoresearch
 │   ├── jira/                  # Jira integration plugin
 │   │   └── skills/            # 5 Jira workflow skills
 │   ├── core/                  # Shared agent definitions
@@ -83,6 +79,7 @@ bstack/
 | `remembering-conversations` | 이전 대화 컨텍스트 검색 및 적용 |
 | `review-claudemd` | CLAUDE.md 개선사항 발굴 |
 | `reddit-fetch` | WebFetch 차단 시 Reddit 콘텐츠 가져오기 |
+| `autoresearch` | /goal 종료 조건으로 자율 실험 루프 실행 |
 
 #### `ralph` plugin
 
@@ -90,12 +87,6 @@ bstack/
 |-------|-------------|
 | `ralph` | PRD 기반 자동 반복 개발 루프 실행 |
 | `ralph-cancel` | 실행 중인 Ralph 루프 취소 |
-
-#### `autoresearch` plugin
-
-| Skill | Description |
-|-------|-------------|
-| `autoresearch` | 최적화 목표를 위한 자율 실험 루프 실행 |
 
 #### `jira` plugin
 

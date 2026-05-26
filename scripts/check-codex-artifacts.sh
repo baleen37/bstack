@@ -8,7 +8,6 @@ bash "${SCRIPT_DIR}/sync-codex-artifacts.sh"
 
 git -C "${PROJECT_ROOT}" diff --exit-code -- \
   .agents/plugins/marketplace.json \
-  plugins/autoresearch/.codex-plugin/plugin.json \
   plugins/jira/.codex-plugin/plugin.json \
   plugins/me/.codex-plugin/plugin.json \
   plugins/ralph/.codex-plugin/plugin.json
