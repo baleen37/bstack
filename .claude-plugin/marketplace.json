@@ -22,7 +22,7 @@
         "memory",
         "context"
       ],
-      "version": "17.11.2"
+      "version": "17.12.0"
     },
     {
       "name": "jira",
@@ -35,7 +35,7 @@
         "confluence",
         "project-management"
       ],
-      "version": "17.11.2"
+      "version": "17.12.0"
     },
     {
       "name": "ralph",
@@ -49,7 +49,7 @@
         "prd",
         "automation"
       ],
-      "version": "17.11.2"
+      "version": "17.12.0"
     },
     {
       "name": "datadog",
@@ -64,7 +64,7 @@
         "apm",
         "pup"
       ],
-      "version": "17.11.2"
+      "version": "17.12.0"
     }
   ]
 }
