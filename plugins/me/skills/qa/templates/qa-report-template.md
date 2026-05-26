@@ -10,6 +10,10 @@
 - **Commit:** {COMMIT_SHA}
 - **Duration:** {DURATION}
 
+## Risk Surface
+
+- {외부 시스템 경계} — verified / skipped (reason) / inaccessible
+
 ## Verification Summary
 
 ### Golden path

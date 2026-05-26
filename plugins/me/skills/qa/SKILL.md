@@ -22,8 +22,7 @@ Focus on the current work context:
 - the intended golden path
 - the most relevant edge cases
 - obvious regressions near the changed behavior
-
-Default to change-centered verification, not exhaustive QA.
+- all Risk Surfaces identified in Phase 0 (외부 시스템 경계는 항상 직접 검증)
 
 `/qa` is the default verification path. If cross-service or multi-layer flow integrity is the main risk, add `/e2e`.
 
@@ -43,6 +42,20 @@ Always report the scope source as one of:
 - `Scope source: user override`
 
 ## Verification flow
+
+### Phase 0: Risk Surface
+
+변경된 코드가 외부 시스템 경계(OpenSearch, DB, message queue, 외부 API, 파일 시스템 등)와 상호작용하는지 식별한다.
+
+식별 단서:
+- diff에 외부 클라이언트/리포지토리/게이트웨이 호출이 포함됨
+- 계획서나 Rollout 메모에 "배포 전 ~ 확인 권장" 같은 항목이 있음
+
+각 Risk Surface에 대해 다음을 결정한다:
+1. 어떤 호출/조회로 검증할 것인가
+2. 지금 접근 가능한가 (SSO, 권한, 터널 등)
+
+접근 불가능한 Risk Surface가 있으면 검증을 시작하기 전에 사용자에게 알리고, 접근 방법을 제공받거나 그 항목을 제외해도 되는지 명시적으로 확인받는다. 사용자 확인 없이 건너뛰지 않는다.
 
 ### Phase 1: Scope
 
@@ -89,9 +102,9 @@ Those belong to `/ship`.
 
 Always choose one:
 
-- **PASS** — the scoped implementation behaves correctly; no blocking behavior issues were found in verified scenarios
-- **PARTIAL** — the implementation mostly works, but at least one important scenario failed, stayed incomplete, or remains uncertain
-- **FAIL** — a core scenario failed or the implementation clearly does not meet the intended behavior
+- **PASS** — Phase 0에서 식별된 모든 Risk Surface와 시나리오가 검증되었고, 문제가 없음
+- **PARTIAL** — 검증되지 않은 Risk Surface가 있거나, 일부 시나리오가 실패/불완전/불확실
+- **FAIL** — 핵심 시나리오가 실패했거나 의도한 동작과 명백히 다름
 
 ## Report structure
 
