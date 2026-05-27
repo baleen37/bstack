@@ -50,3 +50,16 @@ FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/sample-session.jsonl"
     [ "$status" -eq 0 ]
     echo "$output" | jq -e '.skill_invocations | all(.name == "me:browse")'
 }
+
+@test "evolve build-index: fixture produces well-formed index with all signal kinds" {
+    run bun "$INDEXER" "$FIXTURE"
+    [ "$status" -eq 0 ]
+    # 모든 4종(또는 fixture가 만들 수 있는 3종) 신호 종류가 최소 1개씩
+    local kinds
+    kinds=$(echo "$output" | jq -r '[.groups[].signals[].kind] | unique | sort | join(",")')
+    [[ "$kinds" == *"success_pattern"* ]]
+    [[ "$kinds" == *"user_correction"* ]]
+    [[ "$kinds" == *"verbose_exploration"* ]]
+    # 인덱스 자체 형식 검증
+    echo "$output" | jq -e '.session_id and .jsonl_path and .turns_total and (.groups | type == "array")'
+}
