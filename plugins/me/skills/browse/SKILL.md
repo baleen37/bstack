@@ -150,11 +150,14 @@ playwright-cli mousewheel 0 100
 
 ### Save as
 
+For ephemeral artifacts (screenshots, PDFs you'll inspect once and discard), save to `$TMPDIR/<name>.png` — cross-platform, no clutter in the repo, auto-cleaned by the OS. This requires `PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS=true` (export it once in your shell, or prefix the command); without it, file outputs are restricted to the working directory and `<workdir>/.playwright-cli/`. The target directory must already exist — playwright-cli does **not** create missing parent dirs, and `~` is **not** expanded (use `$HOME` or `$TMPDIR`).
+
 ```bash
+# requires: export PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS=true
 playwright-cli screenshot
 playwright-cli screenshot e5
-playwright-cli screenshot --filename=page.png
-playwright-cli pdf --filename=page.pdf
+playwright-cli screenshot --filename=$TMPDIR/page.png
+playwright-cli pdf --filename=$TMPDIR/page.pdf
 ```
 
 ### Tabs
@@ -515,3 +518,4 @@ After any browser-facing change:
 | "I need to read localStorage to debug this" | Credential material is off-limits. Inspect non-sensitive state instead. |
 | "I'll just script the login" | MFA/SSO/captcha break it. Log in by hand once with `--headed --persistent`; reuse forever. |
 | "`attach --cdp=chrome` reuses my Chrome session" | It doesn't — it opens an in-memory context. Use `--persistent` instead. |
+| "I'll save the screenshot to `/tmp` or `~/`" | Default-restricted to workdir + `.playwright-cli/`. Set `PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS=true` and use `$TMPDIR/...` (`~` isn't expanded). |
