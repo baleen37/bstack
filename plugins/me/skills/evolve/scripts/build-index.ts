@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 // build-index.ts — transcript jsonl을 SessionIndex JSON으로 변환
-// 사용: bun build-index.ts [<jsonl-path>] [--session <id>] [--skill <name>]
+// 사용: bun build-index.ts [<jsonl-path>] [--session <id>]
 // 출력: stdout에 JSON
 
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
@@ -26,11 +26,6 @@ interface Event {
   n?: number;
 }
 
-interface SkillRun {
-  name: string;
-  turns: number[];
-}
-
 interface Cluster {
   kind: EventKind;
   t_range: [number, number];
@@ -48,9 +43,6 @@ interface SessionIndex {
   session_id: string;
   session_title?: string;
   turns: number;
-  tools_top: Array<[string, number]>;
-  skill_runs: SkillRun[];
-  signal_counts: Record<string, number>;
   summary: Summary;
   events: Event[];
 }
@@ -275,29 +267,6 @@ function buildEvents(turns: Turn[]): Event[] {
   return combined;
 }
 
-// ── 부수 집계 ──────────────────────────────────────────
-function buildSkillRuns(events: Event[]): SkillRun[] {
-  const byName = new Map<string, number[]>();
-  for (const e of events) {
-    if (e.kind !== "skill" || !e.name) continue;
-    if (!byName.has(e.name)) byName.set(e.name, []);
-    byName.get(e.name)!.push(e.t);
-  }
-  return [...byName.entries()].map(([name, turns]) => ({ name, turns }));
-}
-
-function buildToolsTop(turns: Turn[]): Array<[string, number]> {
-  const counts = new Map<string, number>();
-  for (const t of turns) for (const tu of t.toolUses) counts.set(tu.name, (counts.get(tu.name) ?? 0) + 1);
-  return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
-}
-
-function buildSignalCounts(events: Event[]): Record<string, number> {
-  const counts: Record<string, number> = {};
-  for (const e of events) counts[e.kind] = (counts[e.kind] ?? 0) + 1;
-  return counts;
-}
-
 // ── summary: 얕은 탐색용 ───────────────────────────────
 const SUMMARY_KINDS: EventKind[] = ["interrupt", "error", "repeat", "user"];
 const CLUSTER_GAP = 30;
@@ -337,7 +306,9 @@ function buildSignalPositions(events: Event[]): Partial<Record<EventKind, number
   return out;
 }
 
-function buildHeadline(turns: number, counts: Record<string, number>, clusters: Cluster[]): string {
+function buildHeadline(turns: number, events: Event[], clusters: Cluster[]): string {
+  const counts: Record<string, number> = {};
+  for (const e of events) counts[e.kind] = (counts[e.kind] ?? 0) + 1;
   const parts: string[] = [`${turns} turns`];
   for (const kind of ["user", "interrupt", "error", "repeat"] as const) {
     if (counts[kind]) parts.push(`${counts[kind]} ${kind}${counts[kind] > 1 ? "s" : ""}`);
@@ -346,54 +317,25 @@ function buildHeadline(turns: number, counts: Record<string, number>, clusters: 
   return parts.join(" · ");
 }
 
-function buildSummary(turns: number, events: Event[], counts: Record<string, number>): Summary {
+function buildSummary(turns: number, events: Event[]): Summary {
   const clusters = buildClusters(events);
   return {
-    headline: buildHeadline(turns, counts, clusters),
+    headline: buildHeadline(turns, events, clusters),
     clusters,
     signal_positions: buildSignalPositions(events),
   };
 }
 
-// ── --skill 필터 ───────────────────────────────────────
-function filterBySkill(index: SessionIndex, skillFilter: string): SessionIndex {
-  const matching = index.skill_runs.find((r) => r.name === skillFilter);
-  if (!matching || matching.turns.length === 0) {
-    return {
-      ...index,
-      skill_runs: [],
-      events: [],
-      signal_counts: {},
-      summary: buildSummary(index.turns, [], {}),
-    };
-  }
-  const firstTurn = matching.turns[0];
-  const filteredEvents = index.events.filter((e) => e.t >= firstTurn);
-  const filteredCounts = buildSignalCounts(filteredEvents);
-  return {
-    ...index,
-    skill_runs: [matching],
-    events: filteredEvents,
-    signal_counts: filteredCounts,
-    summary: buildSummary(index.turns, filteredEvents, filteredCounts),
-  };
-}
-
-function buildIndex(jsonlPath: string, skillFilter?: string): SessionIndex {
+function buildIndex(jsonlPath: string): SessionIndex {
   const { turns, sessionTitle } = loadTurns(jsonlPath);
   const events = buildEvents(turns);
-  const counts = buildSignalCounts(events);
-  const index: SessionIndex = {
+  return {
     session_id: basename(jsonlPath, ".jsonl"),
     ...(sessionTitle ? { session_title: sessionTitle } : {}),
     turns: turns.length,
-    tools_top: buildToolsTop(turns),
-    skill_runs: buildSkillRuns(events),
-    signal_counts: counts,
-    summary: buildSummary(turns.length, events, counts),
+    summary: buildSummary(turns.length, events),
     events,
   };
-  return skillFilter ? filterBySkill(index, skillFilter) : index;
 }
 
 // ── Phase 0: transcript 자동 탐지 ──────────────────────
@@ -429,21 +371,19 @@ function resolveTranscriptPath(opts: { jsonlPath?: string; sessionId?: string; c
 }
 
 // ── 진입점 ─────────────────────────────────────────────
-function parseArgs(argv: string[]): { jsonlPath?: string; sessionId?: string; skill?: string } {
+function parseArgs(argv: string[]): { jsonlPath?: string; sessionId?: string } {
   const args = argv.slice(2);
   let jsonlPath: string | undefined;
   let sessionId: string | undefined;
-  let skill: string | undefined;
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === "--skill") skill = args[++i];
-    else if (args[i] === "--session") sessionId = args[++i];
+    if (args[i] === "--session") sessionId = args[++i];
     else if (!jsonlPath) jsonlPath = args[i];
     else {
       console.error(`unexpected argument: ${args[i]}`);
       process.exit(2);
     }
   }
-  return { jsonlPath, sessionId, skill };
+  return { jsonlPath, sessionId };
 }
 
 const opts = parseArgs(process.argv);
@@ -452,4 +392,4 @@ const transcriptPath = resolveTranscriptPath({
   sessionId: opts.sessionId,
   cwd: process.cwd(),
 });
-console.log(JSON.stringify(buildIndex(transcriptPath, opts.skill), null, 2));
+console.log(JSON.stringify(buildIndex(transcriptPath), null, 2));
