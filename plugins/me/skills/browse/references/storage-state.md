@@ -2,6 +2,13 @@
 
 Manage cookies, localStorage, sessionStorage, and browser storage state.
 
+**Most of the time you don't need this file.** `open --persistent` keeps cookies and storage on disk automatically — that's the recommended pattern ([sessions & login](../SKILL.md#sessions--login-read-first)). Reach for `state-save` / `state-load` only when you need to:
+- copy a single site's auth from one session to another (e.g. share a login with a CI run),
+- snapshot a session before risky changes so you can roll back,
+- inject auth that came from outside (a teammate's exported state, an API).
+
+Caveat: `state-save` captures cookies + localStorage but **not HttpOnly cookies, IndexedDB, or service workers**. If the site stores auth there, only `--persistent` keeps it working.
+
 ## Storage State
 
 Save and restore complete browser state including cookies and storage.
@@ -19,12 +26,14 @@ playwright-cli state-save my-auth-state.json
 ### Restore Storage State
 
 ```bash
-# Load storage state from file
+# Load storage state into the current browser context
 playwright-cli state-load my-auth-state.json
 
-# Reload page to apply cookies
-playwright-cli open https://example.com
+# Navigate to the site so the loaded cookies/localStorage take effect
+playwright-cli goto https://example.com
 ```
+
+Note: `state-load` applies to the running context. To keep loaded state across `close`/reopen, either re-`state-save` later or use `open --persistent` from the start.
 
 ### Storage State File Format
 
@@ -251,9 +260,9 @@ playwright-cli open https://app.example.com/dashboard
 ### Save and Restore Roundtrip
 
 ```bash
-# Set up authentication state
+# Set up authentication state — eval takes one expression; wrap multiple statements in an IIFE
 playwright-cli open https://example.com
-playwright-cli eval "() => { document.cookie = 'session=abc123'; localStorage.setItem('user', 'john'); }"
+playwright-cli eval "(()=>{ document.cookie='session=abc123'; localStorage.setItem('user','john'); return 'set'; })()"
 
 # Save state to file
 playwright-cli state-save my-session.json

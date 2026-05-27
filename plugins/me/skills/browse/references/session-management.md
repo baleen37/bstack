@@ -2,20 +2,35 @@
 
 Run multiple isolated browser sessions concurrently with state persistence.
 
-## Named Browser Sessions
+## Default pattern: one `default` session, `--persistent` every call
 
-Use `-s` flag to isolate browser contexts:
+For day-to-day automation, **don't name sessions**. Skip `-s=`. Every call goes to the same `default` session — a real Chromium profile on disk. Add `--persistent` on every `open` so the profile survives.
 
 ```bash
-# Browser 1: Authentication flow
-playwright-cli -s=auth open https://app.example.com/login
+# First time only (per site) — log in by hand
+playwright-cli --headed open https://github.com/login --persistent
 
-# Browser 2: Public browsing (separate cookies, storage)
-playwright-cli -s=public open https://example.com
+# Every later call — no login, on any site previously visited in default
+playwright-cli open https://github.com/issues --persistent
+playwright-cli snapshot
+playwright-cli close
+```
 
-# Commands are isolated by browser session
-playwright-cli -s=auth fill e1 "user@example.com"
-playwright-cli -s=public snapshot
+The `default` profile accumulates logins across sites. Visit each new site once with `--headed`; afterwards it stays signed in.
+
+To pin a different default name for the current shell: `export PLAYWRIGHT_CLI_SESSION=main` (see "Environment Variable" below for the scope caveat).
+
+## Named sessions (only when you need isolation)
+
+Use `-s=<name>` only when two profiles need to coexist — e.g. two accounts on the same site, or a parallel test that must not see your other logins:
+
+```bash
+# Default session (no -s) holds your main work logins
+playwright-cli open https://github.com --persistent
+
+# Separate "alt" session for a second account on the same site
+playwright-cli -s=alt open https://github.com --persistent
+playwright-cli -s=alt fill e1 "alt-user@example.com"
 ```
 
 ## Browser Session Isolation Properties
@@ -51,11 +66,18 @@ playwright-cli -s=mysession delete-data   # delete named browser data
 
 ## Environment Variable
 
-Set a default browser session name via environment variable:
+Set a default browser session name via environment variable. **Scope: current shell only.** If your agent runs each command in a fresh shell, the variable won't carry over and later `close`/`list` calls will hit `default` instead — in that case, pass `-s=<name>` on every call.
 
 ```bash
+# Interactive shell — works for the rest of this session
 export PLAYWRIGHT_CLI_SESSION="mysession"
-playwright-cli open example.com  # Uses "mysession" automatically
+playwright-cli open https://example.com --persistent  # uses "mysession"
+playwright-cli close                                   # closes "mysession"
+
+# Agent / per-command shells — inline -s= is safer
+playwright-cli -s=mysession open https://example.com --persistent
+playwright-cli -s=mysession snapshot
+playwright-cli -s=mysession close
 ```
 
 ## Common Patterns
@@ -64,7 +86,8 @@ playwright-cli open example.com  # Uses "mysession" automatically
 
 ```bash
 #!/bin/bash
-# Scrape multiple sites concurrently
+# Scrape multiple sites concurrently — in-memory profiles (no --persistent) since each run is one-shot.
+# Add --persistent if you'll re-run against the same sites later.
 
 # Start all browsers
 playwright-cli -s=site1 open https://site1.com &
@@ -98,10 +121,10 @@ playwright-cli -s=variant-b screenshot
 By default, browser profile is kept in memory only. Use `--persistent` flag on `open` to persist the browser profile to disk:
 
 ```bash
-# Use persistent profile (auto-generated location)
+# Use persistent profile — stored at ~/Library/Caches/ms-playwright/daemon/<workspace>/ud-<session>-chrome (macOS)
 playwright-cli open https://example.com --persistent
 
-# Use persistent profile with custom directory
+# Use persistent profile with custom directory (e.g. ephemeral path in CI)
 playwright-cli open https://example.com --profile=/path/to/profile
 ```
 
@@ -109,21 +132,17 @@ playwright-cli open https://example.com --profile=/path/to/profile
 
 Use `attach` to connect to a browser that is already running, instead of launching a new one.
 
+**`attach` is not for reusing your everyday Chrome's logins.** Verified: `attach --cdp=chrome` opens a fresh in-memory context layered on top of the Chrome process — none of your personal cookies, tabs, or sessions are visible inside it. For login reuse use `open --persistent` ([see top of this file](#default-pattern-one-default-session---persistent-every-call)).
+
 ### Attach by channel name
 
 Connect to a running Chrome or Edge instance by its channel name. The browser must have remote debugging enabled — navigate to `chrome://inspect/#remote-debugging` in the target browser and check "Allow remote debugging for this browser instance".
 
 ```bash
-# Attach to Chrome
+# Attach to Chrome (NB: empty in-memory context, not your logged-in profile)
 playwright-cli attach --cdp=chrome
-
-# Attach to Chrome Canary
 playwright-cli attach --cdp=chrome-canary
-
-# Attach to Microsoft Edge
 playwright-cli attach --cdp=msedge
-
-# Attach to Edge Dev
 playwright-cli attach --cdp=msedge-dev
 ```
 
@@ -131,7 +150,7 @@ Supported channels: `chrome`, `chrome-beta`, `chrome-dev`, `chrome-canary`, `mse
 
 ### Attach via CDP endpoint
 
-Connect to a browser that exposes a Chrome DevTools Protocol endpoint:
+Connect to a browser that exposes a Chrome DevTools Protocol endpoint (e.g. a remote browser in CI):
 
 ```bash
 playwright-cli attach --cdp=http://localhost:9222
@@ -139,21 +158,27 @@ playwright-cli attach --cdp=http://localhost:9222
 
 ### Attach via browser extension
 
-Connect to a browser with the Playwright extension installed:
+Real reuse of your everyday Chrome's logins, at the cost of manual setup and per-attach friction:
 
 ```bash
-playwright-cli attach --extension
+playwright-cli attach --extension=chrome
 ```
+
+Prerequisites:
+- Install the [Playwright Extension](https://chromewebstore.google.com/detail/playwright-extension/mmlmfjhmonkocbjadbfplnigmagldckm) in Chrome.
+- Each attach prompts you in the extension UI to pick which tab to share. Setting `PLAYWRIGHT_MCP_EXTENSION_TOKEN=<token from extension>` auto-approves the connection dialog, but you still pick a tab.
+
+For unattended automation, prefer `open --persistent`; for one-off reuse of your real browser session, `--extension` works.
 
 ## Default Browser Session
 
-When `-s` is omitted, commands use the default browser session:
+When `-s` is omitted, commands use the default browser session. Always include `--persistent` on `open` so the profile survives across calls (omitting it silently drops into an in-memory context):
 
 ```bash
 # These use the same default browser session
-playwright-cli open https://example.com
+playwright-cli open https://example.com --persistent
 playwright-cli snapshot
-playwright-cli close  # Stops default browser
+playwright-cli close  # Stops default browser; profile remains on disk
 ```
 
 ## Browser Session Configuration
@@ -176,16 +201,9 @@ playwright-cli open https://example.com --persistent
 
 ## Best Practices
 
-### 1. Name Browser Sessions Semantically
+### 1. Prefer the `default` session
 
-```bash
-# GOOD: Clear purpose
-playwright-cli -s=github-auth open https://github.com
-playwright-cli -s=docs-scrape open https://docs.example.com
-
-# AVOID: Generic names
-playwright-cli -s=s1 open https://github.com
-```
+For everyday use, skip `-s=` and let everything land in `default`. Sites you've logged into accumulate there. Reach for a named session only when you actually need isolation (parallel runs, alt account). If you do name one, pick a clear word (`alt`, `qa`, `bot-account`) — not `s1`.
 
 ### 2. Always Clean Up
 
