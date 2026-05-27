@@ -31,6 +31,19 @@ interface SkillRun {
   turns: number[];
 }
 
+interface Cluster {
+  kind: EventKind;
+  t_range: [number, number];
+  n: number;
+  example_t: number;
+}
+
+interface Summary {
+  headline: string;
+  clusters: Cluster[];
+  signal_positions: Partial<Record<EventKind, number[]>>;
+}
+
 interface SessionIndex {
   session_id: string;
   session_title?: string;
@@ -38,6 +51,7 @@ interface SessionIndex {
   tools_top: Array<[string, number]>;
   skill_runs: SkillRun[];
   signal_counts: Record<string, number>;
+  summary: Summary;
   events: Event[];
 }
 
@@ -124,12 +138,15 @@ function summarizeToolUse(tu: { name: string; input: any }): string {
   return arg ? `${name}: ${arg}` : name;
 }
 
+const BOOKKEEPING_TOOLS = new Set(["TaskCreate", "TaskUpdate", "TaskList", "TaskGet", "AskUserQuestion"]);
+
 function priorAssistantActions(turns: Turn[], currentIdx: number): string[] {
   const actions: string[] = [];
   for (let i = currentIdx - 1; i >= 0 && actions.length < 3; i--) {
     const t = turns[i];
     if (t.type !== "assistant") continue;
     for (const tu of t.toolUses) {
+      if (BOOKKEEPING_TOOLS.has(tu.name)) continue;
       actions.push(summarizeToolUse(tu));
       if (actions.length >= 3) break;
     }
@@ -147,6 +164,20 @@ function detectSlashCommand(userText: string): string | undefined {
   if (tag) return tag[1];
   const prefix = userText.trim().match(SLASH_CMD_PREFIX);
   return prefix?.[1];
+}
+
+const PSEUDO_USER_PREFIXES = [
+  "Base directory for this skill:",
+  "<bash-input>",
+  "<bash-stdout>",
+  "<bash-stderr>",
+  "<local-command-",
+  "[Request interrupted",
+];
+
+function isPseudoUser(userText: string): boolean {
+  const trimmed = userText.trimStart();
+  return PSEUDO_USER_PREFIXES.some((p) => trimmed.startsWith(p));
 }
 
 // ── events 빌드 ────────────────────────────────────────
@@ -168,7 +199,7 @@ function buildEvents(turns: Turn[]): Event[] {
         const slashName = detectSlashCommand(t.userText);
         if (slashName) {
           events.push({ t: t.index, kind: "skill", name: slashName });
-        } else {
+        } else if (!isPseudoUser(t.userText)) {
           events.push({
             t: t.index,
             kind: "user",
@@ -267,32 +298,99 @@ function buildSignalCounts(events: Event[]): Record<string, number> {
   return counts;
 }
 
+// ── summary: 얕은 탐색용 ───────────────────────────────
+const SUMMARY_KINDS: EventKind[] = ["interrupt", "error", "repeat", "user"];
+const CLUSTER_GAP = 30;
+const CLUSTER_MIN = 3;
+
+function buildClusters(events: Event[]): Cluster[] {
+  const clusters: Cluster[] = [];
+  for (const kind of SUMMARY_KINDS) {
+    const turns = events.filter((e) => e.kind === kind).map((e) => e.t);
+    if (turns.length < CLUSTER_MIN) continue;
+    let start = turns[0];
+    let prev = turns[0];
+    let count = 1;
+    for (let i = 1; i <= turns.length; i++) {
+      const t = turns[i];
+      if (t !== undefined && t - prev <= CLUSTER_GAP) {
+        count++;
+        prev = t;
+        continue;
+      }
+      if (count >= CLUSTER_MIN) clusters.push({ kind, t_range: [start, prev], n: count, example_t: start });
+      if (t === undefined) break;
+      start = t;
+      prev = t;
+      count = 1;
+    }
+  }
+  return clusters.sort((a, b) => a.t_range[0] - b.t_range[0]);
+}
+
+function buildSignalPositions(events: Event[]): Partial<Record<EventKind, number[]>> {
+  const out: Partial<Record<EventKind, number[]>> = {};
+  for (const kind of SUMMARY_KINDS) {
+    const turns = events.filter((e) => e.kind === kind).map((e) => e.t);
+    if (turns.length > 0) out[kind] = turns;
+  }
+  return out;
+}
+
+function buildHeadline(turns: number, counts: Record<string, number>, clusters: Cluster[]): string {
+  const parts: string[] = [`${turns} turns`];
+  for (const kind of ["user", "interrupt", "error", "repeat"] as const) {
+    if (counts[kind]) parts.push(`${counts[kind]} ${kind}${counts[kind] > 1 ? "s" : ""}`);
+  }
+  if (clusters.length > 0) parts.push(`${clusters.length} cluster${clusters.length > 1 ? "s" : ""}`);
+  return parts.join(" · ");
+}
+
+function buildSummary(turns: number, events: Event[], counts: Record<string, number>): Summary {
+  const clusters = buildClusters(events);
+  return {
+    headline: buildHeadline(turns, counts, clusters),
+    clusters,
+    signal_positions: buildSignalPositions(events),
+  };
+}
+
 // ── --skill 필터 ───────────────────────────────────────
 function filterBySkill(index: SessionIndex, skillFilter: string): SessionIndex {
   const matching = index.skill_runs.find((r) => r.name === skillFilter);
   if (!matching || matching.turns.length === 0) {
-    return { ...index, skill_runs: [], events: [], signal_counts: {} };
+    return {
+      ...index,
+      skill_runs: [],
+      events: [],
+      signal_counts: {},
+      summary: buildSummary(index.turns, [], {}),
+    };
   }
   const firstTurn = matching.turns[0];
   const filteredEvents = index.events.filter((e) => e.t >= firstTurn);
+  const filteredCounts = buildSignalCounts(filteredEvents);
   return {
     ...index,
     skill_runs: [matching],
     events: filteredEvents,
-    signal_counts: buildSignalCounts(filteredEvents),
+    signal_counts: filteredCounts,
+    summary: buildSummary(index.turns, filteredEvents, filteredCounts),
   };
 }
 
 function buildIndex(jsonlPath: string, skillFilter?: string): SessionIndex {
   const { turns, sessionTitle } = loadTurns(jsonlPath);
   const events = buildEvents(turns);
+  const counts = buildSignalCounts(events);
   const index: SessionIndex = {
     session_id: basename(jsonlPath, ".jsonl"),
     ...(sessionTitle ? { session_title: sessionTitle } : {}),
     turns: turns.length,
     tools_top: buildToolsTop(turns),
     skill_runs: buildSkillRuns(events),
-    signal_counts: buildSignalCounts(events),
+    signal_counts: counts,
+    summary: buildSummary(turns.length, events, counts),
     events,
   };
   return skillFilter ? filterBySkill(index, skillFilter) : index;
