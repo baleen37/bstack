@@ -19,3 +19,9 @@ FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/sample-session.jsonl"
     [ "$status" -eq 0 ]
     echo "$output" | jq -e '[.groups[].signals[] | select(.kind == "user_correction")] | length >= 1'
 }
+
+@test "evolve build-index: detects verbose_exploration (repeated grep)" {
+    run bun "$INDEXER" "$FIXTURE"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '[.groups[].signals[] | select(.kind == "verbose_exploration")] | length >= 1'
+}

@@ -109,19 +109,71 @@ function extractUserCorrections(turns: Turn[], jsonlPath: string): Signal[] {
   return signals;
 }
 
+// ── 신호 추출: C. verbose_exploration ──────────────────
+function extractVerboseExploration(turns: Turn[], jsonlPath: string, startId: number): Signal[] {
+  const signals: Signal[] = [];
+  let counter = startId;
+  // 같은 Bash command prefix 3회 이상 또는 같은 Read file_path 3회 이상을 찾는다
+  const bashCounts = new Map<string, number[]>();   // prefix → turn 번호 목록
+  const readCounts = new Map<string, number[]>();   // file_path → turn 번호 목록
+  for (const t of turns) {
+    for (const tu of t.toolUses) {
+      if (tu.name === "Bash") {
+        const cmd: string = tu.input?.command ?? "";
+        const prefix = cmd.split(/\s+/).slice(0, 2).join(" "); // 예: "grep -r"
+        if (!prefix) continue;
+        if (!bashCounts.has(prefix)) bashCounts.set(prefix, []);
+        bashCounts.get(prefix)!.push(t.index);
+      } else if (tu.name === "Read") {
+        const path: string = tu.input?.file_path ?? "";
+        if (!path) continue;
+        if (!readCounts.has(path)) readCounts.set(path, []);
+        readCounts.get(path)!.push(t.index);
+      }
+    }
+  }
+  for (const [prefix, turnsList] of bashCounts) {
+    if (turnsList.length < 3) continue;
+    counter++;
+    signals.push({
+      id: `S${counter}`,
+      kind: "verbose_exploration",
+      turn_range: [turnsList[0], turnsList[turnsList.length - 1]],
+      snippet: prefix,
+      detail: `같은 명령 ${turnsList.length}회 반복`,
+      context_pointer: { jsonl_path: jsonlPath, turn_range: [turnsList[0], turnsList[turnsList.length - 1]] },
+    });
+  }
+  for (const [path, turnsList] of readCounts) {
+    if (turnsList.length < 3) continue;
+    counter++;
+    signals.push({
+      id: `S${counter}`,
+      kind: "verbose_exploration",
+      turn_range: [turnsList[0], turnsList[turnsList.length - 1]],
+      snippet: path,
+      detail: `같은 파일 Read ${turnsList.length}회`,
+      context_pointer: { jsonl_path: jsonlPath, turn_range: [turnsList[0], turnsList[turnsList.length - 1]] },
+    });
+  }
+  return signals;
+}
+
 // ── stub: 나머지는 후속 task에서 채움 ──────────────────
 function buildIndex(jsonlPath: string, skillFilter?: string): SessionIndex {
   const turns = loadTurns(jsonlPath);
   const corrections = extractUserCorrections(turns, jsonlPath);
+  const verbose = extractVerboseExploration(turns, jsonlPath, corrections.length);
+  const allSignals = [...corrections, ...verbose];
   const groups: TurnGroup[] =
-    corrections.length === 0
+    allSignals.length === 0
       ? []
       : [
           {
             turn_range: [1, turns.length],
             topic_hint: "session",
             tools_used: {},
-            signals: corrections,
+            signals: allSignals,
           },
         ];
   return {
