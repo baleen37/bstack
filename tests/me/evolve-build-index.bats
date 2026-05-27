@@ -53,28 +53,19 @@ RICH_FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/rich-signals-session.jsonl"
     echo "$output" | jq -e '[.events[] | select(.kind == "repeat")] | length >= 1'
 }
 
-@test "evolve build-index: tools_top includes Bash and Read" {
+@test "evolve build-index: output has only summary + events fields" {
     run bun "$INDEXER" "$FIXTURE"
     [ "$status" -eq 0 ]
-    echo "$output" | jq -e '.tools_top | map(.[0]) | index("Bash") != null'
+    # top-level keys: session_id, session_title?, turns, summary, events
+    echo "$output" | jq -e '(keys - ["session_id","session_title","turns","summary","events"]) == []'
 }
 
-@test "evolve build-index: skill_runs groups invocations by name" {
+@test "evolve build-index: summary has headline, clusters, signal_positions" {
     run bun "$INDEXER" "$FIXTURE"
     [ "$status" -eq 0 ]
-    echo "$output" | jq -e '.skill_runs | length >= 1'
-    echo "$output" | jq -e '.skill_runs[0].name == "me:browse"'
-    echo "$output" | jq -e '.skill_runs[0].turns | length >= 1'
-}
-
-@test "evolve build-index: --skill filter narrows to matching skill" {
-    run bun "$INDEXER" "$FIXTURE" --skill me:browse
-    [ "$status" -eq 0 ]
-    echo "$output" | jq -e '.skill_runs | all(.name == "me:browse")'
-    # 비매칭 필터는 빈 결과
-    run bun "$INDEXER" "$FIXTURE" --skill nonexistent
-    [ "$status" -eq 0 ]
-    echo "$output" | jq -e '.skill_runs == [] and .events == []'
+    echo "$output" | jq -e '.summary.headline | type == "string"'
+    echo "$output" | jq -e '.summary.clusters | type == "array"'
+    echo "$output" | jq -e '.summary.signal_positions | type == "object"'
 }
 
 @test "evolve build-index: detects slash-command in <command-name> tag form" {
@@ -137,12 +128,14 @@ RICH_FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/rich-signals-session.jsonl"
     '
 }
 
-@test "evolve build-index: signal_counts matches actual events" {
+@test "evolve build-index: signal_positions kinds appear in events" {
     run bun "$INDEXER" "$RICH_FIXTURE"
     [ "$status" -eq 0 ]
-    # signal_counts 합 == events 길이
+    # 각 signal_positions 키는 실제 events 의 kind 와 일치해야 함
     echo "$output" | jq -e '
-      (.signal_counts | to_entries | map(.value) | add) == (.events | length)
+      (.summary.signal_positions | keys) as $sk
+      | ([.events[].kind] | unique) as $ek
+      | ($sk | all(. as $k | $ek | index($k) != null))
     '
 }
 
