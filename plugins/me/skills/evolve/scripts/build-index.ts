@@ -5,6 +5,10 @@
 
 import { readFileSync } from "node:fs";
 import { basename } from "node:path";
+import { existsSync, readdirSync, statSync } from "node:fs";
+import { join, resolve } from "node:path";
+import { execSync } from "node:child_process";
+import { homedir } from "node:os";
 
 // ── 타입 ───────────────────────────────────────────────
 type SignalKind =
@@ -66,7 +70,7 @@ function loadTurns(jsonlPath: string): Turn[] {
       index: turns.length + 1,
       type: obj.type,
       toolUses: [],
-      interrupted: obj.message?.stop_reason === "interrupted",
+      interrupted: obj.message?.stop_reason === "interrupted" || obj.interruptedMessageId !== undefined,
       raw: obj,
     };
     const content = obj.message?.content;
@@ -149,6 +153,29 @@ function extractSkillInvocations(turns: Turn[]): SkillInvocation[] {
     invs.push({ name: m[1], turn: t.index, outcome: "completed" });
   }
   return invs;
+}
+
+// ── 신호 추출: B. interrupt ────────────────────────────
+function extractInterrupts(turns: Turn[], jsonlPath: string, startId: number): Signal[] {
+  const signals: Signal[] = [];
+  let counter = startId;
+  for (const t of turns) {
+    if (t.type !== "assistant" || !t.interrupted) continue;
+    counter++;
+    // 직전 user turn을 컨텍스트로 묶음
+    const prevUser = [...turns].reverse().find((u) => u.index < t.index && u.userText);
+    const winStart = prevUser ? prevUser.index : t.index;
+    const snippet = prevUser?.userText?.trim().slice(0, 80) ?? "(no prior user message)";
+    signals.push({
+      id: `S${counter}`,
+      kind: "interrupt",
+      turn_range: [winStart, t.index],
+      snippet,
+      detail: "assistant turn was interrupted",
+      context_pointer: { jsonl_path: jsonlPath, turn_range: [winStart, t.index] },
+    });
+  }
+  return signals;
 }
 
 // ── group 분할: 슬래시 커맨드 경계로 자름 ──────────────
@@ -234,13 +261,13 @@ function extractVerboseExploration(turns: Turn[], jsonlPath: string, startId: nu
   return signals;
 }
 
-// ── stub: 나머지는 후속 task에서 채움 ──────────────────
 function buildIndex(jsonlPath: string, skillFilter?: string): SessionIndex {
   const turns = loadTurns(jsonlPath);
   const corrections = extractUserCorrections(turns, jsonlPath);
   const verbose = extractVerboseExploration(turns, jsonlPath, corrections.length);
   const success = extractSuccessPatterns(turns, jsonlPath, corrections.length + verbose.length);
-  const allSignals = [...corrections, ...verbose, ...success];
+  const interrupts = extractInterrupts(turns, jsonlPath, corrections.length + verbose.length + success.length);
+  const allSignals = [...corrections, ...verbose, ...success, ...interrupts];
   let invs = extractSkillInvocations(turns);
   let groups = splitGroups(turns, invs, allSignals);
   if (skillFilter) {
@@ -262,21 +289,78 @@ function buildIndex(jsonlPath: string, skillFilter?: string): SessionIndex {
   };
 }
 
-// ── 진입점 ─────────────────────────────────────────────
-function parseArgs(argv: string[]): { path: string; skill?: string } {
-  const args = argv.slice(2);
-  let path = "";
-  let skill: string | undefined;
-  for (let i = 0; i < args.length; i++) {
-    if (args[i] === "--skill") skill = args[++i];
-    else path = args[i];
-  }
-  if (!path) {
-    console.error("usage: bun build-index.ts <jsonl-path> [--skill <name>]");
-    process.exit(2);
-  }
-  return { path, skill };
+// ── Phase 0: transcript 자동 탐지 ──────────────────────
+function encodeCwd(cwd: string): string {
+  // Claude Code project dir naming: '/' and '.' both become '-'
+  return cwd.replace(/[/.]/g, "-");
 }
 
-const { path, skill } = parseArgs(process.argv);
-console.log(JSON.stringify(buildIndex(path, skill), null, 2));
+function resolveTranscriptPath(opts: { jsonlPath?: string; sessionId?: string; cwd: string }): string {
+  if (opts.jsonlPath) return resolve(opts.jsonlPath);
+  const encoded = encodeCwd(opts.cwd);
+  const projectDir = join(homedir(), ".claude", "projects", encoded);
+  if (!existsSync(projectDir)) {
+    console.error(`transcript directory not found: ${projectDir}`);
+    process.exit(14);
+  }
+  if (opts.sessionId) {
+    const candidate = join(projectDir, `${opts.sessionId}.jsonl`);
+    if (!existsSync(candidate)) {
+      console.error(`session not found: ${candidate}`);
+      process.exit(14);
+    }
+    return candidate;
+  }
+  // newest .jsonl in projectDir
+  const files = readdirSync(projectDir)
+    .filter((f) => f.endsWith(".jsonl"))
+    .map((f) => ({ path: join(projectDir, f), mtime: statSync(join(projectDir, f)).mtimeMs }))
+    .sort((a, b) => b.mtime - a.mtime);
+  if (files.length === 0) {
+    console.error(`no .jsonl files in ${projectDir}`);
+    process.exit(14);
+  }
+  return files[0].path;
+}
+
+function assertCleanTree(): void {
+  try {
+    const out = execSync("git status --porcelain", { encoding: "utf8" }).trim();
+    if (out !== "") {
+      console.error("dirty tree, abort. commit or stash first.");
+      console.error(out);
+      process.exit(13);
+    }
+  } catch (e) {
+    // Not a git repo — let the caller decide; no guard
+  }
+}
+
+// ── 진입점 ─────────────────────────────────────────────
+function parseArgs(argv: string[]): { jsonlPath?: string; sessionId?: string; skill?: string; noDirtyCheck: boolean } {
+  const args = argv.slice(2);
+  let jsonlPath: string | undefined;
+  let sessionId: string | undefined;
+  let skill: string | undefined;
+  let noDirtyCheck = false;
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--skill") skill = args[++i];
+    else if (args[i] === "--session") sessionId = args[++i];
+    else if (args[i] === "--no-dirty-check") noDirtyCheck = true;
+    else if (!jsonlPath) jsonlPath = args[i];
+    else {
+      console.error(`unexpected argument: ${args[i]}`);
+      process.exit(2);
+    }
+  }
+  return { jsonlPath, sessionId, skill, noDirtyCheck };
+}
+
+const opts = parseArgs(process.argv);
+if (!opts.noDirtyCheck) assertCleanTree();
+const transcriptPath = resolveTranscriptPath({
+  jsonlPath: opts.jsonlPath,
+  sessionId: opts.sessionId,
+  cwd: process.cwd(),
+});
+console.log(JSON.stringify(buildIndex(transcriptPath, opts.skill), null, 2));
