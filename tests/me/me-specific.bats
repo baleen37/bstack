@@ -43,6 +43,12 @@ load ../helpers/bats_helper
     done
 }
 
+@test "me: evolve skill exists" {
+    [ -f "${PROJECT_ROOT}/plugins/me/skills/evolve/SKILL.md" ]
+    [ -f "${PROJECT_ROOT}/plugins/me/skills/evolve/scripts/build-index.ts" ]
+    [ -f "${PROJECT_ROOT}/plugins/me/skills/evolve/scripts/apply-patch.sh" ]
+}
+
 @test "me: lifecycle skills have proper frontmatter" {
     for skill in build test review ship; do
         local skill_file="${PROJECT_ROOT}/plugins/me/skills/${skill}/SKILL.md"

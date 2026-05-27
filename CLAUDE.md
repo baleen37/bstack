@@ -60,6 +60,7 @@ AI 보조 개발을 위한 도구들을 제공하며, 반복적 자기 참조 AI
 - Version synchronization: `.releaserc.js` updates root plugin.json and marketplace.json
 - Portable paths: Use `${CLAUDE_PLUGIN_ROOT}` in hook scripts
 - Hook script requirements: `set -euo pipefail`, jq for JSON parsing, stderr for errors
+- Skill scripts (under `plugins/*/skills/*/scripts/`) are written in **TypeScript** and run with `bun` — do NOT propose Python or shell alternatives for these scripts
 
 ## Dependencies
 
