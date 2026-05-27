@@ -137,6 +137,53 @@ function buildToolsTop(turns: Turn[]): Array<[string, number]> {
   return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
 }
 
+// ── skill invocations ──────────────────────────────────
+const SLASH_CMD = /^\/([a-z0-9:_-]+)\b/i;
+
+function extractSkillInvocations(turns: Turn[]): SkillInvocation[] {
+  const invs: SkillInvocation[] = [];
+  for (const t of turns) {
+    if (!t.userText) continue;
+    const m = t.userText.trim().match(SLASH_CMD);
+    if (!m) continue;
+    invs.push({ name: m[1], turn: t.index, outcome: "completed" });
+  }
+  return invs;
+}
+
+// ── group 분할: 슬래시 커맨드 경계로 자름 ──────────────
+function splitGroups(
+  turns: Turn[],
+  invs: SkillInvocation[],
+  allSignals: Signal[],
+): TurnGroup[] {
+  if (turns.length === 0) return [];
+  const boundaries = [1, ...invs.map((i) => i.turn), turns.length + 1];
+  const uniqSorted = [...new Set(boundaries)].sort((a, b) => a - b);
+  const groups: TurnGroup[] = [];
+  for (let i = 0; i < uniqSorted.length - 1; i++) {
+    const start = uniqSorted[i];
+    const end = uniqSorted[i + 1] - 1;
+    const groupSignals = allSignals.filter(
+      (s) => s.turn_range[0] >= start && s.turn_range[1] <= end,
+    );
+    if (groupSignals.length === 0) continue;
+    const tools: Record<string, number> = {};
+    for (const t of turns) {
+      if (t.index < start || t.index > end) continue;
+      for (const tu of t.toolUses) tools[tu.name] = (tools[tu.name] ?? 0) + 1;
+    }
+    const inv = invs.find((i) => i.turn >= start && i.turn <= end);
+    groups.push({
+      turn_range: [start, end],
+      topic_hint: inv ? `/${inv.name} 호출 구간` : "session",
+      tools_used: tools,
+      signals: groupSignals,
+    });
+  }
+  return groups;
+}
+
 // ── 신호 추출: C. verbose_exploration ──────────────────
 function extractVerboseExploration(turns: Turn[], jsonlPath: string, startId: number): Signal[] {
   const signals: Signal[] = [];
@@ -194,17 +241,15 @@ function buildIndex(jsonlPath: string, skillFilter?: string): SessionIndex {
   const verbose = extractVerboseExploration(turns, jsonlPath, corrections.length);
   const success = extractSuccessPatterns(turns, jsonlPath, corrections.length + verbose.length);
   const allSignals = [...corrections, ...verbose, ...success];
-  const groups: TurnGroup[] =
-    allSignals.length === 0
-      ? []
-      : [
-          {
-            turn_range: [1, turns.length],
-            topic_hint: "session",
-            tools_used: {},
-            signals: allSignals,
-          },
-        ];
+  let invs = extractSkillInvocations(turns);
+  let groups = splitGroups(turns, invs, allSignals);
+  if (skillFilter) {
+    invs = invs.filter((i) => i.name === skillFilter);
+    const allowed = new Set(invs.map((i) => i.turn));
+    groups = groups.filter((g) =>
+      [...allowed].some((t) => t >= g.turn_range[0] && t <= g.turn_range[1]),
+    );
+  }
   return {
     session_id: basename(jsonlPath, ".jsonl"),
     jsonl_path: jsonlPath,
@@ -212,7 +257,7 @@ function buildIndex(jsonlPath: string, skillFilter?: string): SessionIndex {
     user_messages: turns.filter((t) => t.userText !== undefined).length,
     interrupts_total: turns.filter((t) => t.interrupted).length,
     tools_top: buildToolsTop(turns),
-    skill_invocations: [],
+    skill_invocations: invs,
     groups,
   };
 }

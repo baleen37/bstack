@@ -37,3 +37,16 @@ FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/sample-session.jsonl"
     [ "$status" -eq 0 ]
     echo "$output" | jq -e '.tools_top | map(.[0]) | index("Bash") != null'
 }
+
+@test "evolve build-index: extracts skill_invocations from /<name> messages" {
+    run bun "$INDEXER" "$FIXTURE"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '.skill_invocations | length >= 1'
+    echo "$output" | jq -e '.skill_invocations[0].name == "me:browse"'
+}
+
+@test "evolve build-index: --skill filter keeps only matching groups" {
+    run bun "$INDEXER" "$FIXTURE" --skill me:browse
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '.skill_invocations | all(.name == "me:browse")'
+}
