@@ -188,9 +188,9 @@ interface AnalysisResult {
      P1. plugins/me/skills/browse/SKILL.md
        근거: S1 (사용자 교정 "그게 아니라 X")
        이유: <rationale>
-       
+
        [patch diff]
-       
+
        적용? [y/n/skip/edit]
      ```
    - y: Edit 적용 → `git add` → 개별 commit (메시지 형식 아래)
