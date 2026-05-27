@@ -17,6 +17,18 @@ playwright-cli fill e2 "test"
 playwright-cli tracing-stop
 ```
 
+## Viewing the trace
+
+Traces are written under `.playwright-cli/traces/`. Open them with the Playwright Test trace viewer:
+
+```bash
+# Requires @playwright/test (separate package from playwright-cli)
+npm install -D @playwright/test
+npx playwright show-trace .playwright-cli/traces/trace-<timestamp>.trace
+```
+
+The viewer is interactive — step through actions, scrub the timeline, inspect DOM snapshots, network, and console at each step.
+
 ## Trace Output Files
 
 When you start tracing, Playwright creates a `traces/` directory with several files:

@@ -1,6 +1,9 @@
 # Bun / Package managers
 node_modules/
 
+# playwright-cli runtime artifacts (snapshots, console logs, traces)
+.playwright-cli/
+
 # Python
 __pycache__/
 *.py[cod]
