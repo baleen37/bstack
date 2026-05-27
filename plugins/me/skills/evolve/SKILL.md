@@ -35,7 +35,7 @@ allowed-tools:
 
 Phase 0에서 메인 에이전트는 두 가지를 한다:
 
-> **언어 규칙**: `build-index.ts`를 포함한 모든 스킬 스크립트는 TypeScript(Bun 런타임)로 작성한다. shell/Python 대안을 제안하지 말 것.
+> **언어 규칙**: `build-index.ts`를 포함한 모든 스킬 스크립트는 TypeScript(Bun 런타임)로 작성한다. shell/Python 대안을 제안하지 말 것. 계획 단계, 리뷰 에이전트 제안, 구현 subagent 지시 모두 동일하게 적용. `apply-patch.sh` 같은 기존 보조 셸 스크립트는 유지하되 새로 추가하는 스크립트는 모두 TS.
 
 1. **Dirty tree 가드** — `git status --porcelain`이 비어 있어야 한다. dirty면 "커밋이나 stash 후 다시 실행하세요"라고 알리고 종료. (실제 적용 commit은 Phase 2의 `apply-patch.sh`가 책임지지만, Phase 0에서 미리 확인해 사용자가 헷갈리지 않게 한다.)
 
