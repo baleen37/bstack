@@ -19,9 +19,8 @@ allowed-tools:
 
 ```
 /me:evolve                          현재 세션 회고
-/me:evolve me:research              해당 스킬에 집중
+/me:evolve --skill me:research      해당 스킬에 집중
 /me:evolve --session <id>           특정 세션 ID
-/me:evolve --since 7d me:browse     7일치 + 스킬 필터
 /me:evolve --dry-run                제안만, 적용 안 함
 ```
 
@@ -32,27 +31,19 @@ allowed-tools:
 - 새 스킬을 만들지 않는다 (`writing-skills` 영역)
 - 자동 commit·push 안 한다 (반드시 사용자가 한 건씩 승인)
 
-## Phase 0 — 인덱스 빌드 (Bash)
+## Phase 0 — 인덱스 빌드
 
-1. 현재 세션의 transcript 경로를 결정:
-   - 인자 `--session <id>` 있으면 그 id 사용
-   - 없으면 환경 변수 `CLAUDE_SESSION_ID` 또는 `~/.claude/projects/<encoded-cwd>/`에서 가장 최근 `.jsonl`
-   - encoded-cwd는 `pwd | sed 's|/|-|g'`
-2. dirty tree 가드:
+`build-index.ts`를 실행하면 transcript 자동 탐지, dirty tree 가드, 인덱싱이 한 번에 끝난다. 사용자가 path를 따로 지정할 필요 없다.
 
-   ```bash
-   git status --porcelain | grep -q . && { echo "dirty tree, abort"; exit 1; }
-   ```
+```bash
+bun "${CLAUDE_PLUGIN_ROOT}/skills/evolve/scripts/build-index.ts" [--session <id>] [--skill <name>]
+```
 
-3. 인덱서 실행:
+종료 코드: `0`=정상, `13`=dirty tree (commit 또는 stash 후 재시도), `14`=transcript 또는 project dir을 못 찾음.
 
-   ```bash
-   bun "${CLAUDE_PLUGIN_ROOT}/skills/evolve/scripts/build-index.ts" <jsonl-path> [--skill <name>]
-   ```
+stdout JSON을 변수에 캡처. **사용자에게 보여주지 말 것** — 다음 단계 서브에이전트에게만 전달.
 
-   stdout JSON을 변수에 캡처. **사용자에게 보여주지 말 것** — 다음 단계 서브에이전트에게만 전달.
-
-4. 인덱스의 `groups`가 비었으면: "이 세션에서는 개선 신호를 못 찾았어요" 출력 후 종료.
+인덱스의 `groups`가 비어 있으면: "이 세션에서는 개선 신호를 못 찾았어요" 출력 후 종료.
 
 ## Phase 1 — 서브에이전트 분석 (Agent)
 
