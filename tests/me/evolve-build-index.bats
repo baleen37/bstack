@@ -72,37 +72,26 @@ INTERRUPT_FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/interrupt-session.jsonl
     echo "$output" | jq -e '[.groups[].signals[] | select(.kind == "interrupt")] | length >= 1'
 }
 
-@test "evolve build-index: dirty tree guard exits 13" {
-    # 임시 디렉토리에 가짜 git repo + dirty 상태 만들기
-    local tmp="$BATS_TEST_TMPDIR/dirty-repo"
-    mkdir -p "$tmp"
-    cd "$tmp"
-    git init -q
-    git config user.email t@t && git config user.name t
-    echo "x" > a && git add a && git commit -q -m init
-    echo "dirty" > a   # uncommitted change
-    run bun "$INDEXER" "$FIXTURE"
-    [ "$status" -eq 13 ]
-}
-
-@test "evolve build-index: --no-dirty-check bypasses guard" {
-    local tmp="$BATS_TEST_TMPDIR/dirty-bypass"
-    mkdir -p "$tmp"
-    cd "$tmp"
-    git init -q
-    git config user.email t@t && git config user.name t
-    echo "x" > a && git add a && git commit -q -m init
-    echo "dirty" > a
-    run bun "$INDEXER" "$FIXTURE" --no-dirty-check
-    [ "$status" -eq 0 ]
-}
-
 @test "evolve build-index: missing transcript dir exits 14" {
     # 점이 포함된 절대 경로로 cd → encodeCwd 결과는 존재하지 않을 것
     local tmp="$BATS_TEST_TMPDIR/no.such.transcript.dir/nested"
     mkdir -p "$tmp"
     cd "$tmp"
-    # 이 경로에 .git이 없어 dirty 가드는 건너뜀, encodeCwd로 만든 디렉토리는 ~/.claude/projects/에 없음
-    run bun "$INDEXER" --no-dirty-check
+    run bun "$INDEXER"
     [ "$status" -eq 14 ]
+}
+
+@test "evolve build-index: detects slash-command in <command-name> tag form" {
+    local tag_fixture="${PROJECT_ROOT}/tests/fixtures/evolve/slash-cmd-tag-session.jsonl"
+    run bun "$INDEXER" "$tag_fixture"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '.skill_invocations | length >= 1'
+    echo "$output" | jq -e '.skill_invocations[0].name == "me:verify"'
+}
+
+@test "evolve build-index: detects interrupt from interruptedMessageId on user turn" {
+    run bun "$INDEXER" "$INTERRUPT_FIXTURE"
+    [ "$status" -eq 0 ]
+    # interrupt-session.jsonl 은 두 형태 다 포함 → signal 2건 이상
+    echo "$output" | jq -e '[.groups[].signals[] | select(.kind == "interrupt")] | length >= 2'
 }

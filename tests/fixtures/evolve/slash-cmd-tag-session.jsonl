@@ -1,0 +1,3 @@
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"<command-message>me:verify</command-message>\n<command-name>/me:verify</command-name>\n\n# /verify: prove it works"}]}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"verify 진행합니다"}]}}
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"잠깐 다시"}]}}

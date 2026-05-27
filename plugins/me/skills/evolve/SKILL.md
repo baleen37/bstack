@@ -33,13 +33,17 @@ allowed-tools:
 
 ## Phase 0 — 인덱스 빌드
 
-`build-index.ts`를 실행하면 transcript 자동 탐지, dirty tree 가드, 인덱싱이 한 번에 끝난다. 사용자가 path를 따로 지정할 필요 없다.
+Phase 0에서 메인 에이전트는 두 가지를 한다:
+
+1. **Dirty tree 가드** — `git status --porcelain`이 비어 있어야 한다. dirty면 "커밋이나 stash 후 다시 실행하세요"라고 알리고 종료. (실제 적용 commit은 Phase 2의 `apply-patch.sh`가 책임지지만, Phase 0에서 미리 확인해 사용자가 헷갈리지 않게 한다.)
+
+2. **인덱스 빌드** — `build-index.ts`는 read-only로 transcript 자동 탐지 + 신호 추출 + JSON 출력을 한다.
 
 ```bash
 bun "${CLAUDE_PLUGIN_ROOT}/skills/evolve/scripts/build-index.ts" [--session <id>] [--skill <name>]
 ```
 
-종료 코드: `0`=정상, `13`=dirty tree (commit 또는 stash 후 재시도), `14`=transcript 또는 project dir을 못 찾음.
+종료 코드: `0`=정상, `14`=transcript 또는 project dir을 못 찾음.
 
 stdout JSON을 변수에 캡처. **사용자에게 보여주지 말 것** — 다음 단계 서브에이전트에게만 전달.
 

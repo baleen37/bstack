@@ -3,11 +3,8 @@
 // 사용: bun build-index.ts <jsonl-path> [--skill <name>]
 // 출력: stdout에 JSON
 
-import { readFileSync } from "node:fs";
-import { basename } from "node:path";
-import { existsSync, readdirSync, statSync } from "node:fs";
-import { join, resolve } from "node:path";
-import { execSync } from "node:child_process";
+import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
+import { basename, join, resolve } from "node:path";
 import { homedir } from "node:os";
 
 // ── 타입 ───────────────────────────────────────────────
@@ -142,38 +139,68 @@ function buildToolsTop(turns: Turn[]): Array<[string, number]> {
 }
 
 // ── skill invocations ──────────────────────────────────
-const SLASH_CMD = /^\/([a-z0-9:_-]+)\b/i;
+// Claude Code transcript 안에서 슬래시 커맨드는 두 가지 모양으로 등장한다:
+//   1) <command-name>/me:browse</command-name> 태그 (자동 expand된 경우)
+//   2) 사용자가 직접 친 "/me:browse 잘 동작해?" 같은 prefix
+const SLASH_CMD_TAG = /<command-name>\/([a-z0-9:_-]+)<\/command-name>/i;
+const SLASH_CMD_PREFIX = /^\/([a-z0-9:_-]+)\b/i;
 
 function extractSkillInvocations(turns: Turn[]): SkillInvocation[] {
   const invs: SkillInvocation[] = [];
   for (const t of turns) {
     if (!t.userText) continue;
-    const m = t.userText.trim().match(SLASH_CMD);
-    if (!m) continue;
-    invs.push({ name: m[1], turn: t.index, outcome: "completed" });
+    const text = t.userText;
+    const tagMatch = text.match(SLASH_CMD_TAG);
+    const prefixMatch = text.trim().match(SLASH_CMD_PREFIX);
+    const name = tagMatch?.[1] ?? prefixMatch?.[1];
+    if (!name) continue;
+    invs.push({ name, turn: t.index, outcome: "completed" });
   }
   return invs;
 }
 
 // ── 신호 추출: B. interrupt ────────────────────────────
+// Interrupt 마커는 transcript에 두 모양으로 등장한다:
+//   1) user turn에 interruptedMessageId — 실제 사용자가 끊은 경우 (가장 흔함)
+//   2) assistant turn에 stop_reason="interrupted" — 일부 환경에서 등장
+// 두 경우 모두 signal로 잡되, 같은 turn 묶음을 중복 발행하지 않는다.
 function extractInterrupts(turns: Turn[], jsonlPath: string, startId: number): Signal[] {
   const signals: Signal[] = [];
   let counter = startId;
+  const claimedTurns = new Set<number>();
   for (const t of turns) {
-    if (t.type !== "assistant" || !t.interrupted) continue;
+    if (!t.interrupted) continue;
+    if (claimedTurns.has(t.index)) continue;
     counter++;
-    // 직전 user turn을 컨텍스트로 묶음
-    const prevUser = [...turns].reverse().find((u) => u.index < t.index && u.userText);
-    const winStart = prevUser ? prevUser.index : t.index;
-    const snippet = prevUser?.userText?.trim().slice(0, 80) ?? "(no prior user message)";
-    signals.push({
-      id: `S${counter}`,
-      kind: "interrupt",
-      turn_range: [winStart, t.index],
-      snippet,
-      detail: "assistant turn was interrupted",
-      context_pointer: { jsonl_path: jsonlPath, turn_range: [winStart, t.index] },
-    });
+    if (t.type === "user") {
+      // user turn이 인터럽트 마커를 들고 있음 → 직전 assistant 행동을 컨텍스트로
+      const prevAssist = [...turns].reverse().find((a) => a.index < t.index && a.type === "assistant");
+      const winStart = prevAssist ? prevAssist.index : t.index;
+      claimedTurns.add(t.index);
+      if (prevAssist) claimedTurns.add(prevAssist.index);
+      signals.push({
+        id: `S${counter}`,
+        kind: "interrupt",
+        turn_range: [winStart, t.index],
+        snippet: t.userText?.trim().slice(0, 80) ?? "(interrupted)",
+        detail: "user interrupted the prior assistant turn",
+        context_pointer: { jsonl_path: jsonlPath, turn_range: [winStart, t.index] },
+      });
+    } else {
+      // assistant stop_reason="interrupted" 경로 — 직전 user 발화를 컨텍스트로
+      const prevUser = [...turns].reverse().find((u) => u.index < t.index && u.userText);
+      const winStart = prevUser ? prevUser.index : t.index;
+      claimedTurns.add(t.index);
+      if (prevUser) claimedTurns.add(prevUser.index);
+      signals.push({
+        id: `S${counter}`,
+        kind: "interrupt",
+        turn_range: [winStart, t.index],
+        snippet: prevUser?.userText?.trim().slice(0, 80) ?? "(no prior user message)",
+        detail: "assistant turn was interrupted",
+        context_pointer: { jsonl_path: jsonlPath, turn_range: [winStart, t.index] },
+      });
+    }
   }
   return signals;
 }
@@ -323,41 +350,26 @@ function resolveTranscriptPath(opts: { jsonlPath?: string; sessionId?: string; c
   return files[0].path;
 }
 
-function assertCleanTree(): void {
-  try {
-    const out = execSync("git status --porcelain", { encoding: "utf8" }).trim();
-    if (out !== "") {
-      console.error("dirty tree, abort. commit or stash first.");
-      console.error(out);
-      process.exit(13);
-    }
-  } catch (e) {
-    // Not a git repo — let the caller decide; no guard
-  }
-}
-
 // ── 진입점 ─────────────────────────────────────────────
-function parseArgs(argv: string[]): { jsonlPath?: string; sessionId?: string; skill?: string; noDirtyCheck: boolean } {
+// 인덱서는 read-only — dirty tree 가드는 apply-patch.sh가 책임진다.
+function parseArgs(argv: string[]): { jsonlPath?: string; sessionId?: string; skill?: string } {
   const args = argv.slice(2);
   let jsonlPath: string | undefined;
   let sessionId: string | undefined;
   let skill: string | undefined;
-  let noDirtyCheck = false;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--skill") skill = args[++i];
     else if (args[i] === "--session") sessionId = args[++i];
-    else if (args[i] === "--no-dirty-check") noDirtyCheck = true;
     else if (!jsonlPath) jsonlPath = args[i];
     else {
       console.error(`unexpected argument: ${args[i]}`);
       process.exit(2);
     }
   }
-  return { jsonlPath, sessionId, skill, noDirtyCheck };
+  return { jsonlPath, sessionId, skill };
 }
 
 const opts = parseArgs(process.argv);
-if (!opts.noDirtyCheck) assertCleanTree();
 const transcriptPath = resolveTranscriptPath({
   jsonlPath: opts.jsonlPath,
   sessionId: opts.sessionId,
