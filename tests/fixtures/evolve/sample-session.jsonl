@@ -1,0 +1,9 @@
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"/me:browse 잘 동작해?"}]}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"확인하겠습니다."},{"type":"tool_use","name":"Bash","input":{"command":"grep -r foo src/"}}]}}
+{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"x","content":"no matches"}]}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","name":"Bash","input":{"command":"grep -r foo lib/"}}]}}
+{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"y","content":"no matches"}]}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","name":"Bash","input":{"command":"grep -r foo plugins/"}}]}}
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"아니 그게 아니라 @plugins/me/skills/browse/ 봐"}]}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","name":"Read","input":{"file_path":"plugins/me/skills/browse/SKILL.md"}}],"stop_reason":"end_turn"}}
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"좋아 그거야"}]}}
