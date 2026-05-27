@@ -8,11 +8,11 @@ import { basename, join, resolve } from "node:path";
 import { homedir } from "node:os";
 
 // ── 타입 ───────────────────────────────────────────────
+// SignalKind 의도적으로 좁힘: 인덱서는 결정적 메타데이터만, 의미 분류는 LLM 책임.
 type SignalKind =
-  | "user_correction"
-  | "verbose_exploration"
-  | "success_pattern"
-  | "interrupt";
+  | "user_message"           // 사용자 발화 (LLM이 분류)
+  | "verbose_exploration"    // 같은 명령 N회 반복 (사실 카운트)
+  | "interrupt";             // interrupt 마커 (메타데이터)
 
 interface Signal {
   id: string;
@@ -20,6 +20,7 @@ interface Signal {
   turn_range: [number, number];
   snippet: string;
   detail?: string;
+  prior_actions?: string[];  // user_message일 때만: 직전 assistant 행동 요약
   context_pointer: { jsonl_path: string; turn_range: [number, number] };
 }
 
@@ -84,48 +85,48 @@ function loadTurns(jsonlPath: string): Turn[] {
   return turns;
 }
 
-// ── 신호 추출: A. user_correction ──────────────────────
-const CORRECTION_KR = /^(아니|그게 아니|그러지 말|다시|잠깐)/;
-const CORRECTION_EN = /\b(no|stop|wait|hold on|don't|that's not)\b/i;
-const PATH_REDIRECT = /@\S+\//;
-
-function extractUserCorrections(turns: Turn[], jsonlPath: string): Signal[] {
-  const signals: Signal[] = [];
-  let counter = 0;
-  for (const t of turns) {
-    if (!t.userText) continue;
-    const text = t.userText.trim();
-    const matched =
-      CORRECTION_KR.test(text) || CORRECTION_EN.test(text) || PATH_REDIRECT.test(text);
-    if (!matched) continue;
-    counter++;
-    signals.push({
-      id: `S${counter}`,
-      kind: "user_correction",
-      turn_range: [t.index, t.index],
-      snippet: text.slice(0, 80),
-      context_pointer: { jsonl_path: jsonlPath, turn_range: [Math.max(1, t.index - 2), t.index] },
-    });
-  }
-  return signals;
+// ── 신호 수집: A. user_message ─────────────────────────
+// 모든 user 발화를 raw signal로 emit. 분류 (정정/긍정/질문/잡담)는 LLM이 함.
+// 직전 assistant 행동을 prior_actions로 묶어 문맥 제공.
+function summarizeToolUse(tu: { name: string; input: any }): string {
+  const name = tu.name;
+  let arg = "";
+  if (name === "Bash") arg = (tu.input?.command ?? "").slice(0, 60);
+  else if (name === "Read" || name === "Edit" || name === "Write") arg = tu.input?.file_path ?? "";
+  else if (name === "Grep" || name === "Glob") arg = tu.input?.pattern ?? "";
+  else if (name === "Agent") arg = tu.input?.description ?? "";
+  else arg = JSON.stringify(tu.input ?? {}).slice(0, 60);
+  return arg ? `${name}: ${arg}` : name;
 }
 
-// ── 신호 추출: D. success_pattern ──────────────────────
-const POSITIVE = /^(좋아|perfect|그렇지|yes|ok|good|great)(\s|$)/i;
+function summarizePriorActions(turns: Turn[], currentIdx: number): string[] {
+  const actions: string[] = [];
+  for (let i = currentIdx - 1; i >= 0 && actions.length < 3; i--) {
+    const t = turns[i];
+    if (t.type !== "assistant") continue;
+    for (const tu of t.toolUses) {
+      actions.push(summarizeToolUse(tu));
+      if (actions.length >= 3) break;
+    }
+    if (actions.length > 0) break; // 가장 인접한 assistant turn 하나만
+  }
+  return actions;
+}
 
-function extractSuccessPatterns(turns: Turn[], jsonlPath: string, startId: number): Signal[] {
+function collectUserMessages(turns: Turn[], jsonlPath: string): Signal[] {
   const signals: Signal[] = [];
-  let counter = startId;
-  for (const t of turns) {
-    if (!t.userText || !POSITIVE.test(t.userText.trim())) continue;
+  let counter = 0;
+  for (let i = 0; i < turns.length; i++) {
+    const t = turns[i];
+    if (!t.userText) continue;
     counter++;
-    const winStart = Math.max(1, t.index - 5);
     signals.push({
       id: `S${counter}`,
-      kind: "success_pattern",
-      turn_range: [winStart, t.index],
-      snippet: t.userText.trim().slice(0, 80),
-      context_pointer: { jsonl_path: jsonlPath, turn_range: [winStart, t.index] },
+      kind: "user_message",
+      turn_range: [t.index, t.index],
+      snippet: t.userText.trim().slice(0, 200),
+      prior_actions: summarizePriorActions(turns, i),
+      context_pointer: { jsonl_path: jsonlPath, turn_range: [Math.max(1, t.index - 2), t.index] },
     });
   }
   return signals;
@@ -290,11 +291,10 @@ function extractVerboseExploration(turns: Turn[], jsonlPath: string, startId: nu
 
 function buildIndex(jsonlPath: string, skillFilter?: string): SessionIndex {
   const turns = loadTurns(jsonlPath);
-  const corrections = extractUserCorrections(turns, jsonlPath);
-  const verbose = extractVerboseExploration(turns, jsonlPath, corrections.length);
-  const success = extractSuccessPatterns(turns, jsonlPath, corrections.length + verbose.length);
-  const interrupts = extractInterrupts(turns, jsonlPath, corrections.length + verbose.length + success.length);
-  const allSignals = [...corrections, ...verbose, ...success, ...interrupts];
+  const userMsgs = collectUserMessages(turns, jsonlPath);
+  const verbose = extractVerboseExploration(turns, jsonlPath, userMsgs.length);
+  const interrupts = extractInterrupts(turns, jsonlPath, userMsgs.length + verbose.length);
+  const allSignals = [...userMsgs, ...verbose, ...interrupts];
   let invs = extractSkillInvocations(turns);
   let groups = splitGroups(turns, invs, allSignals);
   if (skillFilter) {
