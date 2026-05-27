@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 // build-index.ts — transcript jsonl을 SessionIndex JSON으로 변환
-// 사용: bun build-index.ts <jsonl-path> [--skill <name>]
+// 사용: bun build-index.ts [<jsonl-path>] [--session <id>] [--skill <name>]
 // 출력: stdout에 JSON
 
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
@@ -8,70 +8,59 @@ import { basename, join, resolve } from "node:path";
 import { homedir } from "node:os";
 
 // ── 타입 ───────────────────────────────────────────────
-// SignalKind 의도적으로 좁힘: 인덱서는 결정적 메타데이터만, 의미 분류는 LLM 책임.
-type SignalKind =
-  | "user_message"           // 사용자 발화 (LLM이 분류)
-  | "verbose_exploration"    // 같은 명령 N회 반복 (사실 카운트)
-  | "interrupt"              // interrupt 마커 (메타데이터)
-  | "tool_error"             // tool_result.is_error == true
-  | "agent_dispatch"         // Agent tool 호출 (서브에이전트 분기)
-  | "large_tool_output";     // tool_result content > 10KB
+type EventKind = "user" | "skill" | "interrupt" | "error" | "agent" | "large_out" | "repeat";
 
-interface Signal {
-  id: string;
-  kind: SignalKind;
-  turn_range: [number, number];
-  snippet: string;
-  detail?: string;
-  prior_actions?: string[];  // user_message일 때만: 직전 assistant 행동 요약
-  context_pointer: { jsonl_path: string; turn_range: [number, number] };
+interface Event {
+  t: number;
+  kind: EventKind;
+  text?: string;
+  prior?: string[];
+  name?: string;
+  by?: "user" | "assistant";
+  tool?: string;
+  desc?: string;
+  sub?: string;
+  model?: string;
+  bytes?: number;
+  pattern?: string;
+  n?: number;
 }
 
-interface TurnGroup {
-  turn_range: [number, number];
-  topic_hint: string;
-  tools_used: Record<string, number>;
-  signals: Signal[];
-}
-
-interface SkillInvocation {
+interface SkillRun {
   name: string;
-  turn: number;
-  outcome: string;
+  turns: number[];
 }
 
 interface SessionIndex {
   session_id: string;
   session_title?: string;
-  jsonl_path: string;
-  turns_total: number;
-  user_messages: number;
-  interrupts_total: number;
+  turns: number;
   tools_top: Array<[string, number]>;
-  skill_invocations: SkillInvocation[];
-  groups: TurnGroup[];
+  skill_runs: SkillRun[];
+  signal_counts: Record<string, number>;
+  events: Event[];
 }
 
 // ── 입력 파싱 ──────────────────────────────────────────
 interface ToolResultPayload {
-  content: string;        // 출력 본문 (string으로 정규화)
+  content: string;
   isError: boolean;
-  size: number;           // content 길이 (large_tool_output 임계 판정용)
+  size: number;
 }
 
 interface Turn {
   index: number;
-  type: "user" | "assistant" | "other";
+  type: "user" | "assistant";
   userText?: string;
   toolUses: Array<{ name: string; input: any }>;
-  toolResults: ToolResultPayload[];  // user turn의 tool_result content들
+  toolResults: ToolResultPayload[];
   interrupted: boolean;
-  raw: any;
+  interruptedBy?: "user" | "assistant";
 }
 
 interface LoadedTranscript {
   turns: Turn[];
-  sessionTitle?: string;  // ai-title 라인에서 추출 (가장 마지막 값)
+  sessionTitle?: string;
 }
 
 function normalizeToolResultContent(raw: any): string {
@@ -86,20 +75,22 @@ function loadTurns(jsonlPath: string): LoadedTranscript {
   const lines = readFileSync(jsonlPath, "utf8").split("\n").filter(Boolean);
   const turns: Turn[] = [];
   let sessionTitle: string | undefined;
-  for (let i = 0; i < lines.length; i++) {
-    const obj = JSON.parse(lines[i]);
+  for (const line of lines) {
+    const obj = JSON.parse(line);
     if (obj.type === "ai-title" && typeof obj.aiTitle === "string") {
-      sessionTitle = obj.aiTitle;  // 최신값으로 덮어씀
+      sessionTitle = obj.aiTitle;
       continue;
     }
     if (obj.type !== "user" && obj.type !== "assistant") continue;
+    const userInterruptedMarker = obj.interruptedMessageId !== undefined;
+    const assistantInterruptedMarker = obj.message?.stop_reason === "interrupted";
     const t: Turn = {
       index: turns.length + 1,
       type: obj.type,
       toolUses: [],
       toolResults: [],
-      interrupted: obj.message?.stop_reason === "interrupted" || obj.interruptedMessageId !== undefined,
-      raw: obj,
+      interrupted: userInterruptedMarker || assistantInterruptedMarker,
+      interruptedBy: userInterruptedMarker ? "user" : assistantInterruptedMarker ? "assistant" : undefined,
     };
     const content = obj.message?.content;
     if (obj.type === "user") {
@@ -113,19 +104,15 @@ function loadTurns(jsonlPath: string): LoadedTranscript {
           }
         }
       }
-    } else {
-      if (Array.isArray(content)) {
-        for (const c of content) if (c.type === "tool_use") t.toolUses.push({ name: c.name, input: c.input });
-      }
+    } else if (Array.isArray(content)) {
+      for (const c of content) if (c.type === "tool_use") t.toolUses.push({ name: c.name, input: c.input });
     }
     turns.push(t);
   }
   return { turns, sessionTitle };
 }
 
-// ── 신호 수집: A. user_message ─────────────────────────
-// 모든 user 발화를 raw signal로 emit. 분류 (정정/긍정/질문/잡담)는 LLM이 함.
-// 직전 assistant 행동을 prior_actions로 묶어 문맥 제공.
+// ── tool_use 요약 (user.prior, large_out.tool에 사용) ──
 function summarizeToolUse(tu: { name: string; input: any }): string {
   const name = tu.name;
   let arg = "";
@@ -137,7 +124,7 @@ function summarizeToolUse(tu: { name: string; input: any }): string {
   return arg ? `${name}: ${arg}` : name;
 }
 
-function summarizePriorActions(turns: Turn[], currentIdx: number): string[] {
+function priorAssistantActions(turns: Turn[], currentIdx: number): string[] {
   const actions: string[] = [];
   for (let i = currentIdx - 1; i >= 0 && actions.length < 3; i--) {
     const t = turns[i];
@@ -146,297 +133,173 @@ function summarizePriorActions(turns: Turn[], currentIdx: number): string[] {
       actions.push(summarizeToolUse(tu));
       if (actions.length >= 3) break;
     }
-    if (actions.length > 0) break; // 가장 인접한 assistant turn 하나만
+    if (actions.length > 0) break;
   }
   return actions;
 }
 
-function collectUserMessages(turns: Turn[], jsonlPath: string): Signal[] {
-  const signals: Signal[] = [];
-  let counter = 0;
-  for (let i = 0; i < turns.length; i++) {
-    const t = turns[i];
-    if (!t.userText) continue;
-    counter++;
-    signals.push({
-      id: `S${counter}`,
-      kind: "user_message",
-      turn_range: [t.index, t.index],
-      snippet: t.userText.trim().slice(0, 200),
-      prior_actions: summarizePriorActions(turns, i),
-      context_pointer: { jsonl_path: jsonlPath, turn_range: [Math.max(1, t.index - 2), t.index] },
-    });
-  }
-  return signals;
+// ── 슬래시 커맨드 검출 ──────────────────────────────────
+const SLASH_CMD_TAG = /<command-name>\/([a-z0-9:_-]+)<\/command-name>/i;
+const SLASH_CMD_PREFIX = /^\/([a-z0-9:_-]+)\b/i;
+
+function detectSlashCommand(userText: string): string | undefined {
+  const tag = userText.match(SLASH_CMD_TAG);
+  if (tag) return tag[1];
+  const prefix = userText.trim().match(SLASH_CMD_PREFIX);
+  return prefix?.[1];
 }
 
-// ── 통계: tools_top ────────────────────────────────────
+// ── events 빌드 ────────────────────────────────────────
+const LARGE_OUTPUT_THRESHOLD = 10 * 1024;
+
+function buildEvents(turns: Turn[]): Event[] {
+  const events: Event[] = [];
+  const interruptClaimed = new Set<number>();
+
+  // user / skill / interrupt(user) / error / agent / large_out 를 순회 중에 emit
+  for (let i = 0; i < turns.length; i++) {
+    const t = turns[i];
+
+    if (t.type === "user") {
+      // skill 호출은 user 발화에 자동 주입된 태그. 그건 skill event로만 emit (user event 중복 X).
+      // 단 사용자가 직접 친 슬래시 커맨드 (prefix form)는 user event도 함께 의미 있을 수 있지만
+      // 분류 노이즈를 줄이기 위해 skill만 emit.
+      if (t.userText) {
+        const slashName = detectSlashCommand(t.userText);
+        if (slashName) {
+          events.push({ t: t.index, kind: "skill", name: slashName });
+        } else {
+          events.push({
+            t: t.index,
+            kind: "user",
+            text: t.userText.trim().slice(0, 200),
+            prior: priorAssistantActions(turns, i),
+          });
+        }
+      }
+      // user turn의 interrupt 마커
+      if (t.interrupted && !interruptClaimed.has(t.index)) {
+        events.push({ t: t.index, kind: "interrupt", by: t.interruptedBy ?? "user" });
+        interruptClaimed.add(t.index);
+      }
+      // tool_result 안의 error / large_out
+      for (const tr of t.toolResults) {
+        const prevAssist = [...turns.slice(0, i)].reverse().find((a) => a.type === "assistant" && a.toolUses.length > 0);
+        const toolName = prevAssist?.toolUses[prevAssist.toolUses.length - 1]?.name ?? "unknown";
+        if (tr.isError) {
+          events.push({ t: t.index, kind: "error", tool: toolName, text: tr.content.slice(0, 200) });
+        }
+        if (tr.size > LARGE_OUTPUT_THRESHOLD) {
+          events.push({ t: t.index, kind: "large_out", tool: toolName, bytes: tr.size });
+        }
+      }
+    } else {
+      // assistant
+      if (t.interrupted && !interruptClaimed.has(t.index)) {
+        events.push({ t: t.index, kind: "interrupt", by: t.interruptedBy ?? "assistant" });
+        interruptClaimed.add(t.index);
+      }
+      for (const tu of t.toolUses) {
+        if (tu.name === "Agent") {
+          const ev: Event = { t: t.index, kind: "agent", desc: String(tu.input?.description ?? "").slice(0, 200) };
+          if (tu.input?.subagent_type) ev.sub = tu.input.subagent_type;
+          if (tu.input?.model) ev.model = tu.input.model;
+          events.push(ev);
+        }
+      }
+    }
+  }
+
+  // repeat 패턴: 같은 Bash prefix / Read path 3회 이상 → 마지막 등장 turn에 1 event
+  const bashOccur = new Map<string, number[]>();
+  const readOccur = new Map<string, number[]>();
+  for (const t of turns) {
+    for (const tu of t.toolUses) {
+      if (tu.name === "Bash") {
+        const cmd: string = tu.input?.command ?? "";
+        const prefix = cmd.split(/\s+/).slice(0, 2).join(" ");
+        if (!prefix) continue;
+        if (!bashOccur.has(prefix)) bashOccur.set(prefix, []);
+        bashOccur.get(prefix)!.push(t.index);
+      } else if (tu.name === "Read") {
+        const p: string = tu.input?.file_path ?? "";
+        if (!p) continue;
+        if (!readOccur.has(p)) readOccur.set(p, []);
+        readOccur.get(p)!.push(t.index);
+      }
+    }
+  }
+  const repeats: Event[] = [];
+  for (const [prefix, list] of bashOccur) {
+    if (list.length < 3) continue;
+    repeats.push({ t: list[list.length - 1], kind: "repeat", pattern: prefix, n: list.length });
+  }
+  for (const [path, list] of readOccur) {
+    if (list.length < 3) continue;
+    repeats.push({ t: list[list.length - 1], kind: "repeat", pattern: path, n: list.length });
+  }
+  // 정렬: 모든 events를 turn 기준 안정 정렬 (같은 turn 안에서는 emit 순서 유지)
+  const combined = [...events, ...repeats];
+  combined.sort((a, b) => a.t - b.t);
+  return combined;
+}
+
+// ── 부수 집계 ──────────────────────────────────────────
+function buildSkillRuns(events: Event[]): SkillRun[] {
+  const byName = new Map<string, number[]>();
+  for (const e of events) {
+    if (e.kind !== "skill" || !e.name) continue;
+    if (!byName.has(e.name)) byName.set(e.name, []);
+    byName.get(e.name)!.push(e.t);
+  }
+  return [...byName.entries()].map(([name, turns]) => ({ name, turns }));
+}
+
 function buildToolsTop(turns: Turn[]): Array<[string, number]> {
   const counts = new Map<string, number>();
   for (const t of turns) for (const tu of t.toolUses) counts.set(tu.name, (counts.get(tu.name) ?? 0) + 1);
   return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
 }
 
-// ── skill invocations ──────────────────────────────────
-// Claude Code transcript 안에서 슬래시 커맨드는 두 가지 모양으로 등장한다:
-//   1) <command-name>/me:browse</command-name> 태그 (자동 expand된 경우)
-//   2) 사용자가 직접 친 "/me:browse 잘 동작해?" 같은 prefix
-const SLASH_CMD_TAG = /<command-name>\/([a-z0-9:_-]+)<\/command-name>/i;
-const SLASH_CMD_PREFIX = /^\/([a-z0-9:_-]+)\b/i;
-
-function extractSkillInvocations(turns: Turn[]): SkillInvocation[] {
-  const invs: SkillInvocation[] = [];
-  for (const t of turns) {
-    if (!t.userText) continue;
-    const text = t.userText;
-    const tagMatch = text.match(SLASH_CMD_TAG);
-    const prefixMatch = text.trim().match(SLASH_CMD_PREFIX);
-    const name = tagMatch?.[1] ?? prefixMatch?.[1];
-    if (!name) continue;
-    invs.push({ name, turn: t.index, outcome: "completed" });
-  }
-  return invs;
+function buildSignalCounts(events: Event[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const e of events) counts[e.kind] = (counts[e.kind] ?? 0) + 1;
+  return counts;
 }
 
-// ── 신호 추출: B. interrupt ────────────────────────────
-// Interrupt 마커는 transcript에 두 모양으로 등장한다:
-//   1) user turn에 interruptedMessageId — 실제 사용자가 끊은 경우 (가장 흔함)
-//   2) assistant turn에 stop_reason="interrupted" — 일부 환경에서 등장
-// 두 경우 모두 signal로 잡되, 같은 turn 묶음을 중복 발행하지 않는다.
-function extractInterrupts(turns: Turn[], jsonlPath: string, startId: number): Signal[] {
-  const signals: Signal[] = [];
-  let counter = startId;
-  const claimedTurns = new Set<number>();
-  for (const t of turns) {
-    if (!t.interrupted) continue;
-    if (claimedTurns.has(t.index)) continue;
-    counter++;
-    if (t.type === "user") {
-      // user turn이 인터럽트 마커를 들고 있음 → 직전 assistant 행동을 컨텍스트로
-      const prevAssist = [...turns].reverse().find((a) => a.index < t.index && a.type === "assistant");
-      const winStart = prevAssist ? prevAssist.index : t.index;
-      claimedTurns.add(t.index);
-      if (prevAssist) claimedTurns.add(prevAssist.index);
-      signals.push({
-        id: `S${counter}`,
-        kind: "interrupt",
-        turn_range: [winStart, t.index],
-        snippet: t.userText?.trim().slice(0, 80) ?? "(interrupted)",
-        detail: "user interrupted the prior assistant turn",
-        context_pointer: { jsonl_path: jsonlPath, turn_range: [winStart, t.index] },
-      });
-    } else {
-      // assistant stop_reason="interrupted" 경로 — 직전 user 발화를 컨텍스트로
-      const prevUser = [...turns].reverse().find((u) => u.index < t.index && u.userText);
-      const winStart = prevUser ? prevUser.index : t.index;
-      claimedTurns.add(t.index);
-      if (prevUser) claimedTurns.add(prevUser.index);
-      signals.push({
-        id: `S${counter}`,
-        kind: "interrupt",
-        turn_range: [winStart, t.index],
-        snippet: prevUser?.userText?.trim().slice(0, 80) ?? "(no prior user message)",
-        detail: "assistant turn was interrupted",
-        context_pointer: { jsonl_path: jsonlPath, turn_range: [winStart, t.index] },
-      });
-    }
+// ── --skill 필터 ───────────────────────────────────────
+function filterBySkill(index: SessionIndex, skillFilter: string): SessionIndex {
+  const matching = index.skill_runs.find((r) => r.name === skillFilter);
+  if (!matching || matching.turns.length === 0) {
+    return { ...index, skill_runs: [], events: [], signal_counts: {} };
   }
-  return signals;
-}
-
-// ── group 분할: 슬래시 커맨드 경계로 자름 ──────────────
-function splitGroups(
-  turns: Turn[],
-  invs: SkillInvocation[],
-  allSignals: Signal[],
-): TurnGroup[] {
-  if (turns.length === 0) return [];
-  const boundaries = [1, ...invs.map((i) => i.turn), turns.length + 1];
-  const uniqSorted = [...new Set(boundaries)].sort((a, b) => a - b);
-  const groups: TurnGroup[] = [];
-  for (let i = 0; i < uniqSorted.length - 1; i++) {
-    const start = uniqSorted[i];
-    const end = uniqSorted[i + 1] - 1;
-    const groupSignals = allSignals.filter(
-      (s) => s.turn_range[0] >= start && s.turn_range[1] <= end,
-    );
-    if (groupSignals.length === 0) continue;
-    const tools: Record<string, number> = {};
-    for (const t of turns) {
-      if (t.index < start || t.index > end) continue;
-      for (const tu of t.toolUses) tools[tu.name] = (tools[tu.name] ?? 0) + 1;
-    }
-    const inv = invs.find((i) => i.turn >= start && i.turn <= end);
-    groups.push({
-      turn_range: [start, end],
-      topic_hint: inv ? `/${inv.name} 호출 구간` : "session",
-      tools_used: tools,
-      signals: groupSignals,
-    });
-  }
-  return groups;
-}
-
-// ── 신호 추출: C. verbose_exploration ──────────────────
-function extractVerboseExploration(turns: Turn[], jsonlPath: string, startId: number): Signal[] {
-  const signals: Signal[] = [];
-  let counter = startId;
-  // 같은 Bash command prefix 3회 이상 또는 같은 Read file_path 3회 이상을 찾는다
-  const bashCounts = new Map<string, number[]>();   // prefix → turn 번호 목록
-  const readCounts = new Map<string, number[]>();   // file_path → turn 번호 목록
-  for (const t of turns) {
-    for (const tu of t.toolUses) {
-      if (tu.name === "Bash") {
-        const cmd: string = tu.input?.command ?? "";
-        const prefix = cmd.split(/\s+/).slice(0, 2).join(" "); // 예: "grep -r"
-        if (!prefix) continue;
-        if (!bashCounts.has(prefix)) bashCounts.set(prefix, []);
-        bashCounts.get(prefix)!.push(t.index);
-      } else if (tu.name === "Read") {
-        const path: string = tu.input?.file_path ?? "";
-        if (!path) continue;
-        if (!readCounts.has(path)) readCounts.set(path, []);
-        readCounts.get(path)!.push(t.index);
-      }
-    }
-  }
-  for (const [prefix, turnsList] of bashCounts) {
-    if (turnsList.length < 3) continue;
-    counter++;
-    signals.push({
-      id: `S${counter}`,
-      kind: "verbose_exploration",
-      turn_range: [turnsList[0], turnsList[turnsList.length - 1]],
-      snippet: prefix,
-      detail: `같은 명령 ${turnsList.length}회 반복`,
-      context_pointer: { jsonl_path: jsonlPath, turn_range: [turnsList[0], turnsList[turnsList.length - 1]] },
-    });
-  }
-  for (const [path, turnsList] of readCounts) {
-    if (turnsList.length < 3) continue;
-    counter++;
-    signals.push({
-      id: `S${counter}`,
-      kind: "verbose_exploration",
-      turn_range: [turnsList[0], turnsList[turnsList.length - 1]],
-      snippet: path,
-      detail: `같은 파일 Read ${turnsList.length}회`,
-      context_pointer: { jsonl_path: jsonlPath, turn_range: [turnsList[0], turnsList[turnsList.length - 1]] },
-    });
-  }
-  return signals;
-}
-
-// ── 신호 추출: D. tool_error ──────────────────────────
-function extractToolErrors(turns: Turn[], jsonlPath: string, startId: number): Signal[] {
-  const signals: Signal[] = [];
-  let counter = startId;
-  for (const t of turns) {
-    for (const tr of t.toolResults) {
-      if (!tr.isError) continue;
-      counter++;
-      // 직후 assistant turn까지 묶어 회복 시도를 컨텍스트로 노출
-      const nextAssist = turns.find((u) => u.index > t.index && u.type === "assistant");
-      const endTurn = nextAssist?.index ?? t.index;
-      signals.push({
-        id: `S${counter}`,
-        kind: "tool_error",
-        turn_range: [t.index, endTurn],
-        snippet: tr.content.slice(0, 200),
-        detail: `tool_result is_error=true (${tr.size}B)`,
-        context_pointer: { jsonl_path: jsonlPath, turn_range: [Math.max(1, t.index - 1), endTurn] },
-      });
-    }
-  }
-  return signals;
-}
-
-// ── 신호 추출: E. agent_dispatch ──────────────────────
-function extractAgentDispatches(turns: Turn[], jsonlPath: string, startId: number): Signal[] {
-  const signals: Signal[] = [];
-  let counter = startId;
-  for (const t of turns) {
-    for (const tu of t.toolUses) {
-      if (tu.name !== "Agent") continue;
-      counter++;
-      const desc: string = tu.input?.description ?? "(no description)";
-      const sub: string | undefined = tu.input?.subagent_type;
-      const model: string | undefined = tu.input?.model;
-      const detail = [sub && `subagent=${sub}`, model && `model=${model}`].filter(Boolean).join(", ");
-      signals.push({
-        id: `S${counter}`,
-        kind: "agent_dispatch",
-        turn_range: [t.index, t.index],
-        snippet: String(desc).slice(0, 200),
-        detail: detail || undefined,
-        context_pointer: { jsonl_path: jsonlPath, turn_range: [t.index, t.index] },
-      });
-    }
-  }
-  return signals;
-}
-
-// ── 신호 추출: F. large_tool_output ───────────────────
-const LARGE_OUTPUT_THRESHOLD = 10 * 1024;  // 10KB
-function extractLargeToolOutputs(turns: Turn[], jsonlPath: string, startId: number): Signal[] {
-  const signals: Signal[] = [];
-  let counter = startId;
-  for (let i = 0; i < turns.length; i++) {
-    const t = turns[i];
-    for (const tr of t.toolResults) {
-      if (tr.size <= LARGE_OUTPUT_THRESHOLD) continue;
-      // 직전 assistant turn에서 어떤 도구를 호출했는지 묶어 표시
-      const prevAssist = [...turns.slice(0, i)].reverse().find((a) => a.type === "assistant" && a.toolUses.length > 0);
-      const toolName = prevAssist?.toolUses[prevAssist.toolUses.length - 1]?.name ?? "unknown";
-      counter++;
-      const kb = (tr.size / 1024).toFixed(1);
-      signals.push({
-        id: `S${counter}`,
-        kind: "large_tool_output",
-        turn_range: [prevAssist?.index ?? t.index, t.index],
-        snippet: `${toolName}: ${kb}KB`,
-        detail: `tool_result content ${tr.size}B (${kb}KB)`,
-        context_pointer: { jsonl_path: jsonlPath, turn_range: [prevAssist?.index ?? t.index, t.index] },
-      });
-    }
-  }
-  return signals;
+  const firstTurn = matching.turns[0];
+  const filteredEvents = index.events.filter((e) => e.t >= firstTurn);
+  return {
+    ...index,
+    skill_runs: [matching],
+    events: filteredEvents,
+    signal_counts: buildSignalCounts(filteredEvents),
+  };
 }
 
 function buildIndex(jsonlPath: string, skillFilter?: string): SessionIndex {
   const { turns, sessionTitle } = loadTurns(jsonlPath);
-  const userMsgs = collectUserMessages(turns, jsonlPath);
-  const verbose = extractVerboseExploration(turns, jsonlPath, userMsgs.length);
-  const interrupts = extractInterrupts(turns, jsonlPath, userMsgs.length + verbose.length);
-  const toolErrors = extractToolErrors(turns, jsonlPath, userMsgs.length + verbose.length + interrupts.length);
-  const agentDispatches = extractAgentDispatches(turns, jsonlPath, userMsgs.length + verbose.length + interrupts.length + toolErrors.length);
-  const largeOutputs = extractLargeToolOutputs(turns, jsonlPath, userMsgs.length + verbose.length + interrupts.length + toolErrors.length + agentDispatches.length);
-  const allSignals = [...userMsgs, ...verbose, ...interrupts, ...toolErrors, ...agentDispatches, ...largeOutputs];
-  let invs = extractSkillInvocations(turns);
-  let groups = splitGroups(turns, invs, allSignals);
-  if (skillFilter) {
-    invs = invs.filter((i) => i.name === skillFilter);
-    const allowed = new Set(invs.map((i) => i.turn));
-    groups = groups.filter((g) =>
-      [...allowed].some((t) => t >= g.turn_range[0] && t <= g.turn_range[1]),
-    );
-  }
-  return {
+  const events = buildEvents(turns);
+  const index: SessionIndex = {
     session_id: basename(jsonlPath, ".jsonl"),
     ...(sessionTitle ? { session_title: sessionTitle } : {}),
-    jsonl_path: jsonlPath,
-    turns_total: turns.length,
-    user_messages: turns.filter((t) => t.userText !== undefined).length,
-    interrupts_total: turns.filter((t) => t.interrupted).length,
+    turns: turns.length,
     tools_top: buildToolsTop(turns),
-    skill_invocations: invs,
-    groups,
+    skill_runs: buildSkillRuns(events),
+    signal_counts: buildSignalCounts(events),
+    events,
   };
+  return skillFilter ? filterBySkill(index, skillFilter) : index;
 }
 
 // ── Phase 0: transcript 자동 탐지 ──────────────────────
 function encodeCwd(cwd: string): string {
-  // Claude Code project dir naming: '/' and '.' both become '-'
   return cwd.replace(/[/.]/g, "-");
 }
 
@@ -456,7 +319,6 @@ function resolveTranscriptPath(opts: { jsonlPath?: string; sessionId?: string; c
     }
     return candidate;
   }
-  // newest .jsonl in projectDir
   const files = readdirSync(projectDir)
     .filter((f) => f.endsWith(".jsonl"))
     .map((f) => ({ path: join(projectDir, f), mtime: statSync(join(projectDir, f)).mtimeMs }))
@@ -469,7 +331,6 @@ function resolveTranscriptPath(opts: { jsonlPath?: string; sessionId?: string; c
 }
 
 // ── 진입점 ─────────────────────────────────────────────
-// 인덱서는 read-only — dirty tree 가드는 apply-patch.sh가 책임진다.
 function parseArgs(argv: string[]): { jsonlPath?: string; sessionId?: string; skill?: string } {
   const args = argv.slice(2);
   let jsonlPath: string | undefined;

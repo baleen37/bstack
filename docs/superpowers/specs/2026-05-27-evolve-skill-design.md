@@ -68,104 +68,105 @@ Phase 0(인덱서)는 **결정적 메타데이터**만 추출한다. "이게 사
 - **인덱서가 하는 것**: turn 카운트, 같은 명령 N회 반복, interrupt 마커 검출, 슬래시 커맨드 위치, user 발화 메시지 수집 (분류 없이 raw)
 - **인덱서가 하지 않는 것**: 정정 vs 질문 vs 긍정 vs 잡담의 분류, "이게 진짜 문제 신호인가" 판단
 
-### 트리 스키마 (TS 타입)
+### 스키마 (TS 타입)
+
+설계 원칙: **flat events 배열이 메인 데이터**. 시간 순서가 array 인덱스로 표현되어 "X after Y" 추론이 무료. cross-cutting view (`skill_runs`)는 같은 스킬을 N회 호출한 패턴만 한눈에 보이게 하기 위한 작은 보조.
 
 ```typescript
-type SignalKind =
-  | "user_message"           // 사용자 발화 (LLM이 분류할 raw 입력)
-  | "verbose_exploration"    // 같은 명령 N회 반복 (사실 카운트)
-  | "interrupt"              // interrupt 마커 (메타데이터)
-  | "tool_error"             // tool_result.is_error == true
-  | "agent_dispatch"         // Agent tool 호출 (서브에이전트 분기)
-  | "large_tool_output";     // tool_result content > 10KB (컨텍스트 부담)
+type EventKind =
+  | "user"          // 사용자 발화 (LLM이 분류할 raw 입력)
+  | "skill"         // 슬래시 커맨드 호출 (/me:foo, <command-name>/me:foo</command-name>)
+  | "interrupt"     // interrupt 마커 (메타데이터)
+  | "error"         // tool_result.is_error == true
+  | "agent"         // Agent tool 호출 (서브에이전트 분기)
+  | "large_out"     // tool_result content > 10KB
+  | "repeat";       // 같은 Bash prefix / Read path 3회 이상
 
-interface Signal {
-  id: string;                // "S1", "S2", ...
-  kind: SignalKind;
-  turn_range: [number, number];  // 단일 turn이면 [n,n]
-  snippet: string;           // 핵심 문장 1줄 (잘라서 200자 이하)
-  detail?: string;           // "같은 grep 4회 반복" 같은 부가 설명
-  prior_actions?: string[];  // user_message일 때만: 직전 assistant 행동 1~2개 ("Bash: grep -r foo", "Read: SKILL.md")
-  context_pointer: {         // LLM이 더 읽고 싶을 때 발췌용
-    jsonl_path: string;
-    turn_range: [number, number];
-  };
+interface Event {
+  t: number;                  // turn 번호 (1-based, user+assistant만 카운트)
+  kind: EventKind;
+  // kind별 최소 필드:
+  text?: string;              // user/error: 본문 앞 200자
+  prior?: string[];           // user: 직전 assistant 행동 요약 1~3개 ("Bash: grep -r foo")
+  name?: string;              // skill: 스킬 이름 ("me:browse")
+  by?: "user" | "assistant";  // interrupt: 누가 끊었는지
+  tool?: string;              // error/large_out: 어떤 도구
+  desc?: string;              // agent: input.description
+  sub?: string;               // agent: input.subagent_type
+  model?: string;             // agent: input.model
+  bytes?: number;             // large_out: tool_result content 크기
+  pattern?: string;           // repeat: 반복된 prefix 또는 path
+  n?: number;                 // repeat: 반복 횟수
 }
 
-interface TurnGroup {
-  turn_range: [number, number];
-  topic_hint: string;        // "me:browse 호출 구간" 등 자동 추정
-  tools_used: Record<string, number>;  // {Bash: 12, Read: 2}
-  signals: Signal[];
-}
-
-interface SkillInvocation {
-  name: string;              // "me:browse"
-  turn: number;
-  outcome: "completed" | "interrupted_at_<n>" | "abandoned";
+interface SkillRun {
+  name: string;               // "me:verify"
+  turns: number[];            // [383, 387, 389, 391]
 }
 
 interface SessionIndex {
   session_id: string;
-  session_title?: string;    // ai-title 라인에서 추출 (Phase 1 컨텍스트 헤더)
-  jsonl_path: string;
-  turns_total: number;
-  user_messages: number;
-  interrupts_total: number;
-  tools_top: Array<[string, number]>;  // [["Bash", 66], ...] top 10
-  skill_invocations: SkillInvocation[];
-  groups: TurnGroup[];
-  // 노이즈 줄이려고: 신호 없는 group은 생략
+  session_title?: string;     // ai-title 라인의 aiTitle (Phase 1 컨텍스트 헤더)
+  turns: number;              // user+assistant turn 총 개수
+  tools_top: Array<[string, number]>;  // [["Bash", 32], ...] top 10
+  skill_runs: SkillRun[];     // 같은 스킬 호출 모음 (cross-cutting)
+  signal_counts: Record<EventKind, number>;  // 카운트만, 분류 없음
+  events: Event[];            // 메인 데이터: 시계열 모든 이벤트
 }
 ```
 
-### 신호 추출 규칙 (스크립트가 적용)
+**제거된 것** (이전 스키마와의 차이):
+- `groups`, `turn_range`, `topic_hint`, `tools_used` per-group → flat `events`로 흡수
+- `context_pointer` → dead weight. LLM은 jsonl 직접 안 봄
+- `signals[].id` (S1, S2...) → events array index로 대체. 필요하면 `events[N]`으로 참조
+- `interrupts_total`, `user_messages` → `signal_counts`로 통일
+- `skill_invocations` (turn당 1개 객체) → `skill_runs` (스킬당 turn 배열)로 통합
 
-**A. user_message** (LLM이 분류할 raw 입력)
-- 모든 사용자 발화(`type=="user"` & content가 `string` 또는 `[{type:"text"}]`)를 1 signal씩 emit
-- snippet = 본문 앞 200자
-- `prior_actions` = 직전 assistant turn 1~2개의 핵심 행동 (tool_use name + 짧은 input 요약)
-- 분류·필터링·정규식 매칭 일체 없음 — 모든 user 발화가 signal이 됨
-- LLM이 이 signal들을 보고 의미상 분류(정정/긍정/질문/잡담 등)를 함
+### Event 추출 규칙
 
-**B. interrupt** (메타데이터 — 의미 판정 아님)
-- user turn에 `interruptedMessageId` 필드 존재 → 그 turn
-- assistant 메시지에 `stop_reason == "interrupted"` → 그 turn
-- 같은 인접 turn에서 중복 발행 안 함 (claimed set으로 제거)
-- 한 사건당 1 signal, 직전·후 assistant 행동을 context_pointer에 묶음
+모든 event는 시간 순서대로 `events[]`에 emit. **kind별 최소 필드만 채움.** 분류·의미 판정 없음.
 
-**C. verbose_exploration** (사실 카운트 — 의미 판정 아님)
-- 같은 Bash command 첫 2 토큰 prefix 3회 이상 → 1 signal (`snippet`=prefix, `detail`=N회)
-- 같은 Read file_path 3회 이상 → 1 signal
-- LLM이 이게 진짜 "장황한 탐색"인지 아니면 정당한 반복인지는 별도 판단
+**`user`** — 모든 user 발화 (`type=="user"` & content가 `string` 또는 `[{type:"text"}]`)
+- `text` = 본문 앞 200자
+- `prior` = 직전 assistant turn 1~3개의 tool_use 요약 (`"Bash: grep -r foo"`, `"Read: SKILL.md"`)
 
-**D. tool_error** (실패 사건)
-- user turn의 content[].type == "tool_result" 중 `is_error == true` → 1 signal
-- snippet = 에러 메시지 앞 200자
-- 직후 assistant turn의 행동을 turn_range 끝으로 포함 → "어떻게 회복했나" 분석용
+**`skill`** — 슬래시 커맨드 호출. user 발화 중 `/<name>` prefix 또는 `<command-name>/<name></command-name>` 태그 검출
+- `name` = 스킬 이름 (`/` 제외)
 
-**E. agent_dispatch** (서브에이전트 호출)
-- assistant tool_use 중 `name == "Agent"` → 1 signal
-- snippet = `input.description`
-- detail = `input.subagent_type` 또는 `input.model` (둘 다 있으면 결합)
-- 동일 description 반복 호출은 그대로 N개 signal로 emit — 패턴 분석은 LLM이
+**`interrupt`** — interrupt 마커
+- user turn에 `interruptedMessageId` → `by: "user"`
+- assistant turn의 `stop_reason == "interrupted"` → `by: "assistant"`
+- 한 사건당 1 event, 인접 turn 중복 제거
 
-**F. large_tool_output** (컨텍스트 부담)
-- tool_result content가 10KB 초과 → 1 signal
-- snippet = "<tool_name>: <size>KB" 형태
-- 직전 assistant tool_use의 name과 묶어 어떤 도구가 큰 출력 냈는지 표시
+**`error`** — `tool_result.is_error == true`
+- `text` = 에러 메시지 앞 200자
+- `tool` = 직전 assistant tool_use의 name
+
+**`agent`** — assistant tool_use 중 `name == "Agent"`
+- `desc` = `input.description`
+- `sub` = `input.subagent_type` (있으면)
+- `model` = `input.model` (있으면)
+
+**`large_out`** — `tool_result` content > 10KB
+- `tool` = 직전 assistant tool_use의 name
+- `bytes` = content 길이
+
+**`repeat`** — 같은 Bash command 첫 2 토큰 prefix 또는 같은 Read file_path 3회 이상
+- 1 event per pattern (각 반복 turn마다 emit하지 않음 — 마지막 등장 turn에 한 번)
+- `pattern` = 반복된 prefix 또는 path
+- `n` = 반복 횟수
 
 ### `session_title` 추출
-- jsonl 라인 중 `type == "ai-title"` 인 것이 있으면 `aiTitle` 필드를 SessionIndex.session_title로 옮김 (최신값 사용)
-- 없으면 필드 자체 생략
+- jsonl 라인 중 `type == "ai-title"` 인 것의 `aiTitle` (최신값)
+- 없으면 필드 생략
 
-### Group 분할 규칙
-- 슬래시 커맨드(`/<skill-name>`) 호출 지점에서 새 group 시작
-- 그 외에는 50턴 슬라이딩 윈도우로 자르되 signal 클러스터를 깨지 않도록 인접 윈도우 병합
+### `skill_runs` 집계
+- `events` 스캔 후 `kind == "skill"`만 모아 `name`별로 묶음
+- 각 SkillRun은 `{name, turns: [t1, t2, ...]}` (호출 turn 배열)
 
 ### Skill 필터 (`--skill` 인자 있을 때)
-- `skill_invocations`를 해당 이름만 남김
-- 해당 invocation이 포함된 group만 출력 (다른 group 생략)
+- `skill_runs`를 해당 이름만 남김
+- `events`는 해당 스킬의 첫 호출 turn 이후로 trim (또는 호출 사이 구간만 유지)
 
 ## Phase 1 — 서브에이전트 분석
 
