@@ -83,9 +83,47 @@ function loadTurns(jsonlPath: string): Turn[] {
   return turns;
 }
 
+// ── 신호 추출: A. user_correction ──────────────────────
+const CORRECTION_KR = /^(아니|그게 아니|그러지 말|다시|잠깐)/;
+const CORRECTION_EN = /\b(no|stop|wait|hold on|don't|that's not)\b/i;
+const PATH_REDIRECT = /@\S+\//;
+
+function extractUserCorrections(turns: Turn[], jsonlPath: string): Signal[] {
+  const signals: Signal[] = [];
+  let counter = 0;
+  for (const t of turns) {
+    if (!t.userText) continue;
+    const text = t.userText.trim();
+    const matched =
+      CORRECTION_KR.test(text) || CORRECTION_EN.test(text) || PATH_REDIRECT.test(text);
+    if (!matched) continue;
+    counter++;
+    signals.push({
+      id: `S${counter}`,
+      kind: "user_correction",
+      turn_range: [t.index, t.index],
+      snippet: text.slice(0, 80),
+      context_pointer: { jsonl_path: jsonlPath, turn_range: [Math.max(1, t.index - 2), t.index] },
+    });
+  }
+  return signals;
+}
+
 // ── stub: 나머지는 후속 task에서 채움 ──────────────────
 function buildIndex(jsonlPath: string, skillFilter?: string): SessionIndex {
   const turns = loadTurns(jsonlPath);
+  const corrections = extractUserCorrections(turns, jsonlPath);
+  const groups: TurnGroup[] =
+    corrections.length === 0
+      ? []
+      : [
+          {
+            turn_range: [1, turns.length],
+            topic_hint: "session",
+            tools_used: {},
+            signals: corrections,
+          },
+        ];
   return {
     session_id: basename(jsonlPath, ".jsonl"),
     jsonl_path: jsonlPath,
@@ -94,7 +132,7 @@ function buildIndex(jsonlPath: string, skillFilter?: string): SessionIndex {
     interrupts_total: turns.filter((t) => t.interrupted).length,
     tools_top: [],
     skill_invocations: [],
-    groups: [],
+    groups,
   };
 }
 
