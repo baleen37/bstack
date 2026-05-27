@@ -11,6 +11,7 @@ INDEXER="${PROJECT_ROOT}/plugins/me/skills/evolve/scripts/build-index.ts"
 FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/sample-session.jsonl"
 INTERRUPT_FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/interrupt-session.jsonl"
 TAG_FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/slash-cmd-tag-session.jsonl"
+RICH_FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/rich-signals-session.jsonl"
 
 @test "evolve build-index: counts turns and user messages" {
     run bun "$INDEXER" "$FIXTURE"
@@ -107,6 +108,31 @@ TAG_FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/slash-cmd-tag-session.jsonl"
     [[ "$kinds" == *"verbose_exploration"* ]]
     # 인덱스 자체 형식 검증
     echo "$output" | jq -e '.session_id and .jsonl_path and .turns_total and (.groups | type == "array")'
+}
+
+@test "evolve build-index: extracts session_title from ai-title line" {
+    run bun "$INDEXER" "$RICH_FIXTURE"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '.session_title == "Test session for rich signals"'
+}
+
+@test "evolve build-index: detects tool_error signal" {
+    run bun "$INDEXER" "$RICH_FIXTURE"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '[.groups[].signals[] | select(.kind == "tool_error")] | length >= 1'
+}
+
+@test "evolve build-index: detects agent_dispatch signal" {
+    run bun "$INDEXER" "$RICH_FIXTURE"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '[.groups[].signals[] | select(.kind == "agent_dispatch")] | length >= 1'
+    echo "$output" | jq -e '[.groups[].signals[] | select(.kind == "agent_dispatch")][0].snippet == "helper sub-task"'
+}
+
+@test "evolve build-index: detects large_tool_output above 10KB" {
+    run bun "$INDEXER" "$RICH_FIXTURE"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '[.groups[].signals[] | select(.kind == "large_tool_output")] | length >= 1'
 }
 
 @test "evolve build-index: false-positive guard — \"stop and report\" body is NOT misclassified" {

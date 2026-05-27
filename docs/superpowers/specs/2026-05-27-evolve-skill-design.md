@@ -74,7 +74,10 @@ Phase 0(인덱서)는 **결정적 메타데이터**만 추출한다. "이게 사
 type SignalKind =
   | "user_message"           // 사용자 발화 (LLM이 분류할 raw 입력)
   | "verbose_exploration"    // 같은 명령 N회 반복 (사실 카운트)
-  | "interrupt";             // interrupt 마커 (메타데이터)
+  | "interrupt"              // interrupt 마커 (메타데이터)
+  | "tool_error"             // tool_result.is_error == true
+  | "agent_dispatch"         // Agent tool 호출 (서브에이전트 분기)
+  | "large_tool_output";     // tool_result content > 10KB (컨텍스트 부담)
 
 interface Signal {
   id: string;                // "S1", "S2", ...
@@ -104,6 +107,7 @@ interface SkillInvocation {
 
 interface SessionIndex {
   session_id: string;
+  session_title?: string;    // ai-title 라인에서 추출 (Phase 1 컨텍스트 헤더)
   jsonl_path: string;
   turns_total: number;
   user_messages: number;
@@ -134,6 +138,26 @@ interface SessionIndex {
 - 같은 Bash command 첫 2 토큰 prefix 3회 이상 → 1 signal (`snippet`=prefix, `detail`=N회)
 - 같은 Read file_path 3회 이상 → 1 signal
 - LLM이 이게 진짜 "장황한 탐색"인지 아니면 정당한 반복인지는 별도 판단
+
+**D. tool_error** (실패 사건)
+- user turn의 content[].type == "tool_result" 중 `is_error == true` → 1 signal
+- snippet = 에러 메시지 앞 200자
+- 직후 assistant turn의 행동을 turn_range 끝으로 포함 → "어떻게 회복했나" 분석용
+
+**E. agent_dispatch** (서브에이전트 호출)
+- assistant tool_use 중 `name == "Agent"` → 1 signal
+- snippet = `input.description`
+- detail = `input.subagent_type` 또는 `input.model` (둘 다 있으면 결합)
+- 동일 description 반복 호출은 그대로 N개 signal로 emit — 패턴 분석은 LLM이
+
+**F. large_tool_output** (컨텍스트 부담)
+- tool_result content가 10KB 초과 → 1 signal
+- snippet = "<tool_name>: <size>KB" 형태
+- 직전 assistant tool_use의 name과 묶어 어떤 도구가 큰 출력 냈는지 표시
+
+### `session_title` 추출
+- jsonl 라인 중 `type == "ai-title"` 인 것이 있으면 `aiTitle` 필드를 SessionIndex.session_title로 옮김 (최신값 사용)
+- 없으면 필드 자체 생략
 
 ### Group 분할 규칙
 - 슬래시 커맨드(`/<skill-name>`) 호출 지점에서 새 group 시작

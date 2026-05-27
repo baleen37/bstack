@@ -12,7 +12,10 @@ import { homedir } from "node:os";
 type SignalKind =
   | "user_message"           // 사용자 발화 (LLM이 분류)
   | "verbose_exploration"    // 같은 명령 N회 반복 (사실 카운트)
-  | "interrupt";             // interrupt 마커 (메타데이터)
+  | "interrupt"              // interrupt 마커 (메타데이터)
+  | "tool_error"             // tool_result.is_error == true
+  | "agent_dispatch"         // Agent tool 호출 (서브에이전트 분기)
+  | "large_tool_output";     // tool_result content > 10KB
 
 interface Signal {
   id: string;
@@ -39,6 +42,7 @@ interface SkillInvocation {
 
 interface SessionIndex {
   session_id: string;
+  session_title?: string;
   jsonl_path: string;
   turns_total: number;
   user_messages: number;
@@ -49,32 +53,66 @@ interface SessionIndex {
 }
 
 // ── 입력 파싱 ──────────────────────────────────────────
+interface ToolResultPayload {
+  content: string;        // 출력 본문 (string으로 정규화)
+  isError: boolean;
+  size: number;           // content 길이 (large_tool_output 임계 판정용)
+}
+
 interface Turn {
   index: number;
   type: "user" | "assistant" | "other";
   userText?: string;
   toolUses: Array<{ name: string; input: any }>;
+  toolResults: ToolResultPayload[];  // user turn의 tool_result content들
   interrupted: boolean;
   raw: any;
 }
 
-function loadTurns(jsonlPath: string): Turn[] {
+interface LoadedTranscript {
+  turns: Turn[];
+  sessionTitle?: string;  // ai-title 라인에서 추출 (가장 마지막 값)
+}
+
+function normalizeToolResultContent(raw: any): string {
+  if (typeof raw === "string") return raw;
+  if (Array.isArray(raw)) {
+    return raw.map((c) => (typeof c === "string" ? c : c?.text ?? JSON.stringify(c))).join("\n");
+  }
+  return JSON.stringify(raw ?? "");
+}
+
+function loadTurns(jsonlPath: string): LoadedTranscript {
   const lines = readFileSync(jsonlPath, "utf8").split("\n").filter(Boolean);
   const turns: Turn[] = [];
+  let sessionTitle: string | undefined;
   for (let i = 0; i < lines.length; i++) {
     const obj = JSON.parse(lines[i]);
+    if (obj.type === "ai-title" && typeof obj.aiTitle === "string") {
+      sessionTitle = obj.aiTitle;  // 최신값으로 덮어씀
+      continue;
+    }
     if (obj.type !== "user" && obj.type !== "assistant") continue;
     const t: Turn = {
       index: turns.length + 1,
       type: obj.type,
       toolUses: [],
+      toolResults: [],
       interrupted: obj.message?.stop_reason === "interrupted" || obj.interruptedMessageId !== undefined,
       raw: obj,
     };
     const content = obj.message?.content;
     if (obj.type === "user") {
       if (typeof content === "string") t.userText = content;
-      else if (Array.isArray(content) && content[0]?.type === "text") t.userText = content[0].text;
+      else if (Array.isArray(content)) {
+        if (content[0]?.type === "text") t.userText = content[0].text;
+        for (const c of content) {
+          if (c.type === "tool_result") {
+            const norm = normalizeToolResultContent(c.content);
+            t.toolResults.push({ content: norm, isError: c.is_error === true, size: norm.length });
+          }
+        }
+      }
     } else {
       if (Array.isArray(content)) {
         for (const c of content) if (c.type === "tool_use") t.toolUses.push({ name: c.name, input: c.input });
@@ -82,7 +120,7 @@ function loadTurns(jsonlPath: string): Turn[] {
     }
     turns.push(t);
   }
-  return turns;
+  return { turns, sessionTitle };
 }
 
 // ── 신호 수집: A. user_message ─────────────────────────
@@ -289,12 +327,91 @@ function extractVerboseExploration(turns: Turn[], jsonlPath: string, startId: nu
   return signals;
 }
 
+// ── 신호 추출: D. tool_error ──────────────────────────
+function extractToolErrors(turns: Turn[], jsonlPath: string, startId: number): Signal[] {
+  const signals: Signal[] = [];
+  let counter = startId;
+  for (const t of turns) {
+    for (const tr of t.toolResults) {
+      if (!tr.isError) continue;
+      counter++;
+      // 직후 assistant turn까지 묶어 회복 시도를 컨텍스트로 노출
+      const nextAssist = turns.find((u) => u.index > t.index && u.type === "assistant");
+      const endTurn = nextAssist?.index ?? t.index;
+      signals.push({
+        id: `S${counter}`,
+        kind: "tool_error",
+        turn_range: [t.index, endTurn],
+        snippet: tr.content.slice(0, 200),
+        detail: `tool_result is_error=true (${tr.size}B)`,
+        context_pointer: { jsonl_path: jsonlPath, turn_range: [Math.max(1, t.index - 1), endTurn] },
+      });
+    }
+  }
+  return signals;
+}
+
+// ── 신호 추출: E. agent_dispatch ──────────────────────
+function extractAgentDispatches(turns: Turn[], jsonlPath: string, startId: number): Signal[] {
+  const signals: Signal[] = [];
+  let counter = startId;
+  for (const t of turns) {
+    for (const tu of t.toolUses) {
+      if (tu.name !== "Agent") continue;
+      counter++;
+      const desc: string = tu.input?.description ?? "(no description)";
+      const sub: string | undefined = tu.input?.subagent_type;
+      const model: string | undefined = tu.input?.model;
+      const detail = [sub && `subagent=${sub}`, model && `model=${model}`].filter(Boolean).join(", ");
+      signals.push({
+        id: `S${counter}`,
+        kind: "agent_dispatch",
+        turn_range: [t.index, t.index],
+        snippet: String(desc).slice(0, 200),
+        detail: detail || undefined,
+        context_pointer: { jsonl_path: jsonlPath, turn_range: [t.index, t.index] },
+      });
+    }
+  }
+  return signals;
+}
+
+// ── 신호 추출: F. large_tool_output ───────────────────
+const LARGE_OUTPUT_THRESHOLD = 10 * 1024;  // 10KB
+function extractLargeToolOutputs(turns: Turn[], jsonlPath: string, startId: number): Signal[] {
+  const signals: Signal[] = [];
+  let counter = startId;
+  for (let i = 0; i < turns.length; i++) {
+    const t = turns[i];
+    for (const tr of t.toolResults) {
+      if (tr.size <= LARGE_OUTPUT_THRESHOLD) continue;
+      // 직전 assistant turn에서 어떤 도구를 호출했는지 묶어 표시
+      const prevAssist = [...turns.slice(0, i)].reverse().find((a) => a.type === "assistant" && a.toolUses.length > 0);
+      const toolName = prevAssist?.toolUses[prevAssist.toolUses.length - 1]?.name ?? "unknown";
+      counter++;
+      const kb = (tr.size / 1024).toFixed(1);
+      signals.push({
+        id: `S${counter}`,
+        kind: "large_tool_output",
+        turn_range: [prevAssist?.index ?? t.index, t.index],
+        snippet: `${toolName}: ${kb}KB`,
+        detail: `tool_result content ${tr.size}B (${kb}KB)`,
+        context_pointer: { jsonl_path: jsonlPath, turn_range: [prevAssist?.index ?? t.index, t.index] },
+      });
+    }
+  }
+  return signals;
+}
+
 function buildIndex(jsonlPath: string, skillFilter?: string): SessionIndex {
-  const turns = loadTurns(jsonlPath);
+  const { turns, sessionTitle } = loadTurns(jsonlPath);
   const userMsgs = collectUserMessages(turns, jsonlPath);
   const verbose = extractVerboseExploration(turns, jsonlPath, userMsgs.length);
   const interrupts = extractInterrupts(turns, jsonlPath, userMsgs.length + verbose.length);
-  const allSignals = [...userMsgs, ...verbose, ...interrupts];
+  const toolErrors = extractToolErrors(turns, jsonlPath, userMsgs.length + verbose.length + interrupts.length);
+  const agentDispatches = extractAgentDispatches(turns, jsonlPath, userMsgs.length + verbose.length + interrupts.length + toolErrors.length);
+  const largeOutputs = extractLargeToolOutputs(turns, jsonlPath, userMsgs.length + verbose.length + interrupts.length + toolErrors.length + agentDispatches.length);
+  const allSignals = [...userMsgs, ...verbose, ...interrupts, ...toolErrors, ...agentDispatches, ...largeOutputs];
   let invs = extractSkillInvocations(turns);
   let groups = splitGroups(turns, invs, allSignals);
   if (skillFilter) {
@@ -306,6 +423,7 @@ function buildIndex(jsonlPath: string, skillFilter?: string): SessionIndex {
   }
   return {
     session_id: basename(jsonlPath, ".jsonl"),
+    ...(sessionTitle ? { session_title: sessionTitle } : {}),
     jsonl_path: jsonlPath,
     turns_total: turns.length,
     user_messages: turns.filter((t) => t.userText !== undefined).length,
