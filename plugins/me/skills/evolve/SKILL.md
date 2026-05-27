@@ -30,6 +30,7 @@ allowed-tools:
 - 외부 플러그인 캐시(`~/.claude/plugins/cache/`)는 수정 안 한다 (upstream 제안 파일에만 누적)
 - 새 스킬을 만들지 않는다 (`writing-skills` 영역)
 - 자동 commit·push 안 한다 (반드시 사용자가 한 건씩 승인)
+- 단, 플러그인 레포 자체(`bstack`의 `plugins/`) 안의 SKILL.md는 정상 수정 대상이다. "외부 캐시 차단"은 `~/.claude/plugins/cache/` 경로만 가리킨다.
 
 ## Phase 0 — 인덱스 빌드
 
