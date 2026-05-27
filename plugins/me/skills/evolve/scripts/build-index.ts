@@ -109,6 +109,34 @@ function extractUserCorrections(turns: Turn[], jsonlPath: string): Signal[] {
   return signals;
 }
 
+// ── 신호 추출: D. success_pattern ──────────────────────
+const POSITIVE = /^(좋아|perfect|그렇지|yes|ok|good|great)(\s|$)/i;
+
+function extractSuccessPatterns(turns: Turn[], jsonlPath: string, startId: number): Signal[] {
+  const signals: Signal[] = [];
+  let counter = startId;
+  for (const t of turns) {
+    if (!t.userText || !POSITIVE.test(t.userText.trim())) continue;
+    counter++;
+    const winStart = Math.max(1, t.index - 5);
+    signals.push({
+      id: `S${counter}`,
+      kind: "success_pattern",
+      turn_range: [winStart, t.index],
+      snippet: t.userText.trim().slice(0, 80),
+      context_pointer: { jsonl_path: jsonlPath, turn_range: [winStart, t.index] },
+    });
+  }
+  return signals;
+}
+
+// ── 통계: tools_top ────────────────────────────────────
+function buildToolsTop(turns: Turn[]): Array<[string, number]> {
+  const counts = new Map<string, number>();
+  for (const t of turns) for (const tu of t.toolUses) counts.set(tu.name, (counts.get(tu.name) ?? 0) + 1);
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
+}
+
 // ── 신호 추출: C. verbose_exploration ──────────────────
 function extractVerboseExploration(turns: Turn[], jsonlPath: string, startId: number): Signal[] {
   const signals: Signal[] = [];
@@ -164,7 +192,8 @@ function buildIndex(jsonlPath: string, skillFilter?: string): SessionIndex {
   const turns = loadTurns(jsonlPath);
   const corrections = extractUserCorrections(turns, jsonlPath);
   const verbose = extractVerboseExploration(turns, jsonlPath, corrections.length);
-  const allSignals = [...corrections, ...verbose];
+  const success = extractSuccessPatterns(turns, jsonlPath, corrections.length + verbose.length);
+  const allSignals = [...corrections, ...verbose, ...success];
   const groups: TurnGroup[] =
     allSignals.length === 0
       ? []
@@ -182,7 +211,7 @@ function buildIndex(jsonlPath: string, skillFilter?: string): SessionIndex {
     turns_total: turns.length,
     user_messages: turns.filter((t) => t.userText !== undefined).length,
     interrupts_total: turns.filter((t) => t.interrupted).length,
-    tools_top: [],
+    tools_top: buildToolsTop(turns),
     skill_invocations: [],
     groups,
   };

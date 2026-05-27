@@ -25,3 +25,15 @@ FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/sample-session.jsonl"
     [ "$status" -eq 0 ]
     echo "$output" | jq -e '[.groups[].signals[] | select(.kind == "verbose_exploration")] | length >= 1'
 }
+
+@test "evolve build-index: detects success_pattern after positive feedback" {
+    run bun "$INDEXER" "$FIXTURE"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '[.groups[].signals[] | select(.kind == "success_pattern")] | length >= 1'
+}
+
+@test "evolve build-index: tools_top includes Bash and Read" {
+    run bun "$INDEXER" "$FIXTURE"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '.tools_top | map(.[0]) | index("Bash") != null'
+}
