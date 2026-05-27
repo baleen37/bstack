@@ -35,6 +35,8 @@ allowed-tools:
 
 Phase 0에서 메인 에이전트는 두 가지를 한다:
 
+> **언어 규칙**: `build-index.ts`를 포함한 모든 스킬 스크립트는 TypeScript(Bun 런타임)로 작성한다. shell/Python 대안을 제안하지 말 것.
+
 1. **Dirty tree 가드** — `git status --porcelain`이 비어 있어야 한다. dirty면 "커밋이나 stash 후 다시 실행하세요"라고 알리고 종료. (실제 적용 commit은 Phase 2의 `apply-patch.sh`가 책임지지만, Phase 0에서 미리 확인해 사용자가 헷갈리지 않게 한다.)
 
 2. **인덱스 빌드** — `build-index.ts`는 read-only로 transcript 자동 탐지 + 신호 추출 + JSON 출력을 한다.
