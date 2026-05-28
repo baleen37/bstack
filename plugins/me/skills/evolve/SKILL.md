@@ -28,7 +28,7 @@ Only when the user invokes it explicitly. No automatic triggers.
 ## What this skill does NOT do
 
 - Main agent never reads the raw transcript directly (avoid context blowup).
-- Never modify external plugin cache (`~/.claude/plugins/cache/`) — it is read-only and gets overwritten on plugin updates. Accumulate those as upstream suggestions instead, **OR**, if the user knows the source repo of that plugin (e.g. `~/dev/wooto/bstack` for `bstack` plugins) and asks you to fix it there, redirect the edit to the source repo and commit there. The cache itself stays untouched.
+- Never modify external plugin cache (`~/.claude/plugins/cache/`) — it is read-only and gets overwritten on plugin updates. Accumulate those as upstream suggestions instead. If the user points you at the plugin's source repo (the path varies per user) and asks you to fix it there, redirect the edit to that source repo and commit there; the cache itself stays untouched.
 - Never create new skills (that's `writing-skills` territory).
 - Never auto-commit or auto-push (user must approve each proposal).
 - SKILL.md files inside this repo's own `plugins/` ARE valid edit targets. "External cache" specifically means `~/.claude/plugins/cache/` only.
