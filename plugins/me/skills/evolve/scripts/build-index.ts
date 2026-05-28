@@ -36,7 +36,6 @@ interface Cluster {
 interface Summary {
   headline: string;
   clusters: Cluster[];
-  signal_positions: Partial<Record<EventKind, number[]>>;
 }
 
 interface SessionIndex {
@@ -304,15 +303,6 @@ function buildClusters(events: Event[]): Cluster[] {
   return clusters.sort((a, b) => a.t_range[0] - b.t_range[0]);
 }
 
-function buildSignalPositions(events: Event[]): Partial<Record<EventKind, number[]>> {
-  const out: Partial<Record<EventKind, number[]>> = {};
-  for (const kind of SUMMARY_KINDS) {
-    const turns = events.filter((e) => e.kind === kind).map((e) => e.t);
-    if (turns.length > 0) out[kind] = turns;
-  }
-  return out;
-}
-
 function buildHeadline(turns: number, events: Event[], clusters: Cluster[]): string {
   const counts: Record<string, number> = {};
   for (const e of events) counts[e.kind] = (counts[e.kind] ?? 0) + 1;
@@ -329,7 +319,6 @@ function buildSummary(turns: number, events: Event[]): Summary {
   return {
     headline: buildHeadline(turns, events, clusters),
     clusters,
-    signal_positions: buildSignalPositions(events),
   };
 }
 

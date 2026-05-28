@@ -51,7 +51,7 @@ Exit codes: `0`=ok, `2`=unknown flag (see §4 below — `--dry-run` must not be 
 
 Capture stdout JSON into a variable. **Do not show it to the user** — pass it only to the next-step subagent.
 
-If `events` is empty, or both `summary.clusters` and `summary.signal_positions` are empty, print "no improvement signals found in this session" and exit.
+If `events` is empty, print "no improvement signals found in this session" and exit.
 
 ## Phase 1 — Subagent analysis (Agent)
 
@@ -62,7 +62,7 @@ Dispatch one subagent (`general-purpose`). The indexer hands user utterances ove
 The prompt must include all of:
 
 1. Spec path: `docs/superpowers/specs/2026-05-27-evolve-skill-design.md`
-2. The full index JSON from Phase 0 (only `summary` + `events`). **Read `summary` first** — `headline` (one-line state), `clusters` (same-kind events within ≤30 turns, ≥3 occurrences, with `t_range`/`n`/`example_t`), `signal_positions` (per-kind turn coordinates). Use this to decide which regions to inspect, then slice `events[]` for causal-chain analysis. summary is a simple heuristic — false positives are expected; skip meaningless clusters.
+2. The full index JSON from Phase 0 (`summary` + `events`). Read `summary.headline` (one-line state) and `summary.clusters` (same-kind events within ≤30 turns, ≥3 occurrences) first to spot dense regions, then walk `events[]` for causal-chain analysis. Clusters are a simple heuristic — skip meaningless ones.
 3. **Classification task for `kind: "user"` events** — label each one with exactly one of (refer by array index, e.g. `events[12]`):
    - **correction**: redirects/corrects the immediately preceding assistant action
    - **success**: positive feedback on the preceding assistant action
