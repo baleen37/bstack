@@ -16,6 +16,7 @@ interface Event {
   text?: string;
   prior?: string[];
   name?: string;
+  args?: string;
   by?: "user" | "assistant";
   tool?: string;
   desc?: string;
@@ -149,13 +150,25 @@ function priorAssistantActions(turns: Turn[], currentIdx: number): string[] {
 
 // ── 슬래시 커맨드 검출 ──────────────────────────────────
 const SLASH_CMD_TAG = /<command-name>\/([a-z0-9:_-]+)<\/command-name>/i;
-const SLASH_CMD_PREFIX = /^\/([a-z0-9:_-]+)\b/i;
+const SLASH_CMD_PREFIX = /^\/([a-z0-9:_-]+)\b(.*)$/i;
+const SLASH_CMD_ARGS_TAG = /<command-args>([\s\S]*?)<\/command-args>/i;
 
-function detectSlashCommand(userText: string): string | undefined {
+interface DetectedSlash {
+  name: string;
+  args?: string;
+}
+
+function detectSlashCommand(userText: string): DetectedSlash | undefined {
   const tag = userText.match(SLASH_CMD_TAG);
-  if (tag) return tag[1];
+  if (tag) {
+    const argsTag = userText.match(SLASH_CMD_ARGS_TAG);
+    const args = argsTag?.[1]?.trim();
+    return args ? { name: tag[1], args: args.slice(0, 200) } : { name: tag[1] };
+  }
   const prefix = userText.trim().match(SLASH_CMD_PREFIX);
-  return prefix?.[1];
+  if (!prefix) return undefined;
+  const args = prefix[2]?.trim();
+  return args ? { name: prefix[1], args: args.slice(0, 200) } : { name: prefix[1] };
 }
 
 const PSEUDO_USER_PREFIXES = [
@@ -188,9 +201,11 @@ function buildEvents(turns: Turn[]): Event[] {
       // 단 사용자가 직접 친 슬래시 커맨드 (prefix form)는 user event도 함께 의미 있을 수 있지만
       // 분류 노이즈를 줄이기 위해 skill만 emit.
       if (t.userText) {
-        const slashName = detectSlashCommand(t.userText);
-        if (slashName) {
-          events.push({ t: t.index, kind: "skill", name: slashName });
+        const slash = detectSlashCommand(t.userText);
+        if (slash) {
+          const ev: Event = { t: t.index, kind: "skill", name: slash.name };
+          if (slash.args) ev.args = slash.args;
+          events.push(ev);
         } else if (!isPseudoUser(t.userText)) {
           events.push({
             t: t.index,
