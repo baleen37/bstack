@@ -135,7 +135,7 @@ After parsing the subagent's returned JSON:
    - **edit**: let the user edit the patch, then proceed as `y`.
    - **skip / n**: move on to the next proposal.
 
-4. If `--dry-run` is passed, skip Phase 2 entirely and just print the proposal list.
+4. If `--dry-run` is passed, skip Phase 2 entirely and just print the proposal list. `--dry-run` is consumed by the main agent only — never forward it to `build-index.ts` (the script will exit 2 on unknown flags).
 
 5. Finalize: print the list of applied commit SHAs and the upstream-suggestions path (if any).
 
