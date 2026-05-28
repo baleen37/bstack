@@ -41,11 +41,13 @@ The main agent does two things in Phase 0:
 
 2. **Build the index** — `build-index.ts` is read-only: auto-detects the transcript, extracts signals, prints JSON.
 
+Use the `Base directory for this skill: <path>` value injected at the top of this command prompt — do **not** rely on `${CLAUDE_PLUGIN_ROOT}` (it is not guaranteed to be set in the slash-command shell).
+
 ```bash
-bun "${CLAUDE_PLUGIN_ROOT}/skills/evolve/scripts/build-index.ts" [--session <id>]
+bun "<Base directory>/scripts/build-index.ts" [--session <id>]
 ```
 
-Exit codes: `0`=ok, `14`=transcript or project dir not found.
+Exit codes: `0`=ok, `2`=unknown flag (see §4 below — `--dry-run` must not be passed here), `14`=transcript or project dir not found.
 
 Capture stdout JSON into a variable. **Do not show it to the user** — pass it only to the next-step subagent.
 
