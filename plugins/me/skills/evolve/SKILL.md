@@ -19,14 +19,16 @@ Only when the user invokes it explicitly. No automatic triggers.
 
 ```
 /me:evolve                          analyze the current session
-/me:evolve --session <id>           analyze a specific session by id
+/me:evolve --session <id>           analyze a specific session by transcript session id
 /me:evolve --dry-run                show proposals only, don't apply
 ```
+
+**`<id>` is a transcript session id** (the `.jsonl` filename under `~/.claude/projects/<project>/`), NOT the `ARGUMENTS` uuid that Claude Code injects when a slash command is invoked with a positional argument. If the user types `/me:evolve` with no explicit `--session` flag, do not pass `--session` to `build-index.ts` even if an `ARGUMENTS:` uuid appears in the prompt — let auto-detection run. Only forward `--session <id>` when the user explicitly provides a transcript session id.
 
 ## What this skill does NOT do
 
 - Main agent never reads the raw transcript directly (avoid context blowup).
-- Never modify external plugin cache (`~/.claude/plugins/cache/`); accumulate those as upstream suggestions instead.
+- Never modify external plugin cache (`~/.claude/plugins/cache/`) — it is read-only and gets overwritten on plugin updates. Accumulate those as upstream suggestions instead. If the user points you at the plugin's source repo (the path varies per user) and asks you to fix it there, redirect the edit to that source repo and commit there; the cache itself stays untouched.
 - Never create new skills (that's `writing-skills` territory).
 - Never auto-commit or auto-push (user must approve each proposal).
 - SKILL.md files inside this repo's own `plugins/` ARE valid edit targets. "External cache" specifically means `~/.claude/plugins/cache/` only.
