@@ -41,15 +41,17 @@ The main agent does two things in Phase 0:
 
 2. **Build the index** — `build-index.ts` is read-only: auto-detects the transcript, extracts signals, prints JSON.
 
+Use the `Base directory for this skill: <path>` value injected at the top of this command prompt — do **not** rely on `${CLAUDE_PLUGIN_ROOT}` (it is not guaranteed to be set in the slash-command shell).
+
 ```bash
-bun "${CLAUDE_PLUGIN_ROOT}/skills/evolve/scripts/build-index.ts" [--session <id>]
+bun "<Base directory>/scripts/build-index.ts" [--session <id>]
 ```
 
-Exit codes: `0`=ok, `14`=transcript or project dir not found.
+Exit codes: `0`=ok, `2`=unknown flag (see §4 below — `--dry-run` must not be passed here), `14`=transcript or project dir not found.
 
 Capture stdout JSON into a variable. **Do not show it to the user** — pass it only to the next-step subagent.
 
-If `events` is empty, or both `summary.clusters` and `summary.signal_positions` are empty, print "no improvement signals found in this session" and exit.
+If `events` is empty, print "no improvement signals found in this session" and exit.
 
 ## Phase 1 — Subagent analysis (Agent)
 
@@ -60,7 +62,7 @@ Dispatch one subagent (`general-purpose`). The indexer hands user utterances ove
 The prompt must include all of:
 
 1. Spec path: `docs/superpowers/specs/2026-05-27-evolve-skill-design.md`
-2. The full index JSON from Phase 0 (only `summary` + `events`). **Read `summary` first** — `headline` (one-line state), `clusters` (same-kind events within ≤30 turns, ≥3 occurrences, with `t_range`/`n`/`example_t`), `signal_positions` (per-kind turn coordinates). Use this to decide which regions to inspect, then slice `events[]` for causal-chain analysis. summary is a simple heuristic — false positives are expected; skip meaningless clusters.
+2. The full index JSON from Phase 0 (`summary` + `events`). Read `summary.headline` (one-line state) and `summary.clusters` (same-kind events within ≤30 turns, ≥3 occurrences) first to spot dense regions, then walk `events[]` for causal-chain analysis. Clusters are a simple heuristic — skip meaningless ones.
 3. **Classification task for `kind: "user"` events** — label each one with exactly one of (refer by array index, e.g. `events[12]`):
    - **correction**: redirects/corrects the immediately preceding assistant action
    - **success**: positive feedback on the preceding assistant action
@@ -70,19 +72,13 @@ The prompt must include all of:
 
    Criterion is *the relation to the preceding assistant action (`event.prior`)*, not the words themselves. E.g. "stop and report" used as a directive verb is noise; "stop, that's wrong" reacting to a tool call is a correction.
 
-4. Candidate-file mapping table (use alongside interrupt/repeat/error events):
+4. Target-file selection — pick by *what kind of knowledge is missing*, not by signal pattern:
 
-   | Signal pattern | 1st choice | 2nd |
-   |---|---|---|
-   | many corrections → skill not invoked | that SKILL.md (description, triggers) | nearest AGENTS.md |
-   | correction → rule violated *after* skill invoked | that SKILL.md (body, Red Flags) | — |
-   | repeat + eventually finds X | nearest AGENTS.md (Key Files) | CLAUDE.md |
-   | correction → project rule/convention violated | nearest CLAUDE.md | AGENTS.md |
-   | success → a skill clearly worked well | that frequently-invoked SKILL.md (reinforce) | — |
-   | interrupt + prior action clearly wrong | that SKILL.md | AGENTS.md |
-   | repeated error → same tool failing | that SKILL.md (usage) | CLAUDE.md |
+   - **that SKILL.md** — skill triggers, body rules, Red Flags. Use when a skill should have run but didn't, or ran but violated its own contract.
+   - **nearest AGENTS.md** — repo navigation, file locations, "where to look" knowledge. Use when the agent searched/read repeatedly before finding something.
+   - **nearest CLAUDE.md** — project conventions and rules that govern *all* work in this tree.
 
-   **"Nearest" resolution**: "that SKILL.md" = the SKILL.md inferred from `events[]` items with `kind:"skill"` or from tool calls in `prior`. "Nearest AGENTS.md/CLAUDE.md" = walk up from that SKILL.md's directory; first one found wins (fallback to repo root). If no skill can be inferred, default to repo-root CLAUDE.md.
+   **"Nearest" resolution**: "that SKILL.md" = inferred from `events[]` items with `kind:"skill"` or tool calls in `prior`. "Nearest AGENTS.md/CLAUDE.md" = walk up from that SKILL.md's directory; first hit wins (fallback to repo-root CLAUDE.md). If no skill can be inferred, default to repo-root CLAUDE.md.
 
 5. Output schema — one JSON block only, no other text. `event_index` is the integer position in the index's `events[]` array:
 
@@ -102,8 +98,7 @@ The prompt must include all of:
          "patch": "<unified diff applicable with `git apply`>",
          "rationale": "1-2 sentences"
        }
-     ],
-     "skipped": [{"event_index": 5, "reason": "low confidence"}]
+     ]
    }
    ```
 
@@ -133,7 +128,7 @@ After parsing the subagent's returned JSON:
    - **edit**: let the user edit the patch, then proceed as `y`.
    - **skip / n**: move on to the next proposal.
 
-4. If `--dry-run` is passed, skip Phase 2 entirely and just print the proposal list.
+4. If `--dry-run` is passed, skip Phase 2 entirely and just print the proposal list. `--dry-run` is consumed by the main agent only — never forward it to `build-index.ts` (the script will exit 2 on unknown flags).
 
 5. Finalize: print the list of applied commit SHAs and the upstream-suggestions path (if any).
 

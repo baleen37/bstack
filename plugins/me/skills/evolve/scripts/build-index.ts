@@ -8,7 +8,7 @@ import { basename, join, resolve } from "node:path";
 import { homedir } from "node:os";
 
 // ── 타입 ───────────────────────────────────────────────
-type EventKind = "user" | "skill" | "interrupt" | "error" | "agent" | "large_out" | "repeat";
+type EventKind = "user" | "skill" | "interrupt" | "error" | "agent" | "repeat";
 
 interface Event {
   t: number;
@@ -16,12 +16,12 @@ interface Event {
   text?: string;
   prior?: string[];
   name?: string;
+  args?: string;
   by?: "user" | "assistant";
   tool?: string;
   desc?: string;
   sub?: string;
   model?: string;
-  bytes?: number;
   pattern?: string;
   n?: number;
 }
@@ -36,7 +36,6 @@ interface Cluster {
 interface Summary {
   headline: string;
   clusters: Cluster[];
-  signal_positions: Partial<Record<EventKind, number[]>>;
 }
 
 interface SessionIndex {
@@ -51,7 +50,6 @@ interface SessionIndex {
 interface ToolResultPayload {
   content: string;
   isError: boolean;
-  size: number;
 }
 
 interface Turn {
@@ -106,7 +104,7 @@ function loadTurns(jsonlPath: string): LoadedTranscript {
         for (const c of content) {
           if (c.type === "tool_result") {
             const norm = normalizeToolResultContent(c.content);
-            t.toolResults.push({ content: norm, isError: c.is_error === true, size: norm.length });
+            t.toolResults.push({ content: norm, isError: c.is_error === true });
           }
         }
       }
@@ -118,7 +116,7 @@ function loadTurns(jsonlPath: string): LoadedTranscript {
   return { turns, sessionTitle };
 }
 
-// ── tool_use 요약 (user.prior, large_out.tool에 사용) ──
+// ── tool_use 요약 (user.prior에 사용) ──
 function summarizeToolUse(tu: { name: string; input: any }): string {
   const name = tu.name;
   let arg = "";
@@ -149,13 +147,25 @@ function priorAssistantActions(turns: Turn[], currentIdx: number): string[] {
 
 // ── 슬래시 커맨드 검출 ──────────────────────────────────
 const SLASH_CMD_TAG = /<command-name>\/([a-z0-9:_-]+)<\/command-name>/i;
-const SLASH_CMD_PREFIX = /^\/([a-z0-9:_-]+)\b/i;
+const SLASH_CMD_PREFIX = /^\/([a-z0-9:_-]+)\b(.*)$/i;
+const SLASH_CMD_ARGS_TAG = /<command-args>([\s\S]*?)<\/command-args>/i;
 
-function detectSlashCommand(userText: string): string | undefined {
+interface DetectedSlash {
+  name: string;
+  args?: string;
+}
+
+function detectSlashCommand(userText: string): DetectedSlash | undefined {
   const tag = userText.match(SLASH_CMD_TAG);
-  if (tag) return tag[1];
+  if (tag) {
+    const argsTag = userText.match(SLASH_CMD_ARGS_TAG);
+    const args = argsTag?.[1]?.trim();
+    return args ? { name: tag[1], args: args.slice(0, 200) } : { name: tag[1] };
+  }
   const prefix = userText.trim().match(SLASH_CMD_PREFIX);
-  return prefix?.[1];
+  if (!prefix) return undefined;
+  const args = prefix[2]?.trim();
+  return args ? { name: prefix[1], args: args.slice(0, 200) } : { name: prefix[1] };
 }
 
 const PSEUDO_USER_PREFIXES = [
@@ -173,13 +183,11 @@ function isPseudoUser(userText: string): boolean {
 }
 
 // ── events 빌드 ────────────────────────────────────────
-const LARGE_OUTPUT_THRESHOLD = 10 * 1024;
-
 function buildEvents(turns: Turn[]): Event[] {
   const events: Event[] = [];
   const interruptClaimed = new Set<number>();
 
-  // user / skill / interrupt(user) / error / agent / large_out 를 순회 중에 emit
+  // user / skill / interrupt(user) / error / agent 를 순회 중에 emit
   for (let i = 0; i < turns.length; i++) {
     const t = turns[i];
 
@@ -188,9 +196,11 @@ function buildEvents(turns: Turn[]): Event[] {
       // 단 사용자가 직접 친 슬래시 커맨드 (prefix form)는 user event도 함께 의미 있을 수 있지만
       // 분류 노이즈를 줄이기 위해 skill만 emit.
       if (t.userText) {
-        const slashName = detectSlashCommand(t.userText);
-        if (slashName) {
-          events.push({ t: t.index, kind: "skill", name: slashName });
+        const slash = detectSlashCommand(t.userText);
+        if (slash) {
+          const ev: Event = { t: t.index, kind: "skill", name: slash.name };
+          if (slash.args) ev.args = slash.args;
+          events.push(ev);
         } else if (!isPseudoUser(t.userText)) {
           events.push({
             t: t.index,
@@ -205,16 +215,12 @@ function buildEvents(turns: Turn[]): Event[] {
         events.push({ t: t.index, kind: "interrupt", by: t.interruptedBy ?? "user" });
         interruptClaimed.add(t.index);
       }
-      // tool_result 안의 error / large_out
+      // tool_result 안의 error
       for (const tr of t.toolResults) {
+        if (!tr.isError) continue;
         const prevAssist = [...turns.slice(0, i)].reverse().find((a) => a.type === "assistant" && a.toolUses.length > 0);
         const toolName = prevAssist?.toolUses[prevAssist.toolUses.length - 1]?.name ?? "unknown";
-        if (tr.isError) {
-          events.push({ t: t.index, kind: "error", tool: toolName, text: tr.content.slice(0, 200) });
-        }
-        if (tr.size > LARGE_OUTPUT_THRESHOLD) {
-          events.push({ t: t.index, kind: "large_out", tool: toolName, bytes: tr.size });
-        }
+        events.push({ t: t.index, kind: "error", tool: toolName, text: tr.content.slice(0, 200) });
       }
     } else {
       // assistant
@@ -297,15 +303,6 @@ function buildClusters(events: Event[]): Cluster[] {
   return clusters.sort((a, b) => a.t_range[0] - b.t_range[0]);
 }
 
-function buildSignalPositions(events: Event[]): Partial<Record<EventKind, number[]>> {
-  const out: Partial<Record<EventKind, number[]>> = {};
-  for (const kind of SUMMARY_KINDS) {
-    const turns = events.filter((e) => e.kind === kind).map((e) => e.t);
-    if (turns.length > 0) out[kind] = turns;
-  }
-  return out;
-}
-
 function buildHeadline(turns: number, events: Event[], clusters: Cluster[]): string {
   const counts: Record<string, number> = {};
   for (const e of events) counts[e.kind] = (counts[e.kind] ?? 0) + 1;
@@ -322,7 +319,6 @@ function buildSummary(turns: number, events: Event[]): Summary {
   return {
     headline: buildHeadline(turns, events, clusters),
     clusters,
-    signal_positions: buildSignalPositions(events),
   };
 }
 

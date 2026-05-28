@@ -43,7 +43,7 @@ RICH_FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/rich-signals-session.jsonl"
     [ "$status" -eq 0 ]
     # 인덱서는 분류 안 함 — user_correction/success_pattern 같은 kind는 절대 emit 안 함
     echo "$output" | jq -e '
-      [.events[].kind] | all(. as $k | ["user","skill","interrupt","error","agent","large_out","repeat"] | index($k) != null)
+      [.events[].kind] | all(. as $k | ["user","skill","interrupt","error","agent","repeat"] | index($k) != null)
     '
 }
 
@@ -60,12 +60,13 @@ RICH_FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/rich-signals-session.jsonl"
     echo "$output" | jq -e '(keys - ["session_id","session_title","turns","summary","events"]) == []'
 }
 
-@test "evolve build-index: summary has headline, clusters, signal_positions" {
+@test "evolve build-index: summary has headline and clusters" {
     run bun "$INDEXER" "$FIXTURE"
     [ "$status" -eq 0 ]
     echo "$output" | jq -e '.summary.headline | type == "string"'
     echo "$output" | jq -e '.summary.clusters | type == "array"'
-    echo "$output" | jq -e '.summary.signal_positions | type == "object"'
+    # signal_positions intentionally removed — clusters + events[] cover its role
+    echo "$output" | jq -e '.summary | has("signal_positions") | not'
 }
 
 @test "evolve build-index: detects slash-command in <command-name> tag form" {
@@ -119,24 +120,11 @@ RICH_FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/rich-signals-session.jsonl"
     '
 }
 
-@test "evolve build-index: detects large_out event above 10KB" {
+@test "evolve build-index: large_out event kind is no longer emitted" {
     run bun "$INDEXER" "$RICH_FIXTURE"
     [ "$status" -eq 0 ]
-    echo "$output" | jq -e '
-      [.events[] | select(.kind == "large_out")] as $l
-      | ($l | length >= 1) and ($l[0].bytes > 10240)
-    '
-}
-
-@test "evolve build-index: signal_positions kinds appear in events" {
-    run bun "$INDEXER" "$RICH_FIXTURE"
-    [ "$status" -eq 0 ]
-    # 각 signal_positions 키는 실제 events 의 kind 와 일치해야 함
-    echo "$output" | jq -e '
-      (.summary.signal_positions | keys) as $sk
-      | ([.events[].kind] | unique) as $ek
-      | ($sk | all(. as $k | $ek | index($k) != null))
-    '
+    # large_out was removed because Phase 1's mapping table never consumed it.
+    echo "$output" | jq -e '[.events[] | select(.kind == "large_out")] | length == 0'
 }
 
 @test "evolve build-index: false-positive guard — body words do NOT trigger semantic kinds" {
@@ -148,5 +136,5 @@ EOF
     [ "$status" -eq 0 ]
     # user event 1건, 분류 kind 일체 없음
     echo "$output" | jq -e '[.events[] | select(.kind == "user")] | length == 1'
-    echo "$output" | jq -e '[.events[].kind] | all(. as $k | ["user","skill","interrupt","error","agent","large_out","repeat"] | index($k) != null)'
+    echo "$output" | jq -e '[.events[].kind] | all(. as $k | ["user","skill","interrupt","error","agent","repeat"] | index($k) != null)'
 }
