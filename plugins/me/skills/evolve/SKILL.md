@@ -104,8 +104,7 @@ The prompt must include all of:
          "patch": "<unified diff applicable with `git apply`>",
          "rationale": "1-2 sentences"
        }
-     ],
-     "skipped": [{"event_index": 5, "reason": "low confidence"}]
+     ]
    }
    ```
 
