@@ -8,7 +8,7 @@ import { basename, join, resolve } from "node:path";
 import { homedir } from "node:os";
 
 // ── 타입 ───────────────────────────────────────────────
-type EventKind = "user" | "skill" | "interrupt" | "error" | "agent" | "large_out" | "repeat";
+type EventKind = "user" | "skill" | "interrupt" | "error" | "agent" | "repeat";
 
 interface Event {
   t: number;
@@ -22,7 +22,6 @@ interface Event {
   desc?: string;
   sub?: string;
   model?: string;
-  bytes?: number;
   pattern?: string;
   n?: number;
 }
@@ -52,7 +51,6 @@ interface SessionIndex {
 interface ToolResultPayload {
   content: string;
   isError: boolean;
-  size: number;
 }
 
 interface Turn {
@@ -107,7 +105,7 @@ function loadTurns(jsonlPath: string): LoadedTranscript {
         for (const c of content) {
           if (c.type === "tool_result") {
             const norm = normalizeToolResultContent(c.content);
-            t.toolResults.push({ content: norm, isError: c.is_error === true, size: norm.length });
+            t.toolResults.push({ content: norm, isError: c.is_error === true });
           }
         }
       }
@@ -119,7 +117,7 @@ function loadTurns(jsonlPath: string): LoadedTranscript {
   return { turns, sessionTitle };
 }
 
-// ── tool_use 요약 (user.prior, large_out.tool에 사용) ──
+// ── tool_use 요약 (user.prior에 사용) ──
 function summarizeToolUse(tu: { name: string; input: any }): string {
   const name = tu.name;
   let arg = "";
@@ -186,13 +184,11 @@ function isPseudoUser(userText: string): boolean {
 }
 
 // ── events 빌드 ────────────────────────────────────────
-const LARGE_OUTPUT_THRESHOLD = 10 * 1024;
-
 function buildEvents(turns: Turn[]): Event[] {
   const events: Event[] = [];
   const interruptClaimed = new Set<number>();
 
-  // user / skill / interrupt(user) / error / agent / large_out 를 순회 중에 emit
+  // user / skill / interrupt(user) / error / agent 를 순회 중에 emit
   for (let i = 0; i < turns.length; i++) {
     const t = turns[i];
 
@@ -220,16 +216,12 @@ function buildEvents(turns: Turn[]): Event[] {
         events.push({ t: t.index, kind: "interrupt", by: t.interruptedBy ?? "user" });
         interruptClaimed.add(t.index);
       }
-      // tool_result 안의 error / large_out
+      // tool_result 안의 error
       for (const tr of t.toolResults) {
+        if (!tr.isError) continue;
         const prevAssist = [...turns.slice(0, i)].reverse().find((a) => a.type === "assistant" && a.toolUses.length > 0);
         const toolName = prevAssist?.toolUses[prevAssist.toolUses.length - 1]?.name ?? "unknown";
-        if (tr.isError) {
-          events.push({ t: t.index, kind: "error", tool: toolName, text: tr.content.slice(0, 200) });
-        }
-        if (tr.size > LARGE_OUTPUT_THRESHOLD) {
-          events.push({ t: t.index, kind: "large_out", tool: toolName, bytes: tr.size });
-        }
+        events.push({ t: t.index, kind: "error", tool: toolName, text: tr.content.slice(0, 200) });
       }
     } else {
       // assistant
