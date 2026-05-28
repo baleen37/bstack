@@ -19,9 +19,11 @@ Only when the user invokes it explicitly. No automatic triggers.
 
 ```
 /me:evolve                          analyze the current session
-/me:evolve --session <id>           analyze a specific session by id
+/me:evolve --session <id>           analyze a specific session by transcript session id
 /me:evolve --dry-run                show proposals only, don't apply
 ```
+
+**`<id>` is a transcript session id** (the `.jsonl` filename under `~/.claude/projects/<project>/`), NOT the `ARGUMENTS` uuid that Claude Code injects when a slash command is invoked with a positional argument. If the user types `/me:evolve` with no explicit `--session` flag, do not pass `--session` to `build-index.ts` even if an `ARGUMENTS:` uuid appears in the prompt — let auto-detection run. Only forward `--session <id>` when the user explicitly provides a transcript session id.
 
 ## What this skill does NOT do
 
