@@ -72,19 +72,13 @@ The prompt must include all of:
 
    Criterion is *the relation to the preceding assistant action (`event.prior`)*, not the words themselves. E.g. "stop and report" used as a directive verb is noise; "stop, that's wrong" reacting to a tool call is a correction.
 
-4. Candidate-file mapping table (use alongside interrupt/repeat/error events):
+4. Target-file selection — pick by *what kind of knowledge is missing*, not by signal pattern:
 
-   | Signal pattern | 1st choice | 2nd |
-   |---|---|---|
-   | many corrections → skill not invoked | that SKILL.md (description, triggers) | nearest AGENTS.md |
-   | correction → rule violated *after* skill invoked | that SKILL.md (body, Red Flags) | — |
-   | repeat + eventually finds X | nearest AGENTS.md (Key Files) | CLAUDE.md |
-   | correction → project rule/convention violated | nearest CLAUDE.md | AGENTS.md |
-   | success → a skill clearly worked well | that frequently-invoked SKILL.md (reinforce) | — |
-   | interrupt + prior action clearly wrong | that SKILL.md | AGENTS.md |
-   | repeated error → same tool failing | that SKILL.md (usage) | CLAUDE.md |
+   - **that SKILL.md** — skill triggers, body rules, Red Flags. Use when a skill should have run but didn't, or ran but violated its own contract.
+   - **nearest AGENTS.md** — repo navigation, file locations, "where to look" knowledge. Use when the agent searched/read repeatedly before finding something.
+   - **nearest CLAUDE.md** — project conventions and rules that govern *all* work in this tree.
 
-   **"Nearest" resolution**: "that SKILL.md" = the SKILL.md inferred from `events[]` items with `kind:"skill"` or from tool calls in `prior`. "Nearest AGENTS.md/CLAUDE.md" = walk up from that SKILL.md's directory; first one found wins (fallback to repo root). If no skill can be inferred, default to repo-root CLAUDE.md.
+   **"Nearest" resolution**: "that SKILL.md" = inferred from `events[]` items with `kind:"skill"` or tool calls in `prior`. "Nearest AGENTS.md/CLAUDE.md" = walk up from that SKILL.md's directory; first hit wins (fallback to repo-root CLAUDE.md). If no skill can be inferred, default to repo-root CLAUDE.md.
 
 5. Output schema — one JSON block only, no other text. `event_index` is the integer position in the index's `events[]` array:
 
