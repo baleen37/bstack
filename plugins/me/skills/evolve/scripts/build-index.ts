@@ -63,9 +63,16 @@ interface Turn {
   interruptedBy?: "user" | "assistant";
 }
 
+interface SkillInvocation {
+  name: string;          // skill 식별자 (Base directory의 마지막 디렉터리명)
+  baseDir: string;       // 주입 본문의 Base directory 절대경로
+  injectedBody: string;  // "Base directory" 줄 제거 후의 본문 (해시 입력)
+}
+
 interface LoadedTranscript {
   turns: Turn[];
   sessionTitle?: string;
+  skillInvocations: SkillInvocation[];
 }
 
 function normalizeToolResultContent(raw: any): string {
@@ -79,12 +86,30 @@ function normalizeToolResultContent(raw: any): string {
 function loadTurns(jsonlPath: string): LoadedTranscript {
   const lines = readFileSync(jsonlPath, "utf8").split("\n").filter(Boolean);
   const turns: Turn[] = [];
+  const skillInvocations: SkillInvocation[] = [];
   let sessionTitle: string | undefined;
   for (const line of lines) {
     const obj = JSON.parse(line);
     if (obj.type === "ai-title" && typeof obj.aiTitle === "string") {
       sessionTitle = obj.aiTitle;
       continue;
+    }
+    // skill 호출시점 주입 본문 (isMeta user/text, 첫 줄 "Base directory for this skill:")
+    if (obj.type === "user" && obj.isMeta === true) {
+      const c = obj.message?.content;
+      const text = Array.isArray(c) && c[0]?.type === "text" ? c[0].text : undefined;
+      if (typeof text === "string") {
+        const m = text.match(/^Base directory for this skill:\s*(.+?)\s*(?:\r?\n|$)/);
+        if (m) {
+          const baseDir = m[1];
+          skillInvocations.push({
+            name: basename(baseDir),
+            baseDir,
+            injectedBody: stripBaseDirLine(text),
+          });
+        }
+      }
+      continue; // 주입 메시지는 turn으로 세지 않음
     }
     if (obj.type !== "user" && obj.type !== "assistant") continue;
     const userInterruptedMarker = obj.interruptedMessageId !== undefined;
@@ -114,7 +139,7 @@ function loadTurns(jsonlPath: string): LoadedTranscript {
     }
     turns.push(t);
   }
-  return { turns, sessionTitle };
+  return { turns, sessionTitle, skillInvocations };
 }
 
 // ── skill 본문 정규화 + 해시 (stale 판정용) ──
