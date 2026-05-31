@@ -421,7 +421,7 @@ function repoSkillPath(repoRoot: string | null, name: string): string | undefine
   if (!repoRoot) return undefined;
   const pluginsDir = join(repoRoot, "plugins");
   if (!existsSync(pluginsDir)) return undefined;
-  for (const plugin of readdirSync(pluginsDir)) {
+  for (const plugin of readdirSync(pluginsDir).sort()) {
     const candidate = join(pluginsDir, plugin, "skills", name, "SKILL.md");
     if (existsSync(candidate)) return candidate;
   }
