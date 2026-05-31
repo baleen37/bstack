@@ -50,10 +50,12 @@ interface SessionIndex {
 
 interface RecentSkill {
   name: string;
-  skill_path: string;     // 현재 디스크 SKILL.md 경로 (제안 target 후보)
+  skill_path: string;     // transcript가 가리킨 호출 시점 base 경로의 SKILL.md (보통 캐시 경로)
+  repo_path?: string;     // cwd repo 안에서 찾은 편집 가능한 SKILL.md (있으면 직접 edit 대상)
   stale: boolean;         // 세션 이후 본문 변경 여부
   dropped: boolean;       // stale 또는 파일없음 → events 제외됨
   seen_in: string[];      // 등장한 session_id 목록
+  signal: string;         // kind별 카운트 한 줄 요약 (LLM이 어디부터 볼지 판단용)
   events: Event[];        // dropped면 빈 배열
 }
 
@@ -240,6 +242,7 @@ const PSEUDO_USER_PREFIXES = [
   "<bash-stderr>",
   "<local-command-",
   "[Request interrupted",
+  "<task-notification>", // 하네스 주입 Monitor/Task 완료 알림 — user 발화 아님
 ];
 
 function isPseudoUser(userText: string): boolean {
@@ -399,13 +402,39 @@ function buildIndex(jsonlPath: string): SessionIndex {
   };
 }
 
-function currentBodyHash(baseDir: string): string | null {
-  const skillMd = join(baseDir, "SKILL.md");
+// cwd에서 위로 올라가며 `plugins/` 를 가진 디렉터리(=이 repo 루트)를 찾는다.
+function findRepoRoot(cwd: string): string | null {
+  let dir = cwd;
+  for (let i = 0; i < 30; i++) {
+    if (existsSync(join(dir, "plugins"))) return dir;
+    const parent = join(dir, "..");
+    const resolved = resolve(parent);
+    if (resolved === dir) break;
+    dir = resolved;
+  }
+  return null;
+}
+
+// repo 안에서 같은 이름 skill의 편집 가능한 SKILL.md 경로를 찾는다 (plugins/*/skills/<name>/SKILL.md).
+// transcript가 캐시 경로를 가리켜도, cwd repo에 그 skill 소스가 있으면 그걸 직접 편집 대상으로 쓴다.
+function repoSkillPath(repoRoot: string | null, name: string): string | undefined {
+  if (!repoRoot) return undefined;
+  const pluginsDir = join(repoRoot, "plugins");
+  if (!existsSync(pluginsDir)) return undefined;
+  for (const plugin of readdirSync(pluginsDir).sort()) {
+    const candidate = join(pluginsDir, plugin, "skills", name, "SKILL.md");
+    if (existsSync(candidate)) return candidate;
+  }
+  return undefined;
+}
+
+function currentBodyHash(skillMd: string): string | null {
   if (!existsSync(skillMd)) return null;
   return bodyHash(stripFrontmatter(readFileSync(skillMd, "utf8")));
 }
 
-function buildRecentIndex(paths: string[]): RecentIndex {
+function buildRecentIndex(paths: string[], cwd: string): RecentIndex {
+  const repoRoot = findRepoRoot(cwd);
   const sessions: RecentIndex["sessions"] = [];
   // name -> 누적 상태
   const acc = new Map<string, {
@@ -446,22 +475,42 @@ function buildRecentIndex(paths: string[]): RecentIndex {
     }
   }
 
-  const skills: RecentSkill[] = [];
+  // kind별 카운트 → 한 줄 요약. interrupt/error/repeat은 개선 신호가 농축된 종류라 앞세운다.
+  function summarizeSignal(events: Event[]): { signal: string; weight: number } {
+    const c: Record<string, number> = {};
+    for (const e of events) c[e.kind] = (c[e.kind] ?? 0) + 1;
+    const order: EventKind[] = ["interrupt", "error", "repeat", "user", "agent", "skill"];
+    const parts = order.filter((k) => c[k]).map((k) => `${c[k]} ${k}`);
+    const weight = (c["interrupt"] ?? 0) + (c["error"] ?? 0) + (c["repeat"] ?? 0);
+    return { signal: parts.length ? parts.join(", ") : "no events", weight };
+  }
+
+  const skills: Array<RecentSkill & { _weight: number }> = [];
   for (const [name, a] of acc) {
-    const nowHash = currentBodyHash(a.baseDir);
+    const cacheSkillMd = join(a.baseDir, "SKILL.md");
+    // cwd repo에 같은 skill 소스가 있으면 그게 편집 가능한 "현재 본문"의 진짜 출처다 (캐시는 구버전일 수 있음).
+    const repoPath = repoSkillPath(repoRoot, name);
+    const nowHash = currentBodyHash(repoPath ?? cacheSkillMd);
     // stale = 현재 본문이 호출시점 본문들 중 어느 것과도 일치하지 않음
     const stale = nowHash === null ? true : !a.invokedHashes.has(nowHash);
     const dropped = stale;
+    const evs = dropped ? [] : a.events;
+    const { signal, weight } = summarizeSignal(evs);
     skills.push({
       name,
-      skill_path: join(a.baseDir, "SKILL.md"),
+      skill_path: cacheSkillMd,
+      ...(repoPath ? { repo_path: repoPath } : {}),
       stale,
       dropped,
       seen_in: [...a.seen],
-      events: dropped ? [] : a.events,
+      signal: dropped ? "dropped (stale)" : signal,
+      events: evs,
+      _weight: weight,
     });
   }
-  skills.sort((x, y) => y.events.length - x.events.length);
+  // 개선 신호(interrupt+error+repeat) 많은 순 → 동률이면 전체 event 수 순
+  skills.sort((x, y) => y._weight - x._weight || y.events.length - x.events.length);
+  for (const s of skills) delete (s as { _weight?: number })._weight;
 
   const droppedN = skills.filter((s) => s.dropped).length;
   return {
@@ -478,19 +527,38 @@ function encodeCwd(cwd: string): string {
   return cwd.replace(/[/.]/g, "-");
 }
 
+// cwd 인코딩에서 worktree base prefix 추출 (worktree들은 `<base>--worktrees-…` 형태)
+function projectBasePrefix(cwd: string): string {
+  const enc = encodeCwd(cwd);
+  const i = enc.indexOf("--worktrees-");
+  return i === -1 ? enc : enc.slice(0, i);
+}
+
 function recentSessionPaths(cwd: string, n: number): string[] {
-  const projectDir = join(homedir(), ".claude", "projects", encodeCwd(cwd));
-  if (!existsSync(projectDir)) {
-    console.error(`transcript directory not found: ${projectDir}`);
+  const projectsRoot = join(homedir(), ".claude", "projects");
+  if (!existsSync(projectsRoot)) {
+    console.error(`transcript directory not found: ${projectsRoot}`);
     process.exit(14);
   }
-  const files = readdirSync(projectDir)
-    .filter((f) => f.endsWith(".jsonl"))
-    .map((f) => ({ path: join(projectDir, f), mtime: statSync(join(projectDir, f)).mtimeMs }))
+  // 같은 프로젝트의 모든 worktree 디렉터리를 합친다: base 자체 + base--worktrees-* 형제들.
+  // bstack처럼 worktree마다 transcript가 쪼개지는 경우 "최근 N개 세션"이 전체에서 모이게.
+  const base = projectBasePrefix(cwd);
+  const dirs = readdirSync(projectsRoot).filter((d) => d === base || d.startsWith(base + "--worktrees-"));
+  const files = dirs
+    .flatMap((d) => {
+      const full = join(projectsRoot, d);
+      try {
+        return readdirSync(full)
+          .filter((f) => f.endsWith(".jsonl"))
+          .map((f) => ({ path: join(full, f), mtime: statSync(join(full, f)).mtimeMs }));
+      } catch {
+        return [];
+      }
+    })
     .sort((a, b) => b.mtime - a.mtime)
     .slice(0, n);
   if (files.length === 0) {
-    console.error(`no .jsonl files in ${projectDir}`);
+    console.error(`no .jsonl files for project ${base} (and its worktrees) under ${projectsRoot}`);
     process.exit(14);
   }
   return files.map((f) => f.path);
@@ -556,7 +624,7 @@ function parseArgs(argv: string[]): { jsonlPath?: string; sessionId?: string; re
 const opts = parseArgs(process.argv);
 if (opts.recent !== undefined) {
   const paths = recentSessionPaths(process.cwd(), opts.recent);
-  console.log(JSON.stringify(buildRecentIndex(paths), null, 2));
+  console.log(JSON.stringify(buildRecentIndex(paths, process.cwd()), null, 2));
 } else {
   const transcriptPath = resolveTranscriptPath({
     jsonlPath: opts.jsonlPath,

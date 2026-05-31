@@ -140,6 +140,19 @@ EOF
     echo "$output" | jq -e '[.events[].kind] | all(. as $k | ["user","skill","interrupt","error","agent","repeat"] | index($k) != null)'
 }
 
+@test "evolve build-index: harness-injected <task-notification> is not a user event" {
+    local tn_fixture="$BATS_TEST_TMPDIR/task-notification.jsonl"
+    cat > "$tn_fixture" <<'EOF'
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"real user message"}]}}
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"<task-notification>\n<task-id>b51bvqj0n</task-id>\n<summary>Monitor event</summary>\n</task-notification>"}]}}
+EOF
+    run bun "$INDEXER" "$tn_fixture"
+    [ "$status" -eq 0 ]
+    # 진짜 user 발화 1건만 잡히고, <task-notification> 주입 텍스트는 제외된다
+    echo "$output" | jq -e '[.events[] | select(.kind == "user")] | length == 1'
+    echo "$output" | jq -e '[.events[] | select(.kind == "user")][0].text == "real user message"'
+}
+
 @test "evolve build-index: --recent and --session together exit 2" {
     run bun "$INDEXER" --recent --session abc
     [ "$status" -eq 2 ]
@@ -232,4 +245,112 @@ EOF
     rm -rf "$pdir"
     [ "$status" -eq 0 ]
     echo "$output" | jq -e '[.skills[] | select(.name == "ghost")][0].stale == true'
+}
+
+@test "evolve build-index: --recent merges sessions across worktree sibling dirs" {
+    # cwd가 worktree 안일 때, base 프로젝트 디렉터리 + base--worktrees-* 형제 디렉터리의
+    # 세션을 모두 합쳐 모은다. base 디렉터리에 skillA, worktree cwd에 skillB 세션을 둔다.
+    local base="$BATS_TEST_TMPDIR/myproj"
+    local wt="$base/.worktrees/wt1"
+    mkdir -p "$wt"
+    cd "$wt"
+    local real_wt; real_wt="$(pwd -P)"
+    local real_base; real_base="$(cd "$base" && pwd -P)"
+    local base_pdir="$HOME/.claude/projects/$(echo "$real_base" | sed 's/[/.]/-/g')"
+    local wt_pdir="$HOME/.claude/projects/$(echo "$real_wt" | sed 's/[/.]/-/g')"
+    mkdir -p "$base_pdir" "$wt_pdir"
+
+    # base 디렉터리 세션: skillA 호출
+    local ta; ta="$(printf 'Base directory for this skill: %s\n\n# a\n' "$BATS_TEST_TMPDIR/skills/skillA")"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"a1","name":"Skill","input":{"skill":"skillA"}}]}}' -n > "$base_pdir/sa.jsonl"
+    jq -c --arg t "$ta" '{"type":"user","isMeta":true,"sourceToolUseID":"a1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$base_pdir/sa.jsonl"
+
+    # worktree cwd 세션: skillB 호출
+    local tb; tb="$(printf 'Base directory for this skill: %s\n\n# b\n' "$BATS_TEST_TMPDIR/skills/skillB")"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"b1","name":"Skill","input":{"skill":"skillB"}}]}}' -n > "$wt_pdir/sb.jsonl"
+    jq -c --arg t "$tb" '{"type":"user","isMeta":true,"sourceToolUseID":"b1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$wt_pdir/sb.jsonl"
+
+    run bun "$INDEXER" --recent 10
+    rm -rf "$base_pdir" "$wt_pdir"
+    [ "$status" -eq 0 ]
+    # 두 worktree의 세션이 모두 모여 session_count == 2
+    echo "$output" | jq -e '.session_count == 2'
+    echo "$output" | jq -e '[.skills[] | select(.name == "skillA")] | length == 1'
+    echo "$output" | jq -e '[.skills[] | select(.name == "skillB")] | length == 1'
+}
+
+@test "evolve build-index: --recent skill carries a signal summary with kind counts" {
+    # skill 호출 + interrupt(assistant) 가 있는 세션 → signal 문자열에 interrupt가 집계된다.
+    local proj="$BATS_TEST_TMPDIR/sigproj"
+    mkdir -p "$proj"
+    cd "$proj"
+    local real_proj; real_proj="$(pwd -P)"
+    local pdir="$HOME/.claude/projects/$(echo "$real_proj" | sed 's/[/.]/-/g')"
+    mkdir -p "$pdir"
+    local skilldir="$BATS_TEST_TMPDIR/skills/sig"
+    local text; text="$(printf 'Base directory for this skill: %s\n\n# sig body\n' "$skilldir")"
+    # 1) skill 호출  2) 주입 본문  3) interrupt 마커가 붙은 assistant turn
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"s1","name":"Skill","input":{"skill":"sig"}}]}}' -n > "$pdir/s.jsonl"
+    jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"s1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/s.jsonl"
+    jq -c '{"type":"assistant","message":{"role":"assistant","stop_reason":"interrupted","content":[{"type":"text","text":"stopped"}]}}' -n >> "$pdir/s.jsonl"
+
+    run bun "$INDEXER" --recent 3
+    rm -rf "$pdir"
+    [ "$status" -eq 0 ]
+    # signal 필드가 문자열로 존재하고, interrupt가 집계되어 있다 (skill은 stale-dropped일 수 있으나
+    # 이 세션은 skilldir에 디스크 SKILL.md가 없으므로 dropped → signal=="dropped (stale)").
+    # dropped 케이스의 signal 표기를 검증.
+    echo "$output" | jq -e '[.skills[] | select(.name == "sig")][0].signal | type == "string"'
+    echo "$output" | jq -e '[.skills[] | select(.name == "sig")][0].signal == "dropped (stale)"'
+}
+
+@test "evolve build-index: --recent live skill signal counts interrupt/error/repeat first" {
+    # 디스크 SKILL.md를 호출 본문과 동일하게 두어 NOT stale → events 보존 → signal에 kind 카운트.
+    local skilldir="$BATS_TEST_TMPDIR/skills/live"
+    mkdir -p "$skilldir"
+    printf -- '# live body\n\nsame.\n' > "$skilldir/SKILL.md"
+    local proj="$BATS_TEST_TMPDIR/liveproj"
+    mkdir -p "$proj"
+    cd "$proj"
+    local real_proj; real_proj="$(pwd -P)"
+    local real_skilldir; real_skilldir="$(cd "$skilldir" && pwd -P)"
+    local pdir="$HOME/.claude/projects/$(echo "$real_proj" | sed 's/[/.]/-/g')"
+    mkdir -p "$pdir"
+    local text; text="$(printf 'Base directory for this skill: %s\n\n# live body\n\nsame.\n' "$real_skilldir")"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"l1","name":"Skill","input":{"skill":"live"}}]}}' -n > "$pdir/s.jsonl"
+    jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"l1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/s.jsonl"
+    jq -c '{"type":"assistant","message":{"role":"assistant","stop_reason":"interrupted","content":[{"type":"text","text":"x"}]}}' -n >> "$pdir/s.jsonl"
+
+    run bun "$INDEXER" --recent 3
+    rm -rf "$pdir"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '[.skills[] | select(.name == "live")][0].dropped == false'
+    # 보존된 skill의 signal은 kind 카운트 문자열이며 interrupt를 포함한다
+    echo "$output" | jq -e '[.skills[] | select(.name == "live")][0].signal | test("interrupt")'
+}
+
+@test "evolve build-index: --recent maps cache skill to editable repo_path and uses it for stale" {
+    # cwd repo(=plugins/ 보유)에 같은 이름 skill 소스를 두면, transcript가 캐시 경로를 가리켜도
+    # repo_path로 매핑되고 stale 비교를 repo 본문 기준으로 한다.
+    local repo="$BATS_TEST_TMPDIR/myrepo"
+    mkdir -p "$repo/plugins/me/skills/mapme"
+    # repo 소스(편집 대상): frontmatter + 본문
+    printf -- '---\nname: mapme\n---\n# mapme body\n\nrepo content.\n' > "$repo/plugins/me/skills/mapme/SKILL.md"
+    cd "$repo"
+    local real_repo; real_repo="$(pwd -P)"
+    local pdir="$HOME/.claude/projects/$(echo "$real_repo" | sed 's/[/.]/-/g')"
+    mkdir -p "$pdir"
+    # transcript는 캐시 경로(존재하지 않는 디렉터리)를 가리키지만 본문은 repo 본문과 동일
+    local cachedir="$BATS_TEST_TMPDIR/cache/mapme"
+    local text; text="$(printf 'Base directory for this skill: %s\n\n# mapme body\n\nrepo content.\n' "$cachedir")"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"m1","name":"Skill","input":{"skill":"mapme"}}]}}' -n > "$pdir/s.jsonl"
+    jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"m1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/s.jsonl"
+
+    run bun "$INDEXER" --recent 3
+    rm -rf "$pdir"
+    [ "$status" -eq 0 ]
+    # repo_path가 repo 소스를 가리킨다
+    echo "$output" | jq -e '[.skills[] | select(.name == "mapme")][0].repo_path | test("plugins/me/skills/mapme/SKILL.md")'
+    # 캐시 디렉터리는 디스크에 없지만(null이 아니라) repo 본문으로 비교해 stale:false
+    echo "$output" | jq -e '[.skills[] | select(.name == "mapme")][0].stale == false'
 }
