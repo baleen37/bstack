@@ -178,7 +178,7 @@ function stripFrontmatter(raw: string): string {
 }
 
 function bodyHash(body: string): string {
-  return createHash("sha256").update(body.trimEnd()).digest("hex");
+  return createHash("sha256").update(body.trim()).digest("hex");
 }
 
 // ── tool_use 요약 (user.prior에 사용) ──
