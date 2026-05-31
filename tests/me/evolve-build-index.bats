@@ -12,6 +12,7 @@ FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/sample-session.jsonl"
 INTERRUPT_FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/interrupt-session.jsonl"
 TAG_FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/slash-cmd-tag-session.jsonl"
 RICH_FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/rich-signals-session.jsonl"
+SKILL_INVOCATION_FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/skill-invocation-session.jsonl"
 
 @test "evolve build-index: counts turns" {
     run bun "$INDEXER" "$FIXTURE"
@@ -147,4 +148,19 @@ EOF
 @test "evolve build-index: --recent with positional path exits 2" {
     run bun "$INDEXER" --recent "$FIXTURE"
     [ "$status" -eq 2 ]
+}
+
+@test "evolve build-index: --recent single fixture surfaces invoked skill in skills[]" {
+    # 임시 프로젝트 디렉터리에 fixture를 단일 세션으로 배치하고 cwd 기반 자동탐지로 --recent 실행
+    local proj="$BATS_TEST_TMPDIR/proj"
+    mkdir -p "$proj"
+    cd "$proj"
+    local pdir="$HOME/.claude/projects/$(echo "$proj" | sed 's/[/.]/-/g')"
+    mkdir -p "$pdir"
+    cp "$SKILL_INVOCATION_FIXTURE" "$pdir/sess1.jsonl"
+    run bun "$INDEXER" --recent 5
+    rm -rf "$pdir"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '.mode == "recent"'
+    echo "$output" | jq -e '[.skills[] | select(.name == "qa")] | length == 1'
 }
