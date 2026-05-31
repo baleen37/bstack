@@ -6,6 +6,7 @@
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { homedir } from "node:os";
+import { createHash } from "node:crypto";
 
 // ── 타입 ───────────────────────────────────────────────
 type EventKind = "user" | "skill" | "interrupt" | "error" | "agent" | "repeat";
@@ -114,6 +115,27 @@ function loadTurns(jsonlPath: string): LoadedTranscript {
     turns.push(t);
   }
   return { turns, sessionTitle };
+}
+
+// ── skill 본문 정규화 + 해시 (stale 판정용) ──
+const BASE_DIR_LINE = /^Base directory for this skill:.*(?:\r?\n)+/;
+
+// transcript 주입 본문에서 "Base directory" 첫 줄(+뒤 빈 줄) 제거
+function stripBaseDirLine(injected: string): string {
+  return injected.replace(BASE_DIR_LINE, "");
+}
+
+// 디스크 SKILL.md에서 YAML frontmatter(--- … ---) 제거
+function stripFrontmatter(raw: string): string {
+  if (!raw.startsWith("---")) return raw;
+  const end = raw.indexOf("\n---", 3);
+  if (end === -1) return raw;
+  const after = raw.indexOf("\n", end + 1);
+  return after === -1 ? "" : raw.slice(after + 1);
+}
+
+function bodyHash(body: string): string {
+  return createHash("sha256").update(body.trimEnd()).digest("hex");
 }
 
 // ── tool_use 요약 (user.prior에 사용) ──
