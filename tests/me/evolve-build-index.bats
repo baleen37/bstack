@@ -12,6 +12,7 @@ FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/sample-session.jsonl"
 INTERRUPT_FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/interrupt-session.jsonl"
 TAG_FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/slash-cmd-tag-session.jsonl"
 RICH_FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/rich-signals-session.jsonl"
+SKILL_INVOCATION_FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/skill-invocation-session.jsonl"
 
 @test "evolve build-index: counts turns" {
     run bun "$INDEXER" "$FIXTURE"
@@ -137,4 +138,98 @@ EOF
     # user event 1건, 분류 kind 일체 없음
     echo "$output" | jq -e '[.events[] | select(.kind == "user")] | length == 1'
     echo "$output" | jq -e '[.events[].kind] | all(. as $k | ["user","skill","interrupt","error","agent","repeat"] | index($k) != null)'
+}
+
+@test "evolve build-index: --recent and --session together exit 2" {
+    run bun "$INDEXER" --recent --session abc
+    [ "$status" -eq 2 ]
+}
+
+@test "evolve build-index: --recent with positional path exits 2" {
+    run bun "$INDEXER" --recent "$FIXTURE"
+    [ "$status" -eq 2 ]
+}
+
+@test "evolve build-index: --recent single fixture surfaces invoked skill in skills[]" {
+    # 임시 프로젝트 디렉터리에 fixture를 단일 세션으로 배치하고 cwd 기반 자동탐지로 --recent 실행
+    local proj="$BATS_TEST_TMPDIR/proj"
+    mkdir -p "$proj"
+    cd "$proj"
+    # process.cwd()는 심볼릭 링크를 해제한 실제 경로를 반환하므로 pwd -P 사용
+    local real_proj
+    real_proj="$(pwd -P)"
+    local pdir="$HOME/.claude/projects/$(echo "$real_proj" | sed 's/[/.]/-/g')"
+    mkdir -p "$pdir"
+    cp "$SKILL_INVOCATION_FIXTURE" "$pdir/sess1.jsonl"
+    run bun "$INDEXER" --recent 5
+    rm -rf "$pdir"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '.mode == "recent"'
+    echo "$output" | jq -e '[.skills[] | select(.name == "qa")] | length == 1'
+}
+
+@test "evolve build-index: identical body → stale:false (version-agnostic)" {
+    local skilldir="$BATS_TEST_TMPDIR/skills/demo"
+    mkdir -p "$skilldir"
+    # disk has frontmatter; injected body will NOT have frontmatter — bodies otherwise identical
+    printf -- '---\nname: demo\ndescription: d\n---\n# demo body\n\nidentical line.\n' > "$skilldir/SKILL.md"
+
+    local proj="$BATS_TEST_TMPDIR/proj1"
+    mkdir -p "$proj"
+    cd "$proj"
+    local real_proj; real_proj="$(pwd -P)"
+    local real_skilldir; real_skilldir="$(cd "$skilldir" && pwd -P)"
+    local pdir="$HOME/.claude/projects/$(echo "$real_proj" | sed 's/[/.]/-/g')"
+    mkdir -p "$pdir"
+    # printf expands \n to real newlines so jq --arg receives actual multiline text
+    local text; text="$(printf 'Base directory for this skill: %s\n\n# demo body\n\nidentical line.\n' "$real_skilldir")"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Skill","input":{"skill":"demo"}}]}}' -n > "$pdir/s.jsonl"
+    jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"t1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/s.jsonl"
+
+    run bun "$INDEXER" --recent 3
+    rm -rf "$pdir"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '[.skills[] | select(.name == "demo")][0].stale == false'
+}
+
+@test "evolve build-index: changed body → stale:true (dropped, no events)" {
+    local skilldir="$BATS_TEST_TMPDIR/skills/demo2"
+    mkdir -p "$skilldir"
+    printf -- '---\nname: demo2\n---\n# demo body\n\nCHANGED ON DISK.\n' > "$skilldir/SKILL.md"
+
+    local proj="$BATS_TEST_TMPDIR/proj2"
+    mkdir -p "$proj"
+    cd "$proj"
+    local real_proj; real_proj="$(pwd -P)"
+    local real_skilldir; real_skilldir="$(cd "$skilldir" && pwd -P)"
+    local pdir="$HOME/.claude/projects/$(echo "$real_proj" | sed 's/[/.]/-/g')"
+    mkdir -p "$pdir"
+    local text; text="$(printf 'Base directory for this skill: %s\n\n# demo body\n\nOLD VERSION AT INVOCATION.\n' "$real_skilldir")"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Skill","input":{"skill":"demo2"}}]}}' -n > "$pdir/s.jsonl"
+    jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"t1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/s.jsonl"
+
+    run bun "$INDEXER" --recent 3
+    rm -rf "$pdir"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '[.skills[] | select(.name == "demo2")][0].stale == true'
+    echo "$output" | jq -e '[.skills[] | select(.name == "demo2")][0].dropped == true'
+    echo "$output" | jq -e '[.skills[] | select(.name == "demo2")][0].events | length == 0'
+}
+
+@test "evolve build-index: missing disk SKILL.md → stale:true" {
+    local proj="$BATS_TEST_TMPDIR/proj3"
+    mkdir -p "$proj"
+    cd "$proj"
+    local real_proj; real_proj="$(pwd -P)"
+    local pdir="$HOME/.claude/projects/$(echo "$real_proj" | sed 's/[/.]/-/g')"
+    mkdir -p "$pdir"
+    local ghost="$BATS_TEST_TMPDIR/skills/ghost"
+    local text; text="$(printf 'Base directory for this skill: %s\n\n# ghost body\n' "$ghost")"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Skill","input":{"skill":"ghost"}}]}}' -n > "$pdir/s.jsonl"
+    jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"t1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/s.jsonl"
+
+    run bun "$INDEXER" --recent 3
+    rm -rf "$pdir"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '[.skills[] | select(.name == "ghost")][0].stale == true'
 }

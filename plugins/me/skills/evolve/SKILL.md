@@ -20,6 +20,8 @@ Only when the user invokes it explicitly. No automatic triggers.
 ```
 /me:evolve                          analyze the current session
 /me:evolve --session <id>           analyze a specific session by transcript session id
+/me:evolve --recent                 analyze the most recent 10 sessions (multi-session review)
+/me:evolve --recent <N>             analyze the most recent N sessions
 /me:evolve --dry-run                show proposals only, don't apply
 ```
 
@@ -49,11 +51,21 @@ Use the `Base directory for this skill: <path>` value injected at the top of thi
 bun "<Base directory>/scripts/build-index.ts" [--session <id>]
 ```
 
-Exit codes: `0`=ok, `2`=unknown flag (see §4 below — `--dry-run` must not be passed here), `14`=transcript or project dir not found.
+Exit codes: `0`=ok, `2`=bad argument (unknown flag, or `--recent` combined with `--session`/a path — and `--dry-run` must not be passed here), `14`=transcript or project dir not found.
 
 Capture stdout JSON into a variable. **Do not show it to the user** — pass it only to the next-step subagent.
 
 If `events` is empty, print "no improvement signals found in this session" and exit.
+
+### --recent mode (multi-session review)
+
+When `--recent [N]` is passed (default N=10), the indexer aggregates the most recent N sessions instead of one, emitting a **multi-session index** (`mode: "recent"`). The output is keyed on `skills[]`:
+
+- Each skill entry: `name`, `skill_path` (current on-disk SKILL.md), `stale`, `dropped`, `seen_in` (sessions it appeared in), `events`.
+- **Stale detection**: the indexer compares the hash of the *SKILL.md body as injected at invocation time* (preserved in the transcript) against the *current on-disk body*. If they differ (or the disk file is gone), the skill is `stale:true` → `dropped:true` → `events` is emptied. This avoids re-proposing changes to a skill that has already evolved since the session. It is decided by **body content hash, not the version number**, so "version bumped but body unchanged" is NOT stale.
+- The skill identifier is the last directory name of the Base directory (e.g. `qa`) and may lack the slash-command prefix (`me:`).
+
+`--recent` cannot be combined with `--session` (the indexer exits 2). `--dry-run` is still consumed by the main agent only and never forwarded to the indexer.
 
 ## Phase 1 — Subagent analysis (Agent)
 
@@ -65,6 +77,7 @@ The prompt must include all of:
 
 1. Spec path: `docs/superpowers/specs/2026-05-27-evolve-skill-design.md`
 2. The full index JSON from Phase 0 (`summary` + `events`). Read `summary.headline` (one-line state) and `summary.clusters` (same-kind events within ≤30 turns, ≥3 occurrences) first to spot dense regions, then walk `events[]` for causal-chain analysis. Clusters are a simple heuristic — skip meaningless ones.
+   - **Multi-session (`mode:"recent"`)**: the index is a `skills[]` array. Analyze each skill's `events[]` per skill. A `dropped:true` (stale) skill already has its events emptied by the indexer, so it is never a proposal target — as a safety net, if you ever see `stale:true`, do not produce a proposal for that skill. Use each event's `session` field to identify which session the evidence came from, and cite the session when quoting evidence. `skill_path` is the proposal target candidate. Note: a non-skill event (user/interrupt/error/agent) is attributed to *every* skill invoked in its session, so the same event may appear under multiple skills — use the `session` field to dedupe and attribute it to the skill it actually concerns.
 3. **Classification task for `kind: "user"` events** — label each one with exactly one of (refer by array index, e.g. `events[12]`):
    - **correction**: redirects/corrects the immediately preceding assistant action
    - **success**: positive feedback on the preceding assistant action

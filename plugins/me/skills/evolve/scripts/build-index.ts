@@ -6,6 +6,7 @@
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { homedir } from "node:os";
+import { createHash } from "node:crypto";
 
 // ── 타입 ───────────────────────────────────────────────
 type EventKind = "user" | "skill" | "interrupt" | "error" | "agent" | "repeat";
@@ -24,6 +25,7 @@ interface Event {
   model?: string;
   pattern?: string;
   n?: number;
+  session?: string;
 }
 
 interface Cluster {
@@ -46,6 +48,23 @@ interface SessionIndex {
   events: Event[];
 }
 
+interface RecentSkill {
+  name: string;
+  skill_path: string;     // 현재 디스크 SKILL.md 경로 (제안 target 후보)
+  stale: boolean;         // 세션 이후 본문 변경 여부
+  dropped: boolean;       // stale 또는 파일없음 → events 제외됨
+  seen_in: string[];      // 등장한 session_id 목록
+  events: Event[];        // dropped면 빈 배열
+}
+
+interface RecentIndex {
+  mode: "recent";
+  session_count: number;
+  sessions: Array<{ session_id: string; session_title?: string; turns: number }>;
+  skills: RecentSkill[];
+  summary: { headline: string };
+}
+
 // ── 입력 파싱 ──────────────────────────────────────────
 interface ToolResultPayload {
   content: string;
@@ -62,9 +81,16 @@ interface Turn {
   interruptedBy?: "user" | "assistant";
 }
 
+interface SkillInvocation {
+  name: string;          // skill 식별자 (Base directory의 마지막 디렉터리명)
+  baseDir: string;       // 주입 본문의 Base directory 절대경로
+  injectedBody: string;  // "Base directory" 줄 제거 후의 본문 (해시 입력)
+}
+
 interface LoadedTranscript {
   turns: Turn[];
   sessionTitle?: string;
+  skillInvocations: SkillInvocation[];
 }
 
 function normalizeToolResultContent(raw: any): string {
@@ -78,12 +104,30 @@ function normalizeToolResultContent(raw: any): string {
 function loadTurns(jsonlPath: string): LoadedTranscript {
   const lines = readFileSync(jsonlPath, "utf8").split("\n").filter(Boolean);
   const turns: Turn[] = [];
+  const skillInvocations: SkillInvocation[] = [];
   let sessionTitle: string | undefined;
   for (const line of lines) {
     const obj = JSON.parse(line);
     if (obj.type === "ai-title" && typeof obj.aiTitle === "string") {
       sessionTitle = obj.aiTitle;
       continue;
+    }
+    // skill 호출시점 주입 본문 (isMeta user/text, 첫 줄 "Base directory for this skill:")
+    if (obj.type === "user" && obj.isMeta === true) {
+      const c = obj.message?.content;
+      const text = Array.isArray(c) && c[0]?.type === "text" ? c[0].text : undefined;
+      if (typeof text === "string") {
+        const m = text.match(/^Base directory for this skill:\s*(.+?)\s*(?:\r?\n|$)/);
+        if (m) {
+          const baseDir = m[1];
+          skillInvocations.push({
+            name: basename(baseDir),
+            baseDir,
+            injectedBody: stripBaseDirLine(text),
+          });
+        }
+      }
+      continue; // 주입 메시지는 turn으로 세지 않음
     }
     if (obj.type !== "user" && obj.type !== "assistant") continue;
     const userInterruptedMarker = obj.interruptedMessageId !== undefined;
@@ -113,7 +157,28 @@ function loadTurns(jsonlPath: string): LoadedTranscript {
     }
     turns.push(t);
   }
-  return { turns, sessionTitle };
+  return { turns, sessionTitle, skillInvocations };
+}
+
+// ── skill 본문 정규화 + 해시 (stale 판정용) ──
+const BASE_DIR_LINE = /^Base directory for this skill:.*(?:\r?\n)+/;
+
+// transcript 주입 본문에서 "Base directory" 첫 줄(+뒤 빈 줄) 제거
+function stripBaseDirLine(injected: string): string {
+  return injected.replace(BASE_DIR_LINE, "");
+}
+
+// 디스크 SKILL.md에서 YAML frontmatter(--- … ---) 제거
+function stripFrontmatter(raw: string): string {
+  if (!raw.startsWith("---")) return raw;
+  const end = raw.indexOf("\n---", 3);
+  if (end === -1) return raw;
+  const after = raw.indexOf("\n", end + 1);
+  return after === -1 ? "" : raw.slice(after + 1);
+}
+
+function bodyHash(body: string): string {
+  return createHash("sha256").update(body.trim()).digest("hex");
 }
 
 // ── tool_use 요약 (user.prior에 사용) ──
@@ -334,9 +399,101 @@ function buildIndex(jsonlPath: string): SessionIndex {
   };
 }
 
+function currentBodyHash(baseDir: string): string | null {
+  const skillMd = join(baseDir, "SKILL.md");
+  if (!existsSync(skillMd)) return null;
+  return bodyHash(stripFrontmatter(readFileSync(skillMd, "utf8")));
+}
+
+function buildRecentIndex(paths: string[]): RecentIndex {
+  const sessions: RecentIndex["sessions"] = [];
+  // name -> 누적 상태
+  const acc = new Map<string, {
+    baseDir: string;
+    invokedHashes: Set<string>;
+    seen: Set<string>;
+    events: Event[];
+  }>();
+
+  for (const p of paths) {
+    const sessionId = basename(p, ".jsonl");
+    const { turns, sessionTitle, skillInvocations } = loadTurns(p);
+    const events = buildEvents(turns);
+    sessions.push({ session_id: sessionId, ...(sessionTitle ? { session_title: sessionTitle } : {}), turns: turns.length });
+
+    // 이 세션에서 호출된 skill 이름 집합 + 호출시점 본문 해시
+    const invokedNames = new Set<string>();
+    for (const inv of skillInvocations) {
+      invokedNames.add(inv.name);
+      if (!acc.has(inv.name)) acc.set(inv.name, { baseDir: inv.baseDir, invokedHashes: new Set(), seen: new Set(), events: [] });
+      const a = acc.get(inv.name)!;
+      a.baseDir = inv.baseDir; // 최신 호출의 baseDir 사용
+      a.invokedHashes.add(bodyHash(inv.injectedBody));
+      a.seen.add(sessionId);
+    }
+
+    // events를 해당 세션에서 호출된 skill로 귀속.
+    // events의 session 식별을 위해 session 필드 마킹.
+    for (const ev of events) {
+      const tagged: Event = { ...ev, session: sessionId };
+      // skill 이벤트는 그 skill에, 그 외 신호는 같은 세션에서 호출된 모든 skill에 귀속
+      if (ev.kind === "skill" && ev.name) {
+        const short = ev.name.includes(":") ? ev.name.split(":").pop()! : ev.name;
+        if (acc.has(short)) acc.get(short)!.events.push(tagged);
+      } else {
+        for (const name of invokedNames) acc.get(name)!.events.push(tagged);
+      }
+    }
+  }
+
+  const skills: RecentSkill[] = [];
+  for (const [name, a] of acc) {
+    const nowHash = currentBodyHash(a.baseDir);
+    // stale = 현재 본문이 호출시점 본문들 중 어느 것과도 일치하지 않음
+    const stale = nowHash === null ? true : !a.invokedHashes.has(nowHash);
+    const dropped = stale;
+    skills.push({
+      name,
+      skill_path: join(a.baseDir, "SKILL.md"),
+      stale,
+      dropped,
+      seen_in: [...a.seen],
+      events: dropped ? [] : a.events,
+    });
+  }
+  skills.sort((x, y) => y.events.length - x.events.length);
+
+  const droppedN = skills.filter((s) => s.dropped).length;
+  return {
+    mode: "recent",
+    session_count: sessions.length,
+    sessions,
+    skills,
+    summary: { headline: `${sessions.length} sessions · ${skills.length} skills · ${droppedN} dropped` },
+  };
+}
+
 // ── Phase 0: transcript 자동 탐지 ──────────────────────
 function encodeCwd(cwd: string): string {
   return cwd.replace(/[/.]/g, "-");
+}
+
+function recentSessionPaths(cwd: string, n: number): string[] {
+  const projectDir = join(homedir(), ".claude", "projects", encodeCwd(cwd));
+  if (!existsSync(projectDir)) {
+    console.error(`transcript directory not found: ${projectDir}`);
+    process.exit(14);
+  }
+  const files = readdirSync(projectDir)
+    .filter((f) => f.endsWith(".jsonl"))
+    .map((f) => ({ path: join(projectDir, f), mtime: statSync(join(projectDir, f)).mtimeMs }))
+    .sort((a, b) => b.mtime - a.mtime)
+    .slice(0, n);
+  if (files.length === 0) {
+    console.error(`no .jsonl files in ${projectDir}`);
+    process.exit(14);
+  }
+  return files.map((f) => f.path);
 }
 
 function resolveTranscriptPath(opts: { jsonlPath?: string; sessionId?: string; cwd: string }): string {
@@ -367,25 +524,44 @@ function resolveTranscriptPath(opts: { jsonlPath?: string; sessionId?: string; c
 }
 
 // ── 진입점 ─────────────────────────────────────────────
-function parseArgs(argv: string[]): { jsonlPath?: string; sessionId?: string } {
+function parseArgs(argv: string[]): { jsonlPath?: string; sessionId?: string; recent?: number } {
   const args = argv.slice(2);
   let jsonlPath: string | undefined;
   let sessionId: string | undefined;
+  let recent: number | undefined;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--session") sessionId = args[++i];
-    else if (!jsonlPath) jsonlPath = args[i];
+    else if (args[i] === "--recent") {
+      // 다음 토큰이 양의 정수면 N, 아니면 기본 10
+      const next = args[i + 1];
+      if (next !== undefined && /^[1-9][0-9]*$/.test(next)) {
+        recent = parseInt(next, 10);
+        i++;
+      } else {
+        recent = 10;
+      }
+    } else if (!jsonlPath) jsonlPath = args[i];
     else {
       console.error(`unexpected argument: ${args[i]}`);
       process.exit(2);
     }
   }
-  return { jsonlPath, sessionId };
+  if (recent !== undefined && (sessionId !== undefined || jsonlPath !== undefined)) {
+    console.error("--recent cannot be combined with --session or a transcript path");
+    process.exit(2);
+  }
+  return { jsonlPath, sessionId, recent };
 }
 
 const opts = parseArgs(process.argv);
-const transcriptPath = resolveTranscriptPath({
-  jsonlPath: opts.jsonlPath,
-  sessionId: opts.sessionId,
-  cwd: process.cwd(),
-});
-console.log(JSON.stringify(buildIndex(transcriptPath), null, 2));
+if (opts.recent !== undefined) {
+  const paths = recentSessionPaths(process.cwd(), opts.recent);
+  console.log(JSON.stringify(buildRecentIndex(paths), null, 2));
+} else {
+  const transcriptPath = resolveTranscriptPath({
+    jsonlPath: opts.jsonlPath,
+    sessionId: opts.sessionId,
+    cwd: process.cwd(),
+  });
+  console.log(JSON.stringify(buildIndex(transcriptPath), null, 2));
+}

@@ -1,0 +1,5 @@
+{"type": "ai-title", "aiTitle": "Skill invocation fixture"}
+{"type": "user", "message": {"role": "user", "content": [{"type": "text", "text": "/me:qa 이거 동작해?"}]}}
+{"type": "assistant", "message": {"role": "assistant", "content": [{"type": "text", "text": "확인하겠습니다."}, {"type": "tool_use", "id": "toolu_qa1", "name": "Skill", "input": {"skill": "me:qa"}}]}}
+{"type": "user", "isMeta": true, "sourceToolUseID": "toolu_qa1", "message": {"role": "user", "content": [{"type": "text", "text": "Base directory for this skill: /Users/x/.claude/plugins/cache/bstack/bstack/17.17.0/skills/qa\n\n# qa skill body\n\nThis is the qa skill body line one.\n"}]}}
+{"type": "user", "message": {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "toolu_qa1", "content": "Launching skill: me:qa"}]}}
