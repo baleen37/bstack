@@ -328,3 +328,29 @@ EOF
     # 보존된 skill의 signal은 kind 카운트 문자열이며 interrupt를 포함한다
     echo "$output" | jq -e '[.skills[] | select(.name == "live")][0].signal | test("interrupt")'
 }
+
+@test "evolve build-index: --recent maps cache skill to editable repo_path and uses it for stale" {
+    # cwd repo(=plugins/ 보유)에 같은 이름 skill 소스를 두면, transcript가 캐시 경로를 가리켜도
+    # repo_path로 매핑되고 stale 비교를 repo 본문 기준으로 한다.
+    local repo="$BATS_TEST_TMPDIR/myrepo"
+    mkdir -p "$repo/plugins/me/skills/mapme"
+    # repo 소스(편집 대상): frontmatter + 본문
+    printf -- '---\nname: mapme\n---\n# mapme body\n\nrepo content.\n' > "$repo/plugins/me/skills/mapme/SKILL.md"
+    cd "$repo"
+    local real_repo; real_repo="$(pwd -P)"
+    local pdir="$HOME/.claude/projects/$(echo "$real_repo" | sed 's/[/.]/-/g')"
+    mkdir -p "$pdir"
+    # transcript는 캐시 경로(존재하지 않는 디렉터리)를 가리키지만 본문은 repo 본문과 동일
+    local cachedir="$BATS_TEST_TMPDIR/cache/mapme"
+    local text; text="$(printf 'Base directory for this skill: %s\n\n# mapme body\n\nrepo content.\n' "$cachedir")"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"m1","name":"Skill","input":{"skill":"mapme"}}]}}' -n > "$pdir/s.jsonl"
+    jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"m1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/s.jsonl"
+
+    run bun "$INDEXER" --recent 3
+    rm -rf "$pdir"
+    [ "$status" -eq 0 ]
+    # repo_path가 repo 소스를 가리킨다
+    echo "$output" | jq -e '[.skills[] | select(.name == "mapme")][0].repo_path | test("plugins/me/skills/mapme/SKILL.md")'
+    # 캐시 디렉터리는 디스크에 없지만(null이 아니라) repo 본문으로 비교해 stale:false
+    echo "$output" | jq -e '[.skills[] | select(.name == "mapme")][0].stale == false'
+}

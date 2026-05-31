@@ -50,7 +50,8 @@ interface SessionIndex {
 
 interface RecentSkill {
   name: string;
-  skill_path: string;     // 현재 디스크 SKILL.md 경로 (제안 target 후보)
+  skill_path: string;     // transcript가 가리킨 호출 시점 base 경로의 SKILL.md (보통 캐시 경로)
+  repo_path?: string;     // cwd repo 안에서 찾은 편집 가능한 SKILL.md (있으면 직접 edit 대상)
   stale: boolean;         // 세션 이후 본문 변경 여부
   dropped: boolean;       // stale 또는 파일없음 → events 제외됨
   seen_in: string[];      // 등장한 session_id 목록
@@ -401,13 +402,39 @@ function buildIndex(jsonlPath: string): SessionIndex {
   };
 }
 
-function currentBodyHash(baseDir: string): string | null {
-  const skillMd = join(baseDir, "SKILL.md");
+// cwd에서 위로 올라가며 `plugins/` 를 가진 디렉터리(=이 repo 루트)를 찾는다.
+function findRepoRoot(cwd: string): string | null {
+  let dir = cwd;
+  for (let i = 0; i < 30; i++) {
+    if (existsSync(join(dir, "plugins"))) return dir;
+    const parent = join(dir, "..");
+    const resolved = resolve(parent);
+    if (resolved === dir) break;
+    dir = resolved;
+  }
+  return null;
+}
+
+// repo 안에서 같은 이름 skill의 편집 가능한 SKILL.md 경로를 찾는다 (plugins/*/skills/<name>/SKILL.md).
+// transcript가 캐시 경로를 가리켜도, cwd repo에 그 skill 소스가 있으면 그걸 직접 편집 대상으로 쓴다.
+function repoSkillPath(repoRoot: string | null, name: string): string | undefined {
+  if (!repoRoot) return undefined;
+  const pluginsDir = join(repoRoot, "plugins");
+  if (!existsSync(pluginsDir)) return undefined;
+  for (const plugin of readdirSync(pluginsDir)) {
+    const candidate = join(pluginsDir, plugin, "skills", name, "SKILL.md");
+    if (existsSync(candidate)) return candidate;
+  }
+  return undefined;
+}
+
+function currentBodyHash(skillMd: string): string | null {
   if (!existsSync(skillMd)) return null;
   return bodyHash(stripFrontmatter(readFileSync(skillMd, "utf8")));
 }
 
-function buildRecentIndex(paths: string[]): RecentIndex {
+function buildRecentIndex(paths: string[], cwd: string): RecentIndex {
+  const repoRoot = findRepoRoot(cwd);
   const sessions: RecentIndex["sessions"] = [];
   // name -> 누적 상태
   const acc = new Map<string, {
@@ -460,7 +487,10 @@ function buildRecentIndex(paths: string[]): RecentIndex {
 
   const skills: Array<RecentSkill & { _weight: number }> = [];
   for (const [name, a] of acc) {
-    const nowHash = currentBodyHash(a.baseDir);
+    const cacheSkillMd = join(a.baseDir, "SKILL.md");
+    // cwd repo에 같은 skill 소스가 있으면 그게 편집 가능한 "현재 본문"의 진짜 출처다 (캐시는 구버전일 수 있음).
+    const repoPath = repoSkillPath(repoRoot, name);
+    const nowHash = currentBodyHash(repoPath ?? cacheSkillMd);
     // stale = 현재 본문이 호출시점 본문들 중 어느 것과도 일치하지 않음
     const stale = nowHash === null ? true : !a.invokedHashes.has(nowHash);
     const dropped = stale;
@@ -468,7 +498,8 @@ function buildRecentIndex(paths: string[]): RecentIndex {
     const { signal, weight } = summarizeSignal(evs);
     skills.push({
       name,
-      skill_path: join(a.baseDir, "SKILL.md"),
+      skill_path: cacheSkillMd,
+      ...(repoPath ? { repo_path: repoPath } : {}),
       stale,
       dropped,
       seen_in: [...a.seen],
@@ -593,7 +624,7 @@ function parseArgs(argv: string[]): { jsonlPath?: string; sessionId?: string; re
 const opts = parseArgs(process.argv);
 if (opts.recent !== undefined) {
   const paths = recentSessionPaths(process.cwd(), opts.recent);
-  console.log(JSON.stringify(buildRecentIndex(paths), null, 2));
+  console.log(JSON.stringify(buildRecentIndex(paths, process.cwd()), null, 2));
 } else {
   const transcriptPath = resolveTranscriptPath({
     jsonlPath: opts.jsonlPath,
