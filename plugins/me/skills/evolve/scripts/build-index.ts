@@ -478,19 +478,38 @@ function encodeCwd(cwd: string): string {
   return cwd.replace(/[/.]/g, "-");
 }
 
+// cwd 인코딩에서 worktree base prefix 추출 (worktree들은 `<base>--worktrees-…` 형태)
+function projectBasePrefix(cwd: string): string {
+  const enc = encodeCwd(cwd);
+  const i = enc.indexOf("--worktrees-");
+  return i === -1 ? enc : enc.slice(0, i);
+}
+
 function recentSessionPaths(cwd: string, n: number): string[] {
-  const projectDir = join(homedir(), ".claude", "projects", encodeCwd(cwd));
-  if (!existsSync(projectDir)) {
-    console.error(`transcript directory not found: ${projectDir}`);
+  const projectsRoot = join(homedir(), ".claude", "projects");
+  if (!existsSync(projectsRoot)) {
+    console.error(`transcript directory not found: ${projectsRoot}`);
     process.exit(14);
   }
-  const files = readdirSync(projectDir)
-    .filter((f) => f.endsWith(".jsonl"))
-    .map((f) => ({ path: join(projectDir, f), mtime: statSync(join(projectDir, f)).mtimeMs }))
+  // 같은 프로젝트의 모든 worktree 디렉터리를 합친다: base 자체 + base--worktrees-* 형제들.
+  // bstack처럼 worktree마다 transcript가 쪼개지는 경우 "최근 N개 세션"이 전체에서 모이게.
+  const base = projectBasePrefix(cwd);
+  const dirs = readdirSync(projectsRoot).filter((d) => d === base || d.startsWith(base + "--worktrees-"));
+  const files = dirs
+    .flatMap((d) => {
+      const full = join(projectsRoot, d);
+      try {
+        return readdirSync(full)
+          .filter((f) => f.endsWith(".jsonl"))
+          .map((f) => ({ path: join(full, f), mtime: statSync(join(full, f)).mtimeMs }));
+      } catch {
+        return [];
+      }
+    })
     .sort((a, b) => b.mtime - a.mtime)
     .slice(0, n);
   if (files.length === 0) {
-    console.error(`no .jsonl files in ${projectDir}`);
+    console.error(`no .jsonl files for project ${base} (and its worktrees) under ${projectsRoot}`);
     process.exit(14);
   }
   return files.map((f) => f.path);

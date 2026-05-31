@@ -233,3 +233,35 @@ EOF
     [ "$status" -eq 0 ]
     echo "$output" | jq -e '[.skills[] | select(.name == "ghost")][0].stale == true'
 }
+
+@test "evolve build-index: --recent merges sessions across worktree sibling dirs" {
+    # cwd가 worktree 안일 때, base 프로젝트 디렉터리 + base--worktrees-* 형제 디렉터리의
+    # 세션을 모두 합쳐 모은다. base 디렉터리에 skillA, worktree cwd에 skillB 세션을 둔다.
+    local base="$BATS_TEST_TMPDIR/myproj"
+    local wt="$base/.worktrees/wt1"
+    mkdir -p "$wt"
+    cd "$wt"
+    local real_wt; real_wt="$(pwd -P)"
+    local real_base; real_base="$(cd "$base" && pwd -P)"
+    local base_pdir="$HOME/.claude/projects/$(echo "$real_base" | sed 's/[/.]/-/g')"
+    local wt_pdir="$HOME/.claude/projects/$(echo "$real_wt" | sed 's/[/.]/-/g')"
+    mkdir -p "$base_pdir" "$wt_pdir"
+
+    # base 디렉터리 세션: skillA 호출
+    local ta; ta="$(printf 'Base directory for this skill: %s\n\n# a\n' "$BATS_TEST_TMPDIR/skills/skillA")"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"a1","name":"Skill","input":{"skill":"skillA"}}]}}' -n > "$base_pdir/sa.jsonl"
+    jq -c --arg t "$ta" '{"type":"user","isMeta":true,"sourceToolUseID":"a1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$base_pdir/sa.jsonl"
+
+    # worktree cwd 세션: skillB 호출
+    local tb; tb="$(printf 'Base directory for this skill: %s\n\n# b\n' "$BATS_TEST_TMPDIR/skills/skillB")"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"b1","name":"Skill","input":{"skill":"skillB"}}]}}' -n > "$wt_pdir/sb.jsonl"
+    jq -c --arg t "$tb" '{"type":"user","isMeta":true,"sourceToolUseID":"b1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$wt_pdir/sb.jsonl"
+
+    run bun "$INDEXER" --recent 10
+    rm -rf "$base_pdir" "$wt_pdir"
+    [ "$status" -eq 0 ]
+    # 두 worktree의 세션이 모두 모여 session_count == 2
+    echo "$output" | jq -e '.session_count == 2'
+    echo "$output" | jq -e '[.skills[] | select(.name == "skillA")] | length == 1'
+    echo "$output" | jq -e '[.skills[] | select(.name == "skillB")] | length == 1'
+}
