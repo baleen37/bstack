@@ -54,6 +54,7 @@ interface RecentSkill {
   stale: boolean;         // 세션 이후 본문 변경 여부
   dropped: boolean;       // stale 또는 파일없음 → events 제외됨
   seen_in: string[];      // 등장한 session_id 목록
+  signal: string;         // kind별 카운트 한 줄 요약 (LLM이 어디부터 볼지 판단용)
   events: Event[];        // dropped면 빈 배열
 }
 
@@ -447,22 +448,38 @@ function buildRecentIndex(paths: string[]): RecentIndex {
     }
   }
 
-  const skills: RecentSkill[] = [];
+  // kind별 카운트 → 한 줄 요약. interrupt/error/repeat은 개선 신호가 농축된 종류라 앞세운다.
+  function summarizeSignal(events: Event[]): { signal: string; weight: number } {
+    const c: Record<string, number> = {};
+    for (const e of events) c[e.kind] = (c[e.kind] ?? 0) + 1;
+    const order: EventKind[] = ["interrupt", "error", "repeat", "user", "agent", "skill"];
+    const parts = order.filter((k) => c[k]).map((k) => `${c[k]} ${k}`);
+    const weight = (c["interrupt"] ?? 0) + (c["error"] ?? 0) + (c["repeat"] ?? 0);
+    return { signal: parts.length ? parts.join(", ") : "no events", weight };
+  }
+
+  const skills: Array<RecentSkill & { _weight: number }> = [];
   for (const [name, a] of acc) {
     const nowHash = currentBodyHash(a.baseDir);
     // stale = 현재 본문이 호출시점 본문들 중 어느 것과도 일치하지 않음
     const stale = nowHash === null ? true : !a.invokedHashes.has(nowHash);
     const dropped = stale;
+    const evs = dropped ? [] : a.events;
+    const { signal, weight } = summarizeSignal(evs);
     skills.push({
       name,
       skill_path: join(a.baseDir, "SKILL.md"),
       stale,
       dropped,
       seen_in: [...a.seen],
-      events: dropped ? [] : a.events,
+      signal: dropped ? "dropped (stale)" : signal,
+      events: evs,
+      _weight: weight,
     });
   }
-  skills.sort((x, y) => y.events.length - x.events.length);
+  // 개선 신호(interrupt+error+repeat) 많은 순 → 동률이면 전체 event 수 순
+  skills.sort((x, y) => y._weight - x._weight || y.events.length - x.events.length);
+  for (const s of skills) delete (s as { _weight?: number })._weight;
 
   const droppedN = skills.filter((s) => s.dropped).length;
   return {

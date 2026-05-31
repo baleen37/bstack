@@ -278,3 +278,53 @@ EOF
     echo "$output" | jq -e '[.skills[] | select(.name == "skillA")] | length == 1'
     echo "$output" | jq -e '[.skills[] | select(.name == "skillB")] | length == 1'
 }
+
+@test "evolve build-index: --recent skill carries a signal summary with kind counts" {
+    # skill 호출 + interrupt(assistant) 가 있는 세션 → signal 문자열에 interrupt가 집계된다.
+    local proj="$BATS_TEST_TMPDIR/sigproj"
+    mkdir -p "$proj"
+    cd "$proj"
+    local real_proj; real_proj="$(pwd -P)"
+    local pdir="$HOME/.claude/projects/$(echo "$real_proj" | sed 's/[/.]/-/g')"
+    mkdir -p "$pdir"
+    local skilldir="$BATS_TEST_TMPDIR/skills/sig"
+    local text; text="$(printf 'Base directory for this skill: %s\n\n# sig body\n' "$skilldir")"
+    # 1) skill 호출  2) 주입 본문  3) interrupt 마커가 붙은 assistant turn
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"s1","name":"Skill","input":{"skill":"sig"}}]}}' -n > "$pdir/s.jsonl"
+    jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"s1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/s.jsonl"
+    jq -c '{"type":"assistant","message":{"role":"assistant","stop_reason":"interrupted","content":[{"type":"text","text":"stopped"}]}}' -n >> "$pdir/s.jsonl"
+
+    run bun "$INDEXER" --recent 3
+    rm -rf "$pdir"
+    [ "$status" -eq 0 ]
+    # signal 필드가 문자열로 존재하고, interrupt가 집계되어 있다 (skill은 stale-dropped일 수 있으나
+    # 이 세션은 skilldir에 디스크 SKILL.md가 없으므로 dropped → signal=="dropped (stale)").
+    # dropped 케이스의 signal 표기를 검증.
+    echo "$output" | jq -e '[.skills[] | select(.name == "sig")][0].signal | type == "string"'
+    echo "$output" | jq -e '[.skills[] | select(.name == "sig")][0].signal == "dropped (stale)"'
+}
+
+@test "evolve build-index: --recent live skill signal counts interrupt/error/repeat first" {
+    # 디스크 SKILL.md를 호출 본문과 동일하게 두어 NOT stale → events 보존 → signal에 kind 카운트.
+    local skilldir="$BATS_TEST_TMPDIR/skills/live"
+    mkdir -p "$skilldir"
+    printf -- '# live body\n\nsame.\n' > "$skilldir/SKILL.md"
+    local proj="$BATS_TEST_TMPDIR/liveproj"
+    mkdir -p "$proj"
+    cd "$proj"
+    local real_proj; real_proj="$(pwd -P)"
+    local real_skilldir; real_skilldir="$(cd "$skilldir" && pwd -P)"
+    local pdir="$HOME/.claude/projects/$(echo "$real_proj" | sed 's/[/.]/-/g')"
+    mkdir -p "$pdir"
+    local text; text="$(printf 'Base directory for this skill: %s\n\n# live body\n\nsame.\n' "$real_skilldir")"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"l1","name":"Skill","input":{"skill":"live"}}]}}' -n > "$pdir/s.jsonl"
+    jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"l1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/s.jsonl"
+    jq -c '{"type":"assistant","message":{"role":"assistant","stop_reason":"interrupted","content":[{"type":"text","text":"x"}]}}' -n >> "$pdir/s.jsonl"
+
+    run bun "$INDEXER" --recent 3
+    rm -rf "$pdir"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '[.skills[] | select(.name == "live")][0].dropped == false'
+    # 보존된 skill의 signal은 kind 카운트 문자열이며 interrupt를 포함한다
+    echo "$output" | jq -e '[.skills[] | select(.name == "live")][0].signal | test("interrupt")'
+}
