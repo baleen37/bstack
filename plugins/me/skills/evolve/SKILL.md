@@ -59,7 +59,7 @@ If `events` is empty, print "no improvement signals found in this session" and e
 
 ### --recent mode (multi-session review)
 
-When `--recent [N]` is passed (default N=10), the indexer aggregates the most recent N sessions instead of one, emitting a **multi-session index** (`mode: "recent"`). The output is keyed on `skills[]`:
+When `--recent [N]` is passed (default N=10), the indexer aggregates the most recent N sessions instead of one, emitting a **multi-session index** (`mode: "recent"`). Sessions are collected across the whole project: the base project transcript directory **plus all `…--worktrees-*` sibling directories** (so worktree-per-task workflows still get a project-wide view, not one session per worktree). The output is keyed on `skills[]`:
 
 - Each skill entry: `name`, `skill_path` (current on-disk SKILL.md), `stale`, `dropped`, `seen_in` (sessions it appeared in), `events`.
 - **Stale detection**: the indexer compares the hash of the *SKILL.md body as injected at invocation time* (preserved in the transcript) against the *current on-disk body*. If they differ (or the disk file is gone), the skill is `stale:true` → `dropped:true` → `events` is emptied. This avoids re-proposing changes to a skill that has already evolved since the session. It is decided by **body content hash, not the version number**, so "version bumped but body unchanged" is NOT stale.
