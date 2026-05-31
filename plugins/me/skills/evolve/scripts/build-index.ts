@@ -25,6 +25,7 @@ interface Event {
   model?: string;
   pattern?: string;
   n?: number;
+  session?: string;
 }
 
 interface Cluster {
@@ -45,6 +46,23 @@ interface SessionIndex {
   turns: number;
   summary: Summary;
   events: Event[];
+}
+
+interface RecentSkill {
+  name: string;
+  skill_path: string;     // 현재 디스크 SKILL.md 경로 (제안 target 후보)
+  stale: boolean;         // 세션 이후 본문 변경 여부
+  dropped: boolean;       // stale 또는 파일없음 → events 제외됨
+  seen_in: string[];      // 등장한 session_id 목록
+  events: Event[];        // dropped면 빈 배열
+}
+
+interface RecentIndex {
+  mode: "recent";
+  session_count: number;
+  sessions: Array<{ session_id: string; session_title?: string; turns: number }>;
+  skills: RecentSkill[];
+  summary: { headline: string };
 }
 
 // ── 입력 파싱 ──────────────────────────────────────────
@@ -381,9 +399,101 @@ function buildIndex(jsonlPath: string): SessionIndex {
   };
 }
 
+function currentBodyHash(baseDir: string): string | null {
+  const skillMd = join(baseDir, "SKILL.md");
+  if (!existsSync(skillMd)) return null;
+  return bodyHash(stripFrontmatter(readFileSync(skillMd, "utf8")));
+}
+
+function buildRecentIndex(paths: string[]): RecentIndex {
+  const sessions: RecentIndex["sessions"] = [];
+  // name -> 누적 상태
+  const acc = new Map<string, {
+    baseDir: string;
+    invokedHashes: Set<string>;
+    seen: Set<string>;
+    events: Event[];
+  }>();
+
+  for (const p of paths) {
+    const sessionId = basename(p, ".jsonl");
+    const { turns, sessionTitle, skillInvocations } = loadTurns(p);
+    const events = buildEvents(turns);
+    sessions.push({ session_id: sessionId, ...(sessionTitle ? { session_title: sessionTitle } : {}), turns: turns.length });
+
+    // 이 세션에서 호출된 skill 이름 집합 + 호출시점 본문 해시
+    const invokedNames = new Set<string>();
+    for (const inv of skillInvocations) {
+      invokedNames.add(inv.name);
+      if (!acc.has(inv.name)) acc.set(inv.name, { baseDir: inv.baseDir, invokedHashes: new Set(), seen: new Set(), events: [] });
+      const a = acc.get(inv.name)!;
+      a.baseDir = inv.baseDir; // 최신 호출의 baseDir 사용
+      a.invokedHashes.add(bodyHash(inv.injectedBody));
+      a.seen.add(sessionId);
+    }
+
+    // events를 해당 세션에서 호출된 skill로 귀속.
+    // events의 session 식별을 위해 session 필드 마킹.
+    for (const ev of events) {
+      const tagged: Event = { ...ev, session: sessionId };
+      // skill 이벤트는 그 skill에, 그 외 신호는 같은 세션에서 호출된 모든 skill에 귀속
+      if (ev.kind === "skill" && ev.name) {
+        const short = ev.name.includes(":") ? ev.name.split(":").pop()! : ev.name;
+        if (acc.has(short)) acc.get(short)!.events.push(tagged);
+      } else {
+        for (const name of invokedNames) acc.get(name)!.events.push(tagged);
+      }
+    }
+  }
+
+  const skills: RecentSkill[] = [];
+  for (const [name, a] of acc) {
+    const nowHash = currentBodyHash(a.baseDir);
+    // stale = 현재 본문이 호출시점 본문들 중 어느 것과도 일치하지 않음
+    const stale = nowHash === null ? true : !a.invokedHashes.has(nowHash);
+    const dropped = stale;
+    skills.push({
+      name,
+      skill_path: join(a.baseDir, "SKILL.md"),
+      stale,
+      dropped,
+      seen_in: [...a.seen],
+      events: dropped ? [] : a.events,
+    });
+  }
+  skills.sort((x, y) => y.events.length - x.events.length);
+
+  const droppedN = skills.filter((s) => s.dropped).length;
+  return {
+    mode: "recent",
+    session_count: sessions.length,
+    sessions,
+    skills,
+    summary: { headline: `${sessions.length} sessions · ${skills.length} skills · ${droppedN} dropped` },
+  };
+}
+
 // ── Phase 0: transcript 자동 탐지 ──────────────────────
 function encodeCwd(cwd: string): string {
   return cwd.replace(/[/.]/g, "-");
+}
+
+function recentSessionPaths(cwd: string, n: number): string[] {
+  const projectDir = join(homedir(), ".claude", "projects", encodeCwd(cwd));
+  if (!existsSync(projectDir)) {
+    console.error(`transcript directory not found: ${projectDir}`);
+    process.exit(14);
+  }
+  const files = readdirSync(projectDir)
+    .filter((f) => f.endsWith(".jsonl"))
+    .map((f) => ({ path: join(projectDir, f), mtime: statSync(join(projectDir, f)).mtimeMs }))
+    .sort((a, b) => b.mtime - a.mtime)
+    .slice(0, n);
+  if (files.length === 0) {
+    console.error(`no .jsonl files in ${projectDir}`);
+    process.exit(14);
+  }
+  return files.map((f) => f.path);
 }
 
 function resolveTranscriptPath(opts: { jsonlPath?: string; sessionId?: string; cwd: string }): string {
@@ -444,9 +554,14 @@ function parseArgs(argv: string[]): { jsonlPath?: string; sessionId?: string; re
 }
 
 const opts = parseArgs(process.argv);
-const transcriptPath = resolveTranscriptPath({
-  jsonlPath: opts.jsonlPath,
-  sessionId: opts.sessionId,
-  cwd: process.cwd(),
-});
-console.log(JSON.stringify(buildIndex(transcriptPath), null, 2));
+if (opts.recent !== undefined) {
+  const paths = recentSessionPaths(process.cwd(), opts.recent);
+  console.log(JSON.stringify(buildRecentIndex(paths), null, 2));
+} else {
+  const transcriptPath = resolveTranscriptPath({
+    jsonlPath: opts.jsonlPath,
+    sessionId: opts.sessionId,
+    cwd: process.cwd(),
+  });
+  console.log(JSON.stringify(buildIndex(transcriptPath), null, 2));
+}

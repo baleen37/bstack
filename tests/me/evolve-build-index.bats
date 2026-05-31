@@ -155,7 +155,10 @@ EOF
     local proj="$BATS_TEST_TMPDIR/proj"
     mkdir -p "$proj"
     cd "$proj"
-    local pdir="$HOME/.claude/projects/$(echo "$proj" | sed 's/[/.]/-/g')"
+    # process.cwd()는 심볼릭 링크를 해제한 실제 경로를 반환하므로 pwd -P 사용
+    local real_proj
+    real_proj="$(pwd -P)"
+    local pdir="$HOME/.claude/projects/$(echo "$real_proj" | sed 's/[/.]/-/g')"
     mkdir -p "$pdir"
     cp "$SKILL_INVOCATION_FIXTURE" "$pdir/sess1.jsonl"
     run bun "$INDEXER" --recent 5
