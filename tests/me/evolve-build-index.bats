@@ -140,6 +140,19 @@ EOF
     echo "$output" | jq -e '[.events[].kind] | all(. as $k | ["user","skill","interrupt","error","agent","repeat"] | index($k) != null)'
 }
 
+@test "evolve build-index: harness-injected <task-notification> is not a user event" {
+    local tn_fixture="$BATS_TEST_TMPDIR/task-notification.jsonl"
+    cat > "$tn_fixture" <<'EOF'
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"real user message"}]}}
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"<task-notification>\n<task-id>b51bvqj0n</task-id>\n<summary>Monitor event</summary>\n</task-notification>"}]}}
+EOF
+    run bun "$INDEXER" "$tn_fixture"
+    [ "$status" -eq 0 ]
+    # 진짜 user 발화 1건만 잡히고, <task-notification> 주입 텍스트는 제외된다
+    echo "$output" | jq -e '[.events[] | select(.kind == "user")] | length == 1'
+    echo "$output" | jq -e '[.events[] | select(.kind == "user")][0].text == "real user message"'
+}
+
 @test "evolve build-index: --recent and --session together exit 2" {
     run bun "$INDEXER" --recent --session abc
     [ "$status" -eq 2 ]

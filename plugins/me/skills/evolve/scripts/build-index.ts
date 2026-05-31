@@ -240,6 +240,7 @@ const PSEUDO_USER_PREFIXES = [
   "<bash-stderr>",
   "<local-command-",
   "[Request interrupted",
+  "<task-notification>", // 하네스 주입 Monitor/Task 완료 알림 — user 발화 아님
 ];
 
 function isPseudoUser(userText: string): boolean {
