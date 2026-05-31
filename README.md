@@ -79,7 +79,12 @@ bstack/
 | `remembering-conversations` | 이전 대화 컨텍스트 검색 및 적용 |
 | `review-claudemd` | CLAUDE.md 개선사항 발굴 |
 | `reddit-fetch` | WebFetch 차단 시 Reddit 콘텐츠 가져오기 |
-| `autoresearch` | /goal 종료 조건으로 자율 실험 루프 실행 |
+
+#### `autoresearch` plugin
+
+| Skill | Description |
+|-------|-------------|
+| `autoresearch` | git 추적 실험으로 metric을 반복 최적화하는 자율 실험 루프 |
 
 #### `ralph` plugin
 
