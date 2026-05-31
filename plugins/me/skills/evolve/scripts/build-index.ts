@@ -414,19 +414,33 @@ function resolveTranscriptPath(opts: { jsonlPath?: string; sessionId?: string; c
 }
 
 // ── 진입점 ─────────────────────────────────────────────
-function parseArgs(argv: string[]): { jsonlPath?: string; sessionId?: string } {
+function parseArgs(argv: string[]): { jsonlPath?: string; sessionId?: string; recent?: number } {
   const args = argv.slice(2);
   let jsonlPath: string | undefined;
   let sessionId: string | undefined;
+  let recent: number | undefined;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--session") sessionId = args[++i];
-    else if (!jsonlPath) jsonlPath = args[i];
+    else if (args[i] === "--recent") {
+      // 다음 토큰이 양의 정수면 N, 아니면 기본 10
+      const next = args[i + 1];
+      if (next !== undefined && /^[1-9][0-9]*$/.test(next)) {
+        recent = parseInt(next, 10);
+        i++;
+      } else {
+        recent = 10;
+      }
+    } else if (!jsonlPath) jsonlPath = args[i];
     else {
       console.error(`unexpected argument: ${args[i]}`);
       process.exit(2);
     }
   }
-  return { jsonlPath, sessionId };
+  if (recent !== undefined && (sessionId !== undefined || jsonlPath !== undefined)) {
+    console.error("--recent cannot be combined with --session or a transcript path");
+    process.exit(2);
+  }
+  return { jsonlPath, sessionId, recent };
 }
 
 const opts = parseArgs(process.argv);

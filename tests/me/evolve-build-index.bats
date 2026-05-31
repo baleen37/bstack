@@ -138,3 +138,13 @@ EOF
     echo "$output" | jq -e '[.events[] | select(.kind == "user")] | length == 1'
     echo "$output" | jq -e '[.events[].kind] | all(. as $k | ["user","skill","interrupt","error","agent","repeat"] | index($k) != null)'
 }
+
+@test "evolve build-index: --recent and --session together exit 2" {
+    run bun "$INDEXER" --recent --session abc
+    [ "$status" -eq 2 ]
+}
+
+@test "evolve build-index: --recent with positional path exits 2" {
+    run bun "$INDEXER" --recent "$FIXTURE"
+    [ "$status" -eq 2 ]
+}
