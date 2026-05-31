@@ -231,6 +231,20 @@ git commit -m "chore(marketplace): register autoresearch plugin"
 
 ---
 
+## Task 4b: codex marketplace 동기화 (구현 중 발견)
+
+`.agents/plugins/marketplace.json`(codex marketplace)은 claude marketplace의 skill plugin들을 같은
+순서로 미러해야 한다(`tests/codex_marketplace_json.bats`가 강제). Task 4가 claude marketplace만
+갱신해 이 테스트가 깨졌으므로, codex marketplace에도 autoresearch를 추가하고 테스트의 하드코딩된
+plugin count를 4→5로 갱신했다.
+
+- Modify: `.agents/plugins/marketplace.json` (autoresearch 항목을 datadog 뒤에 추가)
+- Modify: `tests/codex_marketplace_json.bats` (`[ "$plugin_count" -eq 4 ]` → `5`)
+- 검증: `bats tests/codex_marketplace_json.bats` 4개 모두 통과
+- 커밋: `fix(marketplace): sync autoresearch into codex marketplace`
+
+---
+
 ## Task 5: README 스킬 표 정합화
 
 **Files:**
