@@ -92,7 +92,9 @@ eligible_codex_plugins() {
     local workflow="${PROJECT_ROOT}/.github/workflows/notify-marketplace.yml"
 
     grep -q "baleen37/baleen-marketplace/.github/actions/dispatch-marketplace-update@main" "$workflow"
-    grep -q "BALEEN_MARKETPLACE_DISPATCH_TOKEN" "$workflow"
-    grep -q "event_type: update_versions" "$workflow"
+    grep -q "github-token: \${{ secrets.BALEEN_MARKETPLACE_DISPATCH_TOKEN }}" "$workflow"
+    grep -q "event-type: update_versions" "$workflow"
     grep -q "plugin: bstack" "$workflow"
+    ! grep -q "^[[:space:]]*token:" "$workflow"
+    ! grep -q "event_type:" "$workflow"
 }

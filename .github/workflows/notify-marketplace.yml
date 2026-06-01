@@ -27,7 +27,7 @@ jobs:
       - name: Trigger marketplace update
         uses: baleen37/baleen-marketplace/.github/actions/dispatch-marketplace-update@main
         with:
-          token: ${{ secrets.BALEEN_MARKETPLACE_DISPATCH_TOKEN }}
-          event_type: update_versions
+          github-token: ${{ secrets.BALEEN_MARKETPLACE_DISPATCH_TOKEN }}
+          event-type: update_versions
           plugin: bstack
           version: ${{ steps.version.outputs.value }}
