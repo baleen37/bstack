@@ -35,7 +35,7 @@ jobs:
             git ls-files --others --exclude-standard -- \
               .agents/plugins/marketplace.json \
               'plugins/*/.codex-plugin/plugin.json'
-          )
+          )"
 
           if git diff --quiet -- \
             .claude-plugin/marketplace.json \
