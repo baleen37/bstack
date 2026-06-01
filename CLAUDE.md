@@ -14,7 +14,7 @@ AI 보조 개발을 위한 도구들을 제공하며, 반복적 자기 참조 AI
 | ---- | ----------- |
 | `package.json` | Project dependencies and scripts (commitizen, husky, semantic-release) |
 | `.releaserc.js` | Semantic-release configuration for root plugin version management |
-| `CLAUDE.md` | Project guidance for Claude Code (architecture, commands, guidelines) |
+| `CLAUDE.md` | Project guidance for AI coding agents (architecture, commands, guidelines) |
 | `README.md` | Project overview and documentation |
 | `flake.nix` | Nix flake for reproducible development environment |
 | `.pre-commit-config.yaml` | Pre-commit hooks configuration (YAML, JSON, ShellCheck, markdownlint, commitlint) |
@@ -41,6 +41,19 @@ AI 보조 개발을 위한 도구들을 제공하며, 반복적 자기 참조 AI
 
 ## For AI Agents
 
+### Agent Compatibility
+
+- Treat this file as provider-neutral project guidance. It must remain usable by Claude Code,
+  Codex, and future LLM coding agents.
+- Keep durable project rules in this file. Keep provider-specific glue in thin adapter files only
+  when a provider requires different filenames, tool names, or invocation syntax.
+- Do not duplicate architecture, workflow, or command guidance across agent-specific files. Link
+  or mirror only the minimum needed for compatibility.
+- When adding new guidance, prefer capability-based wording such as "AI agents", "coding agents",
+  or "LLM providers" unless the rule is truly specific to Claude Code or Codex.
+- If a rule depends on a provider feature, include the generic intent first and the
+  provider-specific mechanism second, so other providers can map it later.
+
 ### Working In This Directory
 
 - Always run `bun install` after modifying package.json
@@ -60,7 +73,8 @@ AI 보조 개발을 위한 도구들을 제공하며, 반복적 자기 참조 AI
 - Version synchronization: `.releaserc.js` updates root plugin.json and marketplace.json
 - Portable paths: Use `${CLAUDE_PLUGIN_ROOT}` in hook scripts
 - Hook script requirements: `set -euo pipefail`, jq for JSON parsing, stderr for errors
-- Skill scripts (under `plugins/*/skills/*/scripts/`) are written in **TypeScript** and run with `bun` — do NOT propose Python or shell alternatives for these scripts
+- Skill scripts (under `plugins/*/skills/*/scripts/`) are written in **TypeScript** and run with
+  `bun` — do NOT propose Python or shell alternatives for these scripts
 
 ## Dependencies
 

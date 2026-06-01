@@ -1,6 +1,9 @@
 ---
 name: ship
-description: Use when preparing to deploy to production, asked to "ship", "release", or "deploy", or when you need to verify a deploy succeeded or plan a rollback. Covers the full flow: pre-deploy checks, the deploy itself, and post-deploy verification with rollback on failure.
+description: >-
+  Use when preparing to deploy to production, asked to "ship", "release", or "deploy", or when
+  you need to verify a deploy succeeded or plan a rollback. Covers the full flow: pre-deploy
+  checks, the deploy itself, and post-deploy verification with rollback on failure.
 ---
 
 # Ship
@@ -59,16 +62,16 @@ If unsure, ask the user once. Don't invent a deploy step for a doc change.
 
 ### Phase 2 — Deploy (배포)
 
-6. **Execute deploy** — run the command from the deploy convention. This is `NEEDS_APPROVAL`; never
+1. **Execute deploy** — run the command from the deploy convention. This is `NEEDS_APPROVAL`; never
    run without the user's explicit go-ahead.
 
 ### Phase 3 — Post-deploy (배포 후 점검)
 
-7. **Verify** — run the checks from "Post-Deploy Verification" below. Delegate to subagents only when
+1. **Verify** — run the checks from "Post-Deploy Verification" below. Delegate to subagents only when
    criteria in "When to Delegate" are met.
-8. **On failure** — collect evidence, draft the rollback command from the deploy convention, present
+2. **On failure** — collect evidence, draft the rollback command from the deploy convention, present
    as `NEEDS_APPROVAL`. Do not auto-rollback.
-9. **Report** — what shipped, what was verified, what to watch.
+3. **Report** — what shipped, what was verified, what to watch.
 
 ## Decision Categories
 
