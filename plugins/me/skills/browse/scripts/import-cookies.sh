@@ -24,7 +24,8 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-COOKIES_JSON=$("$SCRIPT_DIR/extract-chrome-cookies.sh" "$DOMAIN" "${EXTRACT_ARGS[@]}")
+COOKIES_JSON=$("$SCRIPT_DIR/extract-chrome-cookies.sh" "$DOMAIN" "${EXTRACT_ARGS[@]+"${EXTRACT_ARGS[@]}"}") \
+  || die "Cookie extraction failed for '$DOMAIN'."
 [ -n "$COOKIES_JSON" ] && [ "$COOKIES_JSON" != "[]" ] \
   || die "No cookies found for '$DOMAIN' in Chrome."
 
