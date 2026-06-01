@@ -22,6 +22,8 @@ Only when the user invokes it explicitly. No automatic triggers.
 /me:evolve --session <id>           analyze a specific session by transcript session id
 /me:evolve --recent                 analyze the most recent 10 sessions (multi-session review)
 /me:evolve --recent <N>             analyze the most recent N sessions
+/me:evolve --skill <name>           analyze a skill across ALL projects (not just this repo)
+/me:evolve --skill <name> --recent <N>  same, capped to the most recent N matching sessions
 /me:evolve --dry-run                show proposals only, don't apply
 ```
 
@@ -51,7 +53,7 @@ Use the `Base directory for this skill: <path>` value injected at the top of thi
 bun "<Base directory>/scripts/build-index.ts" [--session <id>]
 ```
 
-Exit codes: `0`=ok, `2`=bad argument (unknown flag, or `--recent` combined with `--session`/a path — and `--dry-run` must not be passed here), `14`=transcript or project dir not found.
+Exit codes: `0`=ok, `2`=bad argument (unknown flag, `--recent`/`--skill` combined with `--session`/a path, empty `--skill` name — and `--dry-run` must not be passed here), `14`=transcript/project dir not found, or no sessions invoking the `--skill` target.
 
 Capture stdout JSON into a variable. **Do not show it to the user** — pass it only to the next-step subagent.
 
@@ -63,11 +65,21 @@ When `--recent [N]` is passed (default N=10), the indexer aggregates the most re
 
 - Each skill entry: `name`, `skill_path` (current on-disk SKILL.md), `stale`, `dropped`, `seen_in` (sessions it appeared in), `signal`, `events`.
 - **`signal`** is a one-line kind-count summary (e.g. `9 interrupt, 7 error, 9 repeat, 41 user, 17 agent`) — read it FIRST to decide which skills to dig into without walking every event. `interrupt`/`error`/`repeat` are listed first because they are the densest improvement signals. Skills are sorted by that density (interrupt+error+repeat count, then total events). A dropped skill's signal reads `dropped (stale)`.
-- **Stale detection**: the indexer compares the hash of the *SKILL.md body as injected at invocation time* (preserved in the transcript) against the *current on-disk body*. If they differ (or the disk file is gone), the skill is `stale:true` → `dropped:true` → `events` is emptied. This avoids re-proposing changes to a skill that has already evolved since the session. It is decided by **body content hash, not the version number**, so "version bumped but body unchanged" is NOT stale.
+- **Stale detection**: the indexer compares the hash of the *SKILL.md body as injected at invocation time* (preserved in the transcript) against the *current on-disk body*. If they differ (or the disk file is gone), the skill is `stale:true` → `dropped:true` → `events` is emptied. This avoids re-proposing changes to a skill that has already evolved since the session. It is decided by **body content hash, not the version number**, so "version bumped but body unchanged" is NOT stale. Before hashing, the injected body is normalized: the leading `Base directory for this skill:` line **and** a trailing `ARGUMENTS: …` block (appended when a slash command is invoked with arguments) are stripped — otherwise an identical body would be misjudged stale whenever the skill was called with args.
 - The skill identifier is the last directory name of the Base directory (e.g. `qa`) and may lack the slash-command prefix (`me:`).
 - **`repo_path`** (optional): if the invoked skill's source also lives in the current repo (`plugins/*/skills/<name>/SKILL.md`), the indexer resolves it and reports it here. This is the **editable** target — even though `skill_path` points at the read-only plugin cache, a skill that is *this repo's own* can be edited directly at `repo_path`. Stale detection also compares against `repo_path`'s body when present (the cache may be an older installed version). So a proposal for a skill with a `repo_path` targets that path and is NOT external-cache.
 
 `--recent` cannot be combined with `--session` (the indexer exits 2). `--dry-run` is still consumed by the main agent only and never forwarded to the indexer.
+
+### --skill mode (cross-project skill review)
+
+When `--skill <name>` is passed, the indexer scans the **entire** `~/.claude/projects/` tree — not just the current project and its worktree siblings — for sessions that actually invoked that skill, then emits the same `mode:"recent"` index filtered to that one skill. Use this when a skill is mostly exercised in *other* repos (e.g. `research`, which is used while exploring real codebases, not in this meta repo where it is authored): plain `--recent` run from this repo would never see those sessions.
+
+- A session "invokes the skill" when its transcript contains the `Base directory for this skill: …/skills/<name>` injection (same signal `loadTurns` uses) — a bare path mention does not count.
+- Matching sessions are sorted by mtime and capped to the most recent N (combine with `--recent N`; default 10).
+- `skills[]` is filtered to the target `name` only, even if those sessions invoked other skills too.
+- `--skill` cannot be combined with `--session` or a transcript path, and an empty name exits 2. If no session invokes the skill, the indexer exits 14.
+- `stale`/`repo_path` semantics are unchanged: a `research` skill whose source lives in this repo still resolves `repo_path` and is **not** external-cache.
 
 ## Phase 1 — Subagent analysis (Agent)
 
@@ -92,10 +104,11 @@ The prompt must include all of:
 4. Target-file selection — pick by *what kind of knowledge is missing*, not by signal pattern:
 
    - **that SKILL.md** — skill triggers, body rules, Red Flags. Use when a skill should have run but didn't, or ran but violated its own contract.
+   - **a *related* SKILL.md (cross-skill)** — the skill that *carries the missing responsibility*, which is often NOT the skill the signal fired under. When the user's correction redirects to another skill's domain (e.g. research was running but the user said "use the browser" → the gap belongs to `me:browse`'s trigger, or to research's hand-off to it), fix the skill that should own the behavior. Ask: "which skill's contract, if it had been right, would have prevented this?" — that is the target, even if a different skill appears in `kind:"skill"`/`prior`. Prefer editing the owning skill's trigger/body over bolting a special-case onto the skill that merely happened to be active. When the fix is a hand-off (skill X should delegate to Y), the edit may belong to X, to Y, or both — choose by where the durable rule lives.
    - **nearest AGENTS.md** — repo navigation, file locations, "where to look" knowledge. Use when the agent searched/read repeatedly before finding something.
    - **nearest CLAUDE.md** — project conventions and rules that govern *all* work in this tree.
 
-   **"Nearest" resolution**: "that SKILL.md" = inferred from `events[]` items with `kind:"skill"` or tool calls in `prior`. "Nearest AGENTS.md/CLAUDE.md" = walk up from that SKILL.md's directory; first hit wins (fallback to repo-root CLAUDE.md). If no skill can be inferred, default to repo-root CLAUDE.md.
+   **"Nearest" resolution**: "that SKILL.md" = inferred from `events[]` items with `kind:"skill"` or tool calls in `prior`. "Nearest AGENTS.md/CLAUDE.md" = walk up from that SKILL.md's directory; first hit wins (fallback to repo-root CLAUDE.md). If no skill can be inferred, default to repo-root CLAUDE.md. For a cross-skill target, the editable path is that related skill's own `repo_path` (resolve it under `plugins/*/skills/<name>/SKILL.md`); it is still `is_external_cache:false` when it lives in this repo.
 
 5. Output schema — one JSON block only, no other text. `event_index` is the integer position in the index's `events[]` array:
 

@@ -14,6 +14,7 @@ Use the shallowest investigation that can answer safely: **Observe â†’ Explore â
 | Quick lookup | Direct `Read`, grep, or LSP | You can cite the exact file/line or source |
 | Codebase map | `Agent: subagent_type="Explore"` | Search spans many files, naming variants, or 3+ queries |
 | Bug/behavior | Reproduce with a targeted command or test | Execution output and code explain the cause |
+| Live UI/page bug | Inspect the running page (`me:browse`) before reading code | You have observed the actual DOM/console/network, not just the source |
 | Web/current docs | Context7 first; `Agent: subagent_type="me:web-researcher"` for broader web research | Official or recent sources answer the question |
 | Hybrid | Code and web research in parallel | Main session synthesizes both evidence sets |
 
@@ -32,3 +33,4 @@ Use the shallowest investigation that can answer safely: **Observe â†’ Explore â
 - Calling web research for repo-only questions.
 - Claiming behavior from code only when a runnable check exists.
 - Treating outdated or unsourced web content as fact.
+- Investigating a bug at a live URL/UI by reading code first instead of inspecting the running page.

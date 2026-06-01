@@ -354,3 +354,89 @@ EOF
     # 캐시 디렉터리는 디스크에 없지만(null이 아니라) repo 본문으로 비교해 stale:false
     echo "$output" | jq -e '[.skills[] | select(.name == "mapme")][0].stale == false'
 }
+
+@test "evolve build-index: --recent ignores trailing ARGUMENTS block in stale comparison" {
+    # 슬래시 커맨드를 인자와 함께 호출하면 주입 본문 끝에 "ARGUMENTS: …" 블록이 붙는다.
+    # 이는 SKILL.md 본문이 아니므로 stale 비교에서 무시되어야 한다 (본문 동일 → stale:false).
+    local skilldir="$BATS_TEST_TMPDIR/skills/argskill"
+    mkdir -p "$skilldir"
+    printf -- '# argskill body\n\nsame.\n' > "$skilldir/SKILL.md"
+    local proj="$BATS_TEST_TMPDIR/argproj"
+    mkdir -p "$proj"
+    cd "$proj"
+    local real_proj; real_proj="$(pwd -P)"
+    local real_skilldir; real_skilldir="$(cd "$skilldir" && pwd -P)"
+    local pdir="$HOME/.claude/projects/$(echo "$real_proj" | sed 's/[/.]/-/g')"
+    mkdir -p "$pdir"
+    # 주입 본문 = Base directory + 동일 본문 + 끝에 ARGUMENTS 블록
+    local text; text="$(printf 'Base directory for this skill: %s\n\n# argskill body\n\nsame.\n\n\nARGUMENTS: "some user input here"' "$real_skilldir")"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"g1","name":"Skill","input":{"skill":"argskill"}}]}}' -n > "$pdir/s.jsonl"
+    jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"g1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/s.jsonl"
+
+    run bun "$INDEXER" --recent 3
+    rm -rf "$pdir"
+    [ "$status" -eq 0 ]
+    # ARGUMENTS 꼬리에도 불구하고 본문이 같으므로 stale:false (오판하면 dropped 됨)
+    echo "$output" | jq -e '[.skills[] | select(.name == "argskill")][0].stale == false'
+}
+
+@test "evolve build-index: --skill collects sessions across project boundaries" {
+    # --skill 은 현재 프로젝트가 아니라 ~/.claude/projects 전체에서 그 skill 호출 세션을 모은다.
+    # 서로 다른(형제 관계 아닌) 프로젝트 디렉터리 두 곳에 같은 skill 세션을 둔다.
+    local skilldir="$BATS_TEST_TMPDIR/skills/findme"
+    mkdir -p "$skilldir"
+    printf -- '# findme body\n\nbody.\n' > "$skilldir/SKILL.md"
+    local real_skilldir; real_skilldir="$(cd "$skilldir" && pwd -P)"
+    local text; text="$(printf 'Base directory for this skill: %s\n\n# findme body\n\nbody.\n' "$real_skilldir")"
+    # 무관한 두 프로젝트 디렉터리 (worktree 형제 아님)
+    local pA="$HOME/.claude/projects/-tmp-evolve-skilltest-projA-$$"
+    local pB="$HOME/.claude/projects/-tmp-evolve-skilltest-projB-$$"
+    mkdir -p "$pA" "$pB"
+    for p in "$pA" "$pB"; do
+        jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"f1","name":"Skill","input":{"skill":"findme"}}]}}' -n > "$p/s.jsonl"
+        jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"f1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$p/s.jsonl"
+    done
+
+    run bun "$INDEXER" --skill findme
+    rm -rf "$pA" "$pB"
+    [ "$status" -eq 0 ]
+    # 두 프로젝트의 세션이 모두 모인다
+    echo "$output" | jq -e '.session_count >= 2'
+    # skills[]에는 대상 skill만
+    echo "$output" | jq -e '[.skills[].name] | unique == ["findme"]'
+}
+
+@test "evolve build-index: --skill filters to the target skill only" {
+    # 같은 세션에 두 skill이 호출돼도 --skill 은 대상 하나만 skills[]에 남긴다.
+    local sa="$BATS_TEST_TMPDIR/skills/keep"; mkdir -p "$sa"; printf -- '# keep\n' > "$sa/SKILL.md"
+    local sb="$BATS_TEST_TMPDIR/skills/drop"; mkdir -p "$sb"; printf -- '# drop\n' > "$sb/SKILL.md"
+    local ra; ra="$(cd "$sa" && pwd -P)"; local rb; rb="$(cd "$sb" && pwd -P)"
+    local ta; ta="$(printf 'Base directory for this skill: %s\n\n# keep\n' "$ra")"
+    local tb; tb="$(printf 'Base directory for this skill: %s\n\n# drop\n' "$rb")"
+    local p="$HOME/.claude/projects/-tmp-evolve-skilltest-filter-$$"
+    mkdir -p "$p"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"k1","name":"Skill","input":{"skill":"keep"}}]}}' -n > "$p/s.jsonl"
+    jq -c --arg t "$ta" '{"type":"user","isMeta":true,"sourceToolUseID":"k1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$p/s.jsonl"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"d1","name":"Skill","input":{"skill":"drop"}}]}}' -n >> "$p/s.jsonl"
+    jq -c --arg t "$tb" '{"type":"user","isMeta":true,"sourceToolUseID":"d1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$p/s.jsonl"
+
+    run bun "$INDEXER" --skill keep
+    rm -rf "$p"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '[.skills[].name] == ["keep"]'
+}
+
+@test "evolve build-index: --skill with no matching sessions exits 14" {
+    run bun "$INDEXER" --skill __no_such_skill_xyz__
+    [ "$status" -eq 14 ]
+}
+
+@test "evolve build-index: --skill empty name exits 2" {
+    run bun "$INDEXER" --skill ""
+    [ "$status" -eq 2 ]
+}
+
+@test "evolve build-index: --skill and --session together exit 2" {
+    run bun "$INDEXER" --skill foo --session abc
+    [ "$status" -eq 2 ]
+}
