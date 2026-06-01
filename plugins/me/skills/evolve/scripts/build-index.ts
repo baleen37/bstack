@@ -48,10 +48,20 @@ interface SessionIndex {
   events: Event[];
 }
 
+interface ObservedBody {
+  hash: string;
+  current: boolean;
+  versions: string[];
+  seen_in: string[];
+  signal: string;
+}
+
 interface RecentSkill {
   name: string;
   skill_path: string;     // transcript가 가리킨 호출 시점 base 경로의 SKILL.md (보통 캐시 경로)
   repo_path?: string;     // cwd repo 안에서 찾은 편집 가능한 SKILL.md (있으면 직접 edit 대상)
+  current_hash?: string;
+  observed_bodies: ObservedBody[];
   stale: boolean;         // 세션 이후 본문 변경 여부
   dropped: boolean;       // stale 또는 파일없음 → events 제외됨
   seen_in: string[];      // 등장한 session_id 목록
@@ -86,7 +96,8 @@ interface Turn {
 interface SkillInvocation {
   name: string;          // skill 식별자 (Base directory의 마지막 디렉터리명)
   baseDir: string;       // 주입 본문의 Base directory 절대경로
-  injectedBody: string;  // "Base directory" 줄 제거 후의 본문 (해시 입력)
+  version: string;
+  hash: string;
 }
 
 interface LoadedTranscript {
@@ -122,10 +133,12 @@ function loadTurns(jsonlPath: string): LoadedTranscript {
         const m = text.match(/^Base directory for this skill:\s*(.+?)\s*(?:\r?\n|$)/);
         if (m) {
           const baseDir = m[1];
+          const injectedBody = stripBaseDirLine(text);
           skillInvocations.push({
             name: basename(baseDir),
             baseDir,
-            injectedBody: stripBaseDirLine(text),
+            version: skillVersion(baseDir),
+            hash: bodyHash(injectedBody),
           });
         }
       }
@@ -185,6 +198,17 @@ function stripFrontmatter(raw: string): string {
 
 function bodyHash(body: string): string {
   return createHash("sha256").update(body.trim()).digest("hex");
+}
+
+function shortHash(hash: string): string {
+  return hash.slice(0, 8);
+}
+
+function skillVersion(baseDir: string): string {
+  const parts = baseDir.split(/[\\/]/);
+  const i = parts.lastIndexOf("skills");
+  const candidate = i > 0 ? parts[i - 1] : undefined;
+  return candidate && /^\d+\.\d+\.\d+(?:[-+].*)?$/.test(candidate) ? candidate : "unknown";
 }
 
 // ── tool_use 요약 (user.prior에 사용) ──
@@ -443,9 +467,10 @@ function buildRecentIndex(paths: string[], cwd: string): RecentIndex {
   // name -> 누적 상태
   const acc = new Map<string, {
     baseDir: string;
-    invokedHashes: Set<string>;
+    versionsByHash: Map<string, Set<string>>;
+    seenByHash: Map<string, Set<string>>;
     seen: Set<string>;
-    events: Event[];
+    eventsByHash: Map<string, Event[]>;
   }>();
 
   for (const p of paths) {
@@ -456,25 +481,44 @@ function buildRecentIndex(paths: string[], cwd: string): RecentIndex {
 
     // 이 세션에서 호출된 skill 이름 집합 + 호출시점 본문 해시
     const invokedNames = new Set<string>();
+    const invokedHashesByName = new Map<string, Set<string>>();
     for (const inv of skillInvocations) {
       invokedNames.add(inv.name);
-      if (!acc.has(inv.name)) acc.set(inv.name, { baseDir: inv.baseDir, invokedHashes: new Set(), seen: new Set(), events: [] });
+      if (!invokedHashesByName.has(inv.name)) invokedHashesByName.set(inv.name, new Set());
+      invokedHashesByName.get(inv.name)!.add(inv.hash);
+      if (!acc.has(inv.name)) {
+        acc.set(inv.name, {
+          baseDir: inv.baseDir,
+          versionsByHash: new Map(),
+          seenByHash: new Map(),
+          seen: new Set(),
+          eventsByHash: new Map(),
+        });
+      }
       const a = acc.get(inv.name)!;
-      a.baseDir = inv.baseDir; // 최신 호출의 baseDir 사용
-      a.invokedHashes.add(bodyHash(inv.injectedBody));
+      // baseDir는 cache-only 현재 본문 조회를 위해 newest-first 입력에서 처음 관측한 호출 경로를 유지한다.
       a.seen.add(sessionId);
+      if (!a.versionsByHash.has(inv.hash)) a.versionsByHash.set(inv.hash, new Set());
+      a.versionsByHash.get(inv.hash)!.add(inv.version);
+      if (!a.seenByHash.has(inv.hash)) a.seenByHash.set(inv.hash, new Set());
+      a.seenByHash.get(inv.hash)!.add(sessionId);
+      if (!a.eventsByHash.has(inv.hash)) a.eventsByHash.set(inv.hash, []);
     }
 
-    // events를 해당 세션에서 호출된 skill로 귀속.
+    // events를 해당 세션에서 호출된 skill의 호출시점 본문 해시로 귀속.
     // events의 session 식별을 위해 session 필드 마킹.
     for (const ev of events) {
       const tagged: Event = { ...ev, session: sessionId };
-      // skill 이벤트는 그 skill에, 그 외 신호는 같은 세션에서 호출된 모든 skill에 귀속
+      // skill 이벤트는 그 세션에서 관측된 해당 skill의 모든 body hash에, 그 외 신호는 같은 세션에서 호출된 모든 skill hash에 귀속
       if (ev.kind === "skill" && ev.name) {
         const short = ev.name.includes(":") ? ev.name.split(":").pop()! : ev.name;
-        if (acc.has(short)) acc.get(short)!.events.push(tagged);
+        const hashes = invokedHashesByName.get(short);
+        if (!hashes) continue;
+        for (const hash of hashes) acc.get(short)!.eventsByHash.get(hash)!.push(tagged);
       } else {
-        for (const name of invokedNames) acc.get(name)!.events.push(tagged);
+        for (const name of invokedNames) {
+          for (const hash of invokedHashesByName.get(name) ?? []) acc.get(name)!.eventsByHash.get(hash)!.push(tagged);
+        }
       }
     }
   }
@@ -494,26 +538,37 @@ function buildRecentIndex(paths: string[], cwd: string): RecentIndex {
     const cacheSkillMd = join(a.baseDir, "SKILL.md");
     // cwd repo에 같은 skill 소스가 있으면 그게 편집 가능한 "현재 본문"의 진짜 출처다 (캐시는 구버전일 수 있음).
     const repoPath = repoSkillPath(repoRoot, name);
-    const nowHash = currentBodyHash(repoPath ?? cacheSkillMd);
+    const nowHashFull = currentBodyHash(repoPath ?? cacheSkillMd);
+    const hasCurrentBody = nowHashFull !== null && a.versionsByHash.has(nowHashFull);
+    const matchingEvents = hasCurrentBody ? a.eventsByHash.get(nowHashFull) ?? [] : [];
     // stale = 현재 본문이 호출시점 본문들 중 어느 것과도 일치하지 않음
-    const stale = nowHash === null ? true : !a.invokedHashes.has(nowHash);
+    const stale = !hasCurrentBody;
     const dropped = stale;
-    const evs = dropped ? [] : a.events;
+    const evs = dropped ? [] : matchingEvents;
     const { signal, weight } = summarizeSignal(evs);
+    const observed_bodies = [...a.versionsByHash.keys()].sort().map((hash) => ({
+      hash: shortHash(hash),
+      current: hash === nowHashFull,
+      versions: [...(a.versionsByHash.get(hash) ?? [])].sort(),
+      seen_in: [...(a.seenByHash.get(hash) ?? [])].sort(),
+      signal: summarizeSignal(a.eventsByHash.get(hash) ?? []).signal,
+    }));
     skills.push({
       name,
       skill_path: cacheSkillMd,
       ...(repoPath ? { repo_path: repoPath } : {}),
+      ...(nowHashFull ? { current_hash: shortHash(nowHashFull) } : {}),
+      observed_bodies,
       stale,
       dropped,
-      seen_in: [...a.seen],
+      seen_in: [...a.seen].sort(),
       signal: dropped ? "dropped (stale)" : signal,
       events: evs,
       _weight: weight,
     });
   }
-  // 개선 신호(interrupt+error+repeat) 많은 순 → 동률이면 전체 event 수 순
-  skills.sort((x, y) => y._weight - x._weight || y.events.length - x.events.length);
+  // 개선 신호(interrupt+error+repeat) 많은 순 → 동률이면 전체 event 수 순 → 이름순
+  skills.sort((x, y) => y._weight - x._weight || y.events.length - x.events.length || x.name.localeCompare(y.name));
   for (const s of skills) delete (s as { _weight?: number })._weight;
 
   const droppedN = skills.filter((s) => s.dropped).length;
