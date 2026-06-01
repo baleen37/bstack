@@ -4,6 +4,8 @@ This project uses BATS (Bash Automated Testing System) for testing plugin struct
 
 ## Running Tests
 
+Use a docs-only smoke PR when you need to verify the GitHub PR check path without changing plugin behavior.
+
 ### All Tests (Root + Plugins)
 
 ```bash
