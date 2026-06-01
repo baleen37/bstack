@@ -126,11 +126,14 @@ The prompt must include all of:
          "is_external_cache": false,
          "change_kind": "edit",
          "patch": "<unified diff applicable with `git apply`>",
-         "rationale": "1-2 sentences"
+         "rationale": "1-2 sentences",
+         "addresses_signal": "one line: the already-observed failure this patch's event_indexes point to, and why that failure would not have happened had the patch been in place"
        }
      ]
    }
    ```
+
+   Fill `addresses_signal` as one line linking the already-observed failure (the patch's `event_indexes`) to why the patch would have prevented it. It is advisory for the user — not a pass/fail gate; never drop a proposal for reading weak.
 
 6. Instruction: "Read the events array first and notice that adjacent events near the same turn form causal chains. Only when needed, use `Bash` to extract just the relevant turn range from the jsonl. Never read the main transcript in full. Return only the result JSON."
 
@@ -138,29 +141,27 @@ The prompt must include all of:
 
 After parsing the subagent's returned JSON:
 
-> Do not save Phase 1 results or a session retrospective to a separate report file. Unpack the JSON inline at the console and walk it with the user one proposal at a time. The only byproduct file is `upstream-suggestions.md` (and only when an external-cache proposal occurs).
+> Do not save Phase 1 results or a session retrospective to a separate report file. Unpack the JSON inline at the console. The only byproduct file is `upstream-suggestions.md` (and only when an external-cache proposal occurs).
 
-1. Proposals with `is_external_cache: true` are diverted to `docs/superpowers/evolutions/YYYY-MM-DD-upstream-suggestions.md` (append; create if missing). Do not attempt Edit on them.
-2. Present the remaining proposals to the user, starting at #1:
+1. Divert proposals with `is_external_cache: true` to `docs/superpowers/evolutions/YYYY-MM-DD-upstream-suggestions.md` (append; create if missing). Never Edit them — they do not enter the plan below.
+2. **Present the whole plan once**, then ask for a single confirmation. Each entry shows its full diff (review in context). Multi-session (`--recent`/`--skill`) can yield many proposals — group entries under a `### <target_file>` heading so they stay scannable:
 
    ```
-   P1. <target_file>
-     Evidence: <event_indexes> (snippet)
-     Rationale: <rationale>
+   Plan (N patches, one commit each):
+   P1  <target_file>  —  <rationale>
+       addresses: <addresses_signal>
+       [patch diff]
+   P2  ...
 
-     [patch diff]
-
-     Apply? [y / n / skip / edit]
+   Apply? [all / none / <ids to apply, e.g. P1 P3>]
    ```
 
-3. Based on the response:
-   - **y**: `git apply <patch-file>` → `git commit -m "evolve: <subject>"` (one patch = one commit; revert with `git revert <sha>`). If the target is under `~/.claude/plugins/cache/`, refuse to apply and divert to upstream-suggestions.
-   - **edit**: let the user edit the patch, then proceed as `y`.
-   - **skip / n**: move on to the next proposal.
-
-4. If `--dry-run` is passed, skip Phase 2 entirely and just print the proposal list. `--dry-run` is consumed by the main agent only — never forward it to `build-index.ts` (the script will exit 2 on unknown flags).
-
-5. Finalize: print the list of applied commit SHAs and the upstream-suggestions path (if any).
+   To amend a patch, exclude its id and edit the file by hand — there is no inline edit.
+3. Apply the selected ids **sequentially**, in order: `git apply <patch>` → `git commit -m "evolve: <subject>"` (one patch = one commit; revert with `git revert <sha>`).
+4. If a `git apply` fails mid-batch, **stop**: do not roll back already-committed patches (each stands alone). Report the failed id + git's error and the SHAs already committed, then hand control back.
+5. If nothing is left to apply (all diverted or excluded), say so and skip to Finalize.
+6. If `--dry-run` is passed, print the plan only (step 2) and stop. `--dry-run` is consumed by the main agent only — never forward it to `build-index.ts` (the script will exit 2 on unknown flags).
+7. Finalize: print the list of applied commit SHAs and the upstream-suggestions path (if any).
 
 ## Safety
 
