@@ -135,6 +135,8 @@ After each experiment run, follow this exact protocol:
 - **discard**: primary metric worse or equal to best kept result
 - **crash**: command failed (non-zero exit code)
 
+**Noisy metrics:** If the metric is stochastic (LLM-judge scores, sampling-based benchmarks), a single run cannot distinguish signal from noise. Establish the metric's run-to-run variance early, then average N≥3 runs per experiment and only `keep` when the improvement clearly exceeds that noise band. A change within the noise band is a `discard`, not a `keep`.
+
 Secondary metrics are for monitoring only — they almost never affect keep/discard decisions. Only discard a primary improvement if a secondary metric degraded catastrophically, and explain why in the description.
 
 ### 2. Git operations
