@@ -16,13 +16,18 @@ jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger marketplace update
+      - name: Normalize version
+        id: version
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ github.event.release.tag_name || inputs.version }}
         run: |
           VERSION="${VERSION#v}"
-          gh api repos/baleen37/baleen-marketplace/dispatches \
-            -f event_type='update-plugin' \
-            -f client_payload[plugin]='bstack' \
-            -f client_payload[version]="$VERSION"
+          echo "value=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger marketplace update
+        uses: baleen37/baleen-marketplace/.github/actions/dispatch-marketplace-update@12f7f29617c0083c78affd8c1e286e0a093fb0f9
+        with:
+          github-token: ${{ secrets.BALEEN_MARKETPLACE_DISPATCH_TOKEN }}
+          event-type: update_versions
+          plugin: bstack
+          version: ${{ steps.version.outputs.value }}

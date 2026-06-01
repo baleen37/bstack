@@ -6,8 +6,20 @@ PROJECT_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 
 bash "${SCRIPT_DIR}/sync-codex-artifacts.sh"
 
-git -C "${PROJECT_ROOT}" diff --exit-code -- \
+cd "${PROJECT_ROOT}"
+
+git diff --exit-code -- \
   .agents/plugins/marketplace.json \
-  plugins/jira/.codex-plugin/plugin.json \
-  plugins/me/.codex-plugin/plugin.json \
-  plugins/ralph/.codex-plugin/plugin.json
+  'plugins/*/.codex-plugin/plugin.json'
+
+untracked_artifacts="$(
+  git ls-files --others --exclude-standard -- \
+    .agents/plugins/marketplace.json \
+    'plugins/*/.codex-plugin/plugin.json'
+)"
+
+if [ -n "${untracked_artifacts}" ]; then
+  echo "Untracked Codex artifacts found:" >&2
+  echo "${untracked_artifacts}" >&2
+  exit 1
+fi
