@@ -164,10 +164,14 @@ function loadTurns(jsonlPath: string): LoadedTranscript {
 
 // ── skill 본문 정규화 + 해시 (stale 판정용) ──
 const BASE_DIR_LINE = /^Base directory for this skill:.*(?:\r?\n)+/;
+// 슬래시 커맨드를 인자와 함께 호출하면 주입 본문 끝에 "ARGUMENTS: …" 블록이 덧붙는다.
+// 이는 SKILL.md 본문이 아니라 호출 인자이므로 stale 해시 비교 전에 제거해야
+// 같은 본문이 인자 유무/내용에 따라 stale로 오판되지 않는다.
+const ARGUMENTS_TAIL = /\r?\n\r?\nARGUMENTS:[\s\S]*$/;
 
-// transcript 주입 본문에서 "Base directory" 첫 줄(+뒤 빈 줄) 제거
+// transcript 주입 본문에서 "Base directory" 첫 줄(+뒤 빈 줄)과 끝의 "ARGUMENTS:" 블록을 제거
 function stripBaseDirLine(injected: string): string {
-  return injected.replace(BASE_DIR_LINE, "");
+  return injected.replace(BASE_DIR_LINE, "").replace(ARGUMENTS_TAIL, "");
 }
 
 // 디스크 SKILL.md에서 YAML frontmatter(--- … ---) 제거
@@ -564,6 +568,54 @@ function recentSessionPaths(cwd: string, n: number): string[] {
   return files.map((f) => f.path);
 }
 
+// 주어진 transcript에서 `<name>` skill이 호출된 적 있는지 loadTurns 와 동일한 기준으로 판정.
+// 주입 메시지는 "Base directory for this skill: …/skills/<name>" (디렉터리명 = basename) 형태이며,
+// loadTurns 의 baseDir 정규식과 같은 경계(줄 끝 또는 다음 토큰)로 매칭해야 단순 경로 언급을 거른다.
+// jsonl 안에서 줄바꿈은 "\n" 으로 escape 되어 있으므로 경계는 슬래시/escape 개행/문자열 종료다.
+function transcriptInvokesSkill(jsonlPath: string, name: string): boolean {
+  let text: string;
+  try {
+    text = readFileSync(jsonlPath, "utf8");
+  } catch {
+    return false;
+  }
+  const esc = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  // baseDir 마지막 세그먼트가 정확히 <name> 이어야 한다: …/skills/<name> 뒤에 / 또는 escape개행(\n) 또는 따옴표.
+  const re = new RegExp(`Base directory for this skill:[^\\n"]*?/${esc}(?:/|\\\\n|")`);
+  return re.test(text);
+}
+
+// ~/.claude/projects 전체에서 `<name>` skill이 호출된 세션을 mtime 순 최근 N개 수집.
+// --recent 가 현재 프로젝트+worktree로 한정되는 것과 달리, --skill 은 프로젝트 경계를 넘는다.
+function skillSessionPaths(name: string, n: number): string[] {
+  const projectsRoot = join(homedir(), ".claude", "projects");
+  if (!existsSync(projectsRoot)) {
+    console.error(`transcript directory not found: ${projectsRoot}`);
+    process.exit(14);
+  }
+  const files = readdirSync(projectsRoot)
+    .flatMap((d) => {
+      const full = join(projectsRoot, d);
+      try {
+        if (!statSync(full).isDirectory()) return [];
+        return readdirSync(full)
+          .filter((f) => f.endsWith(".jsonl"))
+          .map((f) => join(full, f));
+      } catch {
+        return [];
+      }
+    })
+    .filter((p) => transcriptInvokesSkill(p, name))
+    .map((p) => ({ path: p, mtime: statSync(p).mtimeMs }))
+    .sort((a, b) => b.mtime - a.mtime)
+    .slice(0, n);
+  if (files.length === 0) {
+    console.error(`no sessions invoking skill '${name}' found under ${projectsRoot}`);
+    process.exit(14);
+  }
+  return files.map((f) => f.path);
+}
+
 function resolveTranscriptPath(opts: { jsonlPath?: string; sessionId?: string; cwd: string }): string {
   if (opts.jsonlPath) return resolve(opts.jsonlPath);
   const encoded = encodeCwd(opts.cwd);
@@ -592,13 +644,15 @@ function resolveTranscriptPath(opts: { jsonlPath?: string; sessionId?: string; c
 }
 
 // ── 진입점 ─────────────────────────────────────────────
-function parseArgs(argv: string[]): { jsonlPath?: string; sessionId?: string; recent?: number } {
+function parseArgs(argv: string[]): { jsonlPath?: string; sessionId?: string; recent?: number; skill?: string } {
   const args = argv.slice(2);
   let jsonlPath: string | undefined;
   let sessionId: string | undefined;
   let recent: number | undefined;
+  let skill: string | undefined;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--session") sessionId = args[++i];
+    else if (args[i] === "--skill") skill = args[++i];
     else if (args[i] === "--recent") {
       // 다음 토큰이 양의 정수면 N, 아니면 기본 10
       const next = args[i + 1];
@@ -614,15 +668,30 @@ function parseArgs(argv: string[]): { jsonlPath?: string; sessionId?: string; re
       process.exit(2);
     }
   }
+  if (skill !== undefined && (sessionId !== undefined || jsonlPath !== undefined)) {
+    console.error("--skill cannot be combined with --session or a transcript path");
+    process.exit(2);
+  }
   if (recent !== undefined && (sessionId !== undefined || jsonlPath !== undefined)) {
     console.error("--recent cannot be combined with --session or a transcript path");
     process.exit(2);
   }
-  return { jsonlPath, sessionId, recent };
+  if (skill !== undefined && skill.trim() === "") {
+    console.error("--skill requires a skill name");
+    process.exit(2);
+  }
+  return { jsonlPath, sessionId, recent, skill };
 }
 
 const opts = parseArgs(process.argv);
-if (opts.recent !== undefined) {
+if (opts.skill !== undefined) {
+  const n = opts.recent ?? 10;
+  const paths = skillSessionPaths(opts.skill, n);
+  const index = buildRecentIndex(paths, process.cwd());
+  // --skill 은 대상 스킬 하나로 좁혀서 내보낸다 (같은 세션의 다른 스킬은 제외).
+  index.skills = index.skills.filter((s) => s.name === opts.skill);
+  console.log(JSON.stringify(index, null, 2));
+} else if (opts.recent !== undefined) {
   const paths = recentSessionPaths(process.cwd(), opts.recent);
   console.log(JSON.stringify(buildRecentIndex(paths, process.cwd()), null, 2));
 } else {
