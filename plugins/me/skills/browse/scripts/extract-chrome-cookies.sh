@@ -114,6 +114,8 @@ def decrypt(enc, key_hex):
         if proc.returncode != 0:
             return ""
         out = proc.stdout
+    if not out:
+        return ""
     pad = out[-1]
     if 0 < pad <= 16:
         out = out[:-pad]
