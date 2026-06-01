@@ -329,6 +329,101 @@ EOF
     echo "$output" | jq -e '[.skills[] | select(.name == "live")][0].signal | test("interrupt")'
 }
 
+@test "evolve build-index: observed_bodies show versions and keep current-body events only" {
+    local repo="$BATS_TEST_TMPDIR/observed-repo"
+    mkdir -p "$repo/plugins/me/skills/observed"
+    printf -- '# observed body\n\nsame.\n' > "$repo/plugins/me/skills/observed/SKILL.md"
+    cd "$repo"
+    local real_repo; real_repo="$(pwd -P)"
+    local pdir="$HOME/.claude/projects/$(echo "$real_repo" | sed 's/[/.]/-/g')"
+    mkdir -p "$pdir"
+
+    local current18; current18="$(printf 'Base directory for this skill: %s\n\n# observed body\n\nsame.\n' "$BATS_TEST_TMPDIR/cache/bstack/bstack/17.18.0/skills/observed")"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"o1","name":"Skill","input":{"skill":"observed"}}]}}' -n > "$pdir/current18.jsonl"
+    jq -c --arg t "$current18" '{"type":"user","isMeta":true,"sourceToolUseID":"o1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/current18.jsonl"
+    jq -c '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"current user signal"}]}}' -n >> "$pdir/current18.jsonl"
+
+    local current19; current19="$(printf 'Base directory for this skill: %s\n\n# observed body\n\nsame.\n' "$BATS_TEST_TMPDIR/cache/bstack/bstack/17.19.1/skills/observed")"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"o2","name":"Skill","input":{"skill":"observed"}}]}}' -n > "$pdir/current19.jsonl"
+    jq -c --arg t "$current19" '{"type":"user","isMeta":true,"sourceToolUseID":"o2","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/current19.jsonl"
+
+    local old17; old17="$(printf 'Base directory for this skill: %s\n\n# observed body\n\nold.\n' "$BATS_TEST_TMPDIR/cache/bstack/bstack/17.17.0/skills/observed")"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"o3","name":"Skill","input":{"skill":"observed"}}]}}' -n > "$pdir/old17.jsonl"
+    jq -c --arg t "$old17" '{"type":"user","isMeta":true,"sourceToolUseID":"o3","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/old17.jsonl"
+    jq -c '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"old user signal"}]}}' -n >> "$pdir/old17.jsonl"
+
+    run bun "$INDEXER" --recent 10
+    rm -rf "$pdir"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '[.skills[] | select(.name == "observed")][0].dropped == false'
+    echo "$output" | jq -e '[.skills[] | select(.name == "observed")][0].observed_bodies | length == 2'
+    echo "$output" | jq -e '[.skills[] | select(.name == "observed")][0].observed_bodies[] | select(.current == true) | .versions == ["17.18.0","17.19.1"]'
+    echo "$output" | jq -e '[.skills[] | select(.name == "observed")][0].observed_bodies[] | select(.current == false) | .versions == ["17.17.0"]'
+    echo "$output" | jq -e '[.skills[] | select(.name == "observed")][0] | .events | map(select(.text == "current user signal")) | length == 1'
+    echo "$output" | jq -e '[.skills[] | select(.name == "observed")][0] | .events | map(select(.text == "old user signal")) | length == 0'
+}
+
+@test "evolve build-index: cache-only keeps newest baseDir for observed_bodies" {
+    local cache_new="$BATS_TEST_TMPDIR/cache/bstack/bstack/17.19.1/skills/cached"
+    local cache_old="$BATS_TEST_TMPDIR/cache/bstack/bstack/17.17.0/skills/cached"
+    mkdir -p "$cache_new" "$cache_old"
+    printf -- '# cached body\n\nnew.\n' > "$cache_new/SKILL.md"
+    printf -- '# cached body\n\nold.\n' > "$cache_old/SKILL.md"
+
+    local proj="$BATS_TEST_TMPDIR/cache-only-proj"
+    mkdir -p "$proj"
+    cd "$proj"
+    local real_proj; real_proj="$(pwd -P)"
+    local real_cache_new; real_cache_new="$(cd "$cache_new" && pwd -P)"
+    local real_cache_old; real_cache_old="$(cd "$cache_old" && pwd -P)"
+    local pdir="$HOME/.claude/projects/$(echo "$real_proj" | sed 's/[/.]/-/g')"
+    mkdir -p "$pdir"
+
+    local old_text; old_text="$(printf 'Base directory for this skill: %s\n\n# cached body\n\nold.\n' "$real_cache_old")"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"c1","name":"Skill","input":{"skill":"cached"}}]}}' -n > "$pdir/old.jsonl"
+    jq -c --arg t "$old_text" '{"type":"user","isMeta":true,"sourceToolUseID":"c1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/old.jsonl"
+    jq -c '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"old signal"}]}}' -n >> "$pdir/old.jsonl"
+
+    local new_text; new_text="$(printf 'Base directory for this skill: %s\n\n# cached body\n\nnew.\n' "$real_cache_new")"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"c2","name":"Skill","input":{"skill":"cached"}}]}}' -n > "$pdir/new.jsonl"
+    jq -c --arg t "$new_text" '{"type":"user","isMeta":true,"sourceToolUseID":"c2","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/new.jsonl"
+    jq -c '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"new signal"}]}}' -n >> "$pdir/new.jsonl"
+    touch -t 202001010101 "$pdir/old.jsonl"
+    touch -t 202001010102 "$pdir/new.jsonl"
+
+    run bun "$INDEXER" --recent 10
+    rm -rf "$pdir"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '[.skills[] | select(.name == "cached")][0].dropped == false'
+    echo "$output" | jq -e '[.skills[] | select(.name == "cached")][0].observed_bodies[] | select(.current == true) | .versions == ["17.19.1"]'
+    echo "$output" | jq -e '[.skills[] | select(.name == "cached")][0].observed_bodies[] | select(.current == false) | .versions == ["17.17.0"]'
+    echo "$output" | jq -e '[.skills[] | select(.name == "cached")][0] | .events | map(select(.text == "new signal")) | length == 1'
+    echo "$output" | jq -e '[.skills[] | select(.name == "cached")][0] | .events | map(select(.text == "old signal")) | length == 0'
+}
+
+@test "evolve build-index: current body with no events is not stale" {
+    local skilldir="$BATS_TEST_TMPDIR/skills/noevents"
+    mkdir -p "$skilldir"
+    printf -- '# noevents body\n' > "$skilldir/SKILL.md"
+
+    local proj="$BATS_TEST_TMPDIR/noevents-proj"
+    mkdir -p "$proj"
+    cd "$proj"
+    local real_proj; real_proj="$(pwd -P)"
+    local real_skilldir; real_skilldir="$(cd "$skilldir" && pwd -P)"
+    local pdir="$HOME/.claude/projects/$(echo "$real_proj" | sed 's/[/.]/-/g')"
+    mkdir -p "$pdir"
+    local text; text="$(printf 'Base directory for this skill: %s\n\n# noevents body\n' "$real_skilldir")"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"n1","name":"Skill","input":{"skill":"noevents"}}]}}' -n > "$pdir/s.jsonl"
+    jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"n1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/s.jsonl"
+
+    run bun "$INDEXER" --recent 3
+    rm -rf "$pdir"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '[.skills[] | select(.name == "noevents")][0].stale == false'
+    echo "$output" | jq -e '[.skills[] | select(.name == "noevents")][0].events | length == 0'
+}
+
 @test "evolve build-index: --recent maps cache skill to editable repo_path and uses it for stale" {
     # cwd repo(=plugins/ 보유)에 같은 이름 skill 소스를 두면, transcript가 캐시 경로를 가리켜도
     # repo_path로 매핑되고 stale 비교를 repo 본문 기준으로 한다.
