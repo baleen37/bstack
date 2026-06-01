@@ -35,6 +35,11 @@ The hard part is **not** finding the directory — Claude can do that. The hard 
 
 ## Steps
 
+0. **Check for args** — if the user passed text after `/pickup`:
+   - Absolute path to a `.md` file → use that file directly. Skip Steps 1–2 (list + choose). Proceed from Step 3.
+   - Keyword/phrase → list candidates with `ls -t ~/.claude/handoff/*.md | head -10`, then match the best candidate and confirm with a single-line question before proceeding.
+   - Never silently ignore args. If the path doesn't exist → report it and stop.
+
 1. **List candidates** (newest first):
    ```bash
    ls -t ~/.claude/handoff/*.md 2>/dev/null | head -10

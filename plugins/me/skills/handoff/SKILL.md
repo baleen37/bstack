@@ -13,6 +13,10 @@ Save the current session's context to `~/.claude/handoff/YYYY-MM-DD-HHmm-<topic>
 
 There is no resume logic in this skill. The next session picks up context either by invoking `/pickup` (which reads the most recent file from `~/.claude/handoff/`) or by pasting the file path or contents directly — Claude reads the frontmatter and the Resume Prompt section and takes it from there.
 
+## Arguments
+
+If the user passes text after `/handoff` (e.g. `/handoff now we need to join and index this into search`), treat it as an **explicit next-step instruction** and include it verbatim at the top of the `## Next Steps` section — before any steps inferred from the conversation. Label it: `(from user at handoff time)`.
+
 ## What `/handoff` does
 
 - Extracts goal, decisions, next steps, and blockers from the current conversation
