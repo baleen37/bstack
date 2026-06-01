@@ -104,10 +104,11 @@ The prompt must include all of:
 4. Target-file selection — pick by *what kind of knowledge is missing*, not by signal pattern:
 
    - **that SKILL.md** — skill triggers, body rules, Red Flags. Use when a skill should have run but didn't, or ran but violated its own contract.
+   - **a *related* SKILL.md (cross-skill)** — the skill that *carries the missing responsibility*, which is often NOT the skill the signal fired under. When the user's correction redirects to another skill's domain (e.g. research was running but the user said "use the browser" → the gap belongs to `me:browse`'s trigger, or to research's hand-off to it), fix the skill that should own the behavior. Ask: "which skill's contract, if it had been right, would have prevented this?" — that is the target, even if a different skill appears in `kind:"skill"`/`prior`. Prefer editing the owning skill's trigger/body over bolting a special-case onto the skill that merely happened to be active. When the fix is a hand-off (skill X should delegate to Y), the edit may belong to X, to Y, or both — choose by where the durable rule lives.
    - **nearest AGENTS.md** — repo navigation, file locations, "where to look" knowledge. Use when the agent searched/read repeatedly before finding something.
    - **nearest CLAUDE.md** — project conventions and rules that govern *all* work in this tree.
 
-   **"Nearest" resolution**: "that SKILL.md" = inferred from `events[]` items with `kind:"skill"` or tool calls in `prior`. "Nearest AGENTS.md/CLAUDE.md" = walk up from that SKILL.md's directory; first hit wins (fallback to repo-root CLAUDE.md). If no skill can be inferred, default to repo-root CLAUDE.md.
+   **"Nearest" resolution**: "that SKILL.md" = inferred from `events[]` items with `kind:"skill"` or tool calls in `prior`. "Nearest AGENTS.md/CLAUDE.md" = walk up from that SKILL.md's directory; first hit wins (fallback to repo-root CLAUDE.md). If no skill can be inferred, default to repo-root CLAUDE.md. For a cross-skill target, the editable path is that related skill's own `repo_path` (resolve it under `plugins/*/skills/<name>/SKILL.md`); it is still `is_external_cache:false` when it lives in this repo.
 
 5. Output schema — one JSON block only, no other text. `event_index` is the integer position in the index's `events[]` array:
 
