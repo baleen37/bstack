@@ -133,7 +133,7 @@ function loadTurns(jsonlPath: string): LoadedTranscript {
         const m = text.match(/^Base directory for this skill:\s*(.+?)\s*(?:\r?\n|$)/);
         if (m) {
           const baseDir = m[1];
-          const injectedBody = stripBaseDirLine(text);
+          const injectedBody = restorePluginRoot(stripBaseDirLine(text), baseDir);
           skillInvocations.push({
             name: basename(baseDir),
             baseDir,
@@ -185,6 +185,16 @@ const ARGUMENTS_TAIL = /\r?\n\r?\nARGUMENTS:[\s\S]*$/;
 // transcript 주입 본문에서 "Base directory" 첫 줄(+뒤 빈 줄)과 끝의 "ARGUMENTS:" 블록을 제거
 function stripBaseDirLine(injected: string): string {
   return injected.replace(BASE_DIR_LINE, "").replace(ARGUMENTS_TAIL, "");
+}
+
+// 스킬 주입 시 Claude Code는 본문의 ${CLAUDE_PLUGIN_ROOT}를 plugin root 절대경로로 치환한다.
+// 디스크 SKILL.md는 리터럴 ${CLAUDE_PLUGIN_ROOT}를 그대로 보존하므로, 동일 본문이라도
+// 치환 여부 때문에 해시가 어긋나 false-stale로 dropped된다. 해싱 전에 치환을 되돌린다.
+// plugin root = baseDir에서 끝의 "/skills/<name>"을 제거한 경로.
+function restorePluginRoot(injectedBody: string, baseDir: string): string {
+  const root = baseDir.replace(/[\\/]skills[\\/][^\\/]+[\\/]?$/, "");
+  if (!root || root === baseDir) return injectedBody;
+  return injectedBody.split(root).join("${CLAUDE_PLUGIN_ROOT}");
 }
 
 // 디스크 SKILL.md에서 YAML frontmatter(--- … ---) 제거
