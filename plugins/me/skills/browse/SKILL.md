@@ -81,7 +81,7 @@ ${CLAUDE_PLUGIN_ROOT}/skills/browse/scripts/import-cookies.sh example.com
 playwright-cli goto https://example.com    # now logged in
 ```
 
-- macOS only. The first run may show a Keychain access prompt ("playwright-cli wants to use the 'Chrome Safe Storage' key") — approve it.
+- macOS only. The first run may show a macOS Keychain access prompt for the "Chrome Safe Storage" key — approve it.
 - The profile holding cookies for the domain is auto-detected; override with `--chrome-profile "Profile 2"`.
 - Target a named session with `--session <name>` (default `default`).
 - This is an alternative to the hand-login (`--headed --persistent`) flow above. Works only if you're already logged in to the domain in Chrome.
