@@ -19,6 +19,7 @@ eligible_codex_plugins() {
     expected_plugins="$(eligible_codex_plugins)"
 
     while IFS= read -r plugin; do
+        [ -n "$plugin" ] || continue
         assert_file_exists "${PROJECT_ROOT}/plugins/${plugin}/.codex-plugin/plugin.json"
     done <<< "$expected_plugins"
 
@@ -37,6 +38,7 @@ eligible_codex_plugins() {
     expected_plugins="$(eligible_codex_plugins)"
 
     while IFS= read -r plugin; do
+        [ -n "$plugin" ] || continue
         validate_json "${PROJECT_ROOT}/plugins/${plugin}/.codex-plugin/plugin.json"
     done <<< "$expected_plugins"
 }
@@ -46,6 +48,7 @@ eligible_codex_plugins() {
     expected_plugins="$(eligible_codex_plugins)"
 
     while IFS= read -r plugin; do
+        [ -n "$plugin" ] || continue
         local manifest="${PROJECT_ROOT}/plugins/${plugin}/.codex-plugin/plugin.json"
         local skills_path
         skills_path=$(jq -r '.skills' "$manifest")
@@ -59,6 +62,7 @@ eligible_codex_plugins() {
     expected_plugins="$(eligible_codex_plugins)"
 
     while IFS= read -r plugin; do
+        [ -n "$plugin" ] || continue
         local claude_manifest="${PROJECT_ROOT}/plugins/${plugin}/.claude-plugin/plugin.json"
         local codex_manifest="${PROJECT_ROOT}/plugins/${plugin}/.codex-plugin/plugin.json"
 
@@ -91,7 +95,8 @@ eligible_codex_plugins() {
 @test "marketplace notification uses reusable update_versions dispatch action" {
     local workflow="${PROJECT_ROOT}/.github/workflows/notify-marketplace.yml"
 
-    grep -q "baleen37/baleen-marketplace/.github/actions/dispatch-marketplace-update@main" "$workflow"
+    grep -q "baleen37/baleen-marketplace/.github/actions/dispatch-marketplace-update@12f7f29617c0083c78affd8c1e286e0a093fb0f9" "$workflow"
+    ! grep -q "dispatch-marketplace-update@main" "$workflow"
     grep -q "github-token: \${{ secrets.BALEEN_MARKETPLACE_DISPATCH_TOKEN }}" "$workflow"
     grep -q "event-type: update_versions" "$workflow"
     grep -q "plugin: bstack" "$workflow"
