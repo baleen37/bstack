@@ -130,7 +130,7 @@ function loadTurns(jsonlPath: string): LoadedTranscript {
       const c = obj.message?.content;
       const text = Array.isArray(c) && c[0]?.type === "text" ? c[0].text : undefined;
       if (typeof text === "string") {
-        const m = text.match(/^Base directory for this skill:\s*(.+?)\s*(?:\r?\n|$)/);
+        const m = text.match(new RegExp(`^Base directory for this skill:\\s*(.+?)\\s*(?:${LINE_BREAK}|$)`));
         if (m) {
           const baseDir = m[1];
           const injectedBody = stripBaseDirLine(text);
@@ -176,11 +176,12 @@ function loadTurns(jsonlPath: string): LoadedTranscript {
 }
 
 // ── skill 본문 정규화 + 해시 (stale 판정용) ──
-const BASE_DIR_LINE = /^Base directory for this skill:.*(?:\r?\n)+/;
+const LINE_BREAK = "(?:\\r\\n|\\n|\\r)";
+const BASE_DIR_LINE = new RegExp(`^Base directory for this skill:.*${LINE_BREAK}+`);
 // 슬래시 커맨드를 인자와 함께 호출하면 주입 본문 끝에 "ARGUMENTS: …" 블록이 덧붙는다.
 // 이는 SKILL.md 본문이 아니라 호출 인자이므로 stale 해시 비교 전에 제거해야
 // 같은 본문이 인자 유무/내용에 따라 stale로 오판되지 않는다.
-const ARGUMENTS_TAIL = /\r?\n\r?\nARGUMENTS:[\s\S]*$/;
+const ARGUMENTS_TAIL = new RegExp(`${LINE_BREAK}${LINE_BREAK}ARGUMENTS:[\\s\\S]*$`);
 
 // transcript 주입 본문에서 "Base directory" 첫 줄(+뒤 빈 줄)과 끝의 "ARGUMENTS:" 블록을 제거
 function stripBaseDirLine(injected: string): string {
@@ -197,7 +198,7 @@ function stripFrontmatter(raw: string): string {
 }
 
 function bodyHash(body: string): string {
-  return createHash("sha256").update(body.trim()).digest("hex");
+  return createHash("sha256").update(body.replace(/\r\n?/g, "\n").trim()).digest("hex");
 }
 
 function shortHash(hash: string): string {
@@ -271,6 +272,8 @@ const PSEUDO_USER_PREFIXES = [
   "<local-command-",
   "[Request interrupted",
   "<task-notification>", // 하네스 주입 Monitor/Task 완료 알림 — user 발화 아님
+  "<system-reminder>", // 하네스 주입 context — user 발화 아님
+  "<ide-context>", // 하네스 주입 IDE context — user 발화 아님
 ];
 
 function isPseudoUser(userText: string): boolean {
@@ -511,10 +514,11 @@ function buildRecentIndex(paths: string[], cwd: string): RecentIndex {
       const tagged: Event = { ...ev, session: sessionId };
       // skill 이벤트는 그 세션에서 관측된 해당 skill의 모든 body hash에, 그 외 신호는 같은 세션에서 호출된 모든 skill hash에 귀속
       if (ev.kind === "skill" && ev.name) {
-        const short = ev.name.includes(":") ? ev.name.split(":").pop()! : ev.name;
-        const hashes = invokedHashesByName.get(short);
+        const fallback = ev.name.includes(":") ? ev.name.split(":").pop()! : ev.name;
+        const target = invokedHashesByName.has(ev.name) ? ev.name : fallback;
+        const hashes = invokedHashesByName.get(target);
         if (!hashes) continue;
-        for (const hash of hashes) acc.get(short)!.eventsByHash.get(hash)!.push(tagged);
+        for (const hash of hashes) acc.get(target)!.eventsByHash.get(hash)!.push(tagged);
       } else {
         for (const name of invokedNames) {
           for (const hash of invokedHashesByName.get(name) ?? []) acc.get(name)!.eventsByHash.get(hash)!.push(tagged);
@@ -640,15 +644,18 @@ function transcriptInvokesSkill(jsonlPath: string, name: string): boolean {
   return re.test(text);
 }
 
-// ~/.claude/projects 전체에서 `<name>` skill이 호출된 세션을 mtime 순 최근 N개 수집.
-// --recent 가 현재 프로젝트+worktree로 한정되는 것과 달리, --skill 은 프로젝트 경계를 넘는다.
-function skillSessionPaths(name: string, n: number): string[] {
+function skillNameCandidates(name: string): string[] {
+  const short = name.includes(":") ? name.split(":").pop()! : name;
+  return [...new Set([name, short])];
+}
+
+function findSkillSessionPaths(names: string[], n: number): string[] {
   const projectsRoot = join(homedir(), ".claude", "projects");
   if (!existsSync(projectsRoot)) {
     console.error(`transcript directory not found: ${projectsRoot}`);
     process.exit(14);
   }
-  const files = readdirSync(projectsRoot)
+  return readdirSync(projectsRoot)
     .flatMap((d) => {
       const full = join(projectsRoot, d);
       try {
@@ -660,19 +667,37 @@ function skillSessionPaths(name: string, n: number): string[] {
         return [];
       }
     })
-    .filter((p) => transcriptInvokesSkill(p, name))
+    .filter((p) => names.some((name) => transcriptInvokesSkill(p, name)))
     .map((p) => ({ path: p, mtime: statSync(p).mtimeMs }))
     .sort((a, b) => b.mtime - a.mtime)
-    .slice(0, n);
+    .slice(0, n)
+    .map((f) => f.path);
+}
+
+// ~/.claude/projects 전체에서 `<name>` skill이 호출된 세션을 mtime 순 최근 N개 수집.
+// --recent 가 현재 프로젝트+worktree로 한정되는 것과 달리, --skill 은 프로젝트 경계를 넘는다.
+function skillSessionPaths(names: string[], n: number): string[] {
+  const files = findSkillSessionPaths(names, n);
   if (files.length === 0) {
-    console.error(`no sessions invoking skill '${name}' found under ${projectsRoot}`);
+    console.error(`no sessions invoking skill '${names[0]}' found under ${join(homedir(), ".claude", "projects")}`);
     process.exit(14);
   }
-  return files.map((f) => f.path);
+  return files;
 }
 
 function resolveTranscriptPath(opts: { jsonlPath?: string; sessionId?: string; cwd: string }): string {
-  if (opts.jsonlPath) return resolve(opts.jsonlPath);
+  if (opts.jsonlPath) {
+    const resolved = resolve(opts.jsonlPath);
+    if (!existsSync(resolved)) {
+      console.error(`transcript file not found: ${resolved}`);
+      process.exit(14);
+    }
+    if (!statSync(resolved).isFile()) {
+      console.error(`transcript path is not a file: ${resolved}`);
+      process.exit(14);
+    }
+    return resolved;
+  }
   const encoded = encodeCwd(opts.cwd);
   const projectDir = join(homedir(), ".claude", "projects", encoded);
   if (!existsSync(projectDir)) {
@@ -706,22 +731,64 @@ function parseArgs(argv: string[]): { jsonlPath?: string; sessionId?: string; re
   let recent: number | undefined;
   let skill: string | undefined;
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === "--session") sessionId = args[++i];
-    else if (args[i] === "--skill") skill = args[++i];
-    else if (args[i] === "--recent") {
-      // 다음 토큰이 양의 정수면 N, 아니면 기본 10
+    if (args[i] === "--session") {
+      if (sessionId !== undefined) {
+        console.error("--session can only be specified once");
+        process.exit(2);
+      }
+      const next = args[++i];
+      if (next === undefined || next.startsWith("--")) {
+        console.error("--session requires a session id");
+        process.exit(2);
+      }
+      if (next.endsWith(".jsonl") || next.includes("/") || next.includes("\\")) {
+        console.error("--session expects a transcript session id without .jsonl or path separators");
+        process.exit(2);
+      }
+      sessionId = next;
+    } else if (args[i] === "--skill") {
+      if (skill !== undefined) {
+        console.error("--skill can only be specified once");
+        process.exit(2);
+      }
+      const next = args[++i];
+      if (next === undefined || next.startsWith("--")) {
+        console.error("--skill requires a skill name");
+        process.exit(2);
+      }
+      if (next.includes("/") || next.includes("\\")) {
+        console.error("--skill expects a skill name, not a path");
+        process.exit(2);
+      }
+      skill = next;
+    } else if (args[i] === "--recent") {
+      if (recent !== undefined) {
+        console.error("--recent can only be specified once");
+        process.exit(2);
+      }
+      // 다음 토큰이 양의 정수면 N, flag/없음이면 기본 10. 그 외 토큰은 잘못된 N이다.
       const next = args[i + 1];
       if (next !== undefined && /^[1-9][0-9]*$/.test(next)) {
         recent = parseInt(next, 10);
         i++;
+      } else if (next !== undefined && !next.startsWith("--")) {
+        console.error("--recent requires a positive integer");
+        process.exit(2);
       } else {
         recent = 10;
       }
+    } else if (args[i].startsWith("--")) {
+      console.error(`unknown flag: ${args[i]}`);
+      process.exit(2);
     } else if (!jsonlPath) jsonlPath = args[i];
     else {
       console.error(`unexpected argument: ${args[i]}`);
       process.exit(2);
     }
+  }
+  if (sessionId !== undefined && jsonlPath !== undefined) {
+    console.error("--session cannot be combined with a transcript path");
+    process.exit(2);
   }
   if (skill !== undefined && (sessionId !== undefined || jsonlPath !== undefined)) {
     console.error("--skill cannot be combined with --session or a transcript path");
@@ -741,10 +808,14 @@ function parseArgs(argv: string[]): { jsonlPath?: string; sessionId?: string; re
 const opts = parseArgs(process.argv);
 if (opts.skill !== undefined) {
   const n = opts.recent ?? 10;
-  const paths = skillSessionPaths(opts.skill, n);
+  const exactPaths = findSkillSessionPaths([opts.skill], n);
+  const skillNames = exactPaths.length > 0 ? [opts.skill] : skillNameCandidates(opts.skill);
+  const paths = exactPaths.length > 0 ? exactPaths : skillSessionPaths(skillNames, n);
   const index = buildRecentIndex(paths, process.cwd());
   // --skill 은 대상 스킬 하나로 좁혀서 내보낸다 (같은 세션의 다른 스킬은 제외).
-  index.skills = index.skills.filter((s) => s.name === opts.skill);
+  index.skills = index.skills.filter((s) => skillNames.includes(s.name));
+  const droppedN = index.skills.filter((s) => s.dropped).length;
+  index.summary.headline = `${index.session_count} sessions · ${index.skills.length} skills · ${droppedN} dropped`;
   console.log(JSON.stringify(index, null, 2));
 } else if (opts.recent !== undefined) {
   const paths = recentSessionPaths(process.cwd(), opts.recent);
