@@ -153,6 +153,20 @@ EOF
     echo "$output" | jq -e '[.events[] | select(.kind == "user")][0].text == "real user message"'
 }
 
+@test "evolve build-index: harness-injected context markers are not user events" {
+    local context_fixture="$BATS_TEST_TMPDIR/context-markers.jsonl"
+    cat > "$context_fixture" <<'EOF'
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"real user message"}]}}
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"<system-reminder>\nInjected context\n</system-reminder>"}]}}
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"<ide-context>\nOpen files and diagnostics\n</ide-context>"}]}}
+EOF
+    run bun "$INDEXER" "$context_fixture"
+    [ "$status" -eq 0 ]
+    # 진짜 user 발화 1건만 잡히고, context marker 주입 텍스트는 제외된다
+    echo "$output" | jq -e '[.events[] | select(.kind == "user")] | length == 1'
+    echo "$output" | jq -e '[.events[] | select(.kind == "user")][0].text == "real user message"'
+}
+
 @test "evolve build-index: --recent and --session together exit 2" {
     run bun "$INDEXER" --recent --session abc
     [ "$status" -eq 2 ]
@@ -203,6 +217,50 @@ EOF
     rm -rf "$pdir"
     [ "$status" -eq 0 ]
     echo "$output" | jq -e '[.skills[] | select(.name == "demo")][0].stale == false'
+}
+
+@test "evolve build-index: CRLF injected body matches LF disk body for stale" {
+    local skilldir="$BATS_TEST_TMPDIR/skills/crlfskill"
+    mkdir -p "$skilldir"
+    printf -- '# crlfskill body\n\nsame line.\n' > "$skilldir/SKILL.md"
+
+    local proj="$BATS_TEST_TMPDIR/crlfproj"
+    mkdir -p "$proj"
+    cd "$proj"
+    local real_proj; real_proj="$(pwd -P)"
+    local real_skilldir; real_skilldir="$(cd "$skilldir" && pwd -P)"
+    local pdir="$HOME/.claude/projects/$(echo "$real_proj" | sed 's/[/.]/-/g')"
+    mkdir -p "$pdir"
+    local text; text="$(printf 'Base directory for this skill: %s\r\n\r\n# crlfskill body\r\n\r\nsame line.\r\n' "$real_skilldir")"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"c1","name":"Skill","input":{"skill":"crlfskill"}}]}}' -n > "$pdir/s.jsonl"
+    jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"c1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/s.jsonl"
+
+    run bun "$INDEXER" --recent 3
+    rm -rf "$pdir"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '[.skills[] | select(.name == "crlfskill")][0].stale == false'
+}
+
+@test "evolve build-index: CR-only injected body matches LF disk body for stale" {
+    local skilldir="$BATS_TEST_TMPDIR/skills/crskill"
+    mkdir -p "$skilldir"
+    printf -- '# crskill body\n\nsame line.\n' > "$skilldir/SKILL.md"
+
+    local proj="$BATS_TEST_TMPDIR/crproj"
+    mkdir -p "$proj"
+    cd "$proj"
+    local real_proj; real_proj="$(pwd -P)"
+    local real_skilldir; real_skilldir="$(cd "$skilldir" && pwd -P)"
+    local pdir="$HOME/.claude/projects/$(echo "$real_proj" | sed 's/[/.]/-/g')"
+    mkdir -p "$pdir"
+    local text; text="$(printf 'Base directory for this skill: %s\r\r# crskill body\r\rsame line.\r' "$real_skilldir")"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"c1","name":"Skill","input":{"skill":"crskill"}}]}}' -n > "$pdir/s.jsonl"
+    jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"c1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/s.jsonl"
+
+    run bun "$INDEXER" --recent 3
+    rm -rf "$pdir"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '[.skills[] | select(.name == "crskill")][0].stale == false'
 }
 
 @test "evolve build-index: changed body → stale:true (dropped, no events)" {
@@ -492,13 +550,59 @@ EOF
         jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"f1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$p/s.jsonl"
     done
 
-    run bun "$INDEXER" --skill findme
+    run bun "$INDEXER" --skill findme --recent 2
     rm -rf "$pA" "$pB"
     [ "$status" -eq 0 ]
-    # 두 프로젝트의 세션이 모두 모인다
-    echo "$output" | jq -e '.session_count >= 2'
+    # positive --recent N 조합이 허용되고 두 프로젝트의 세션이 모두 모인다
+    echo "$output" | jq -e '.session_count == 2'
     # skills[]에는 대상 skill만
     echo "$output" | jq -e '[.skills[].name] | unique == ["findme"]'
+}
+
+@test "evolve build-index: --skill accepts user-facing prefixed skill name" {
+    # user-facing slash command name(me:evolve)는 Base directory basename(evolve)과 같은 skill로 취급한다.
+    local skilldir="$BATS_TEST_TMPDIR/skills/evolve"
+    mkdir -p "$skilldir"
+    printf -- '# evolve body\n' > "$skilldir/SKILL.md"
+    local real_skilldir; real_skilldir="$(cd "$skilldir" && pwd -P)"
+    local text; text="$(printf 'Base directory for this skill: %s\n\n# evolve body\n' "$real_skilldir")"
+    local p="$HOME/.claude/projects/-tmp-evolve-skilltest-prefixed-$$"
+    mkdir -p "$p"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"e1","name":"Skill","input":{"skill":"me:evolve"}}]}}' -n > "$p/s.jsonl"
+    jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"e1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$p/s.jsonl"
+
+    run bun "$INDEXER" --skill me:evolve --recent 1
+    rm -rf "$p"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '.session_count == 1'
+    echo "$output" | jq -e '[.skills[].name] == ["evolve"]'
+}
+
+@test "evolve build-index: --skill exact colon name does not also match basename" {
+    # 실제 directory basename이 foo:bar인 skill은 별도 bar skill과 구분되어야 한다.
+    local colon_dir="$BATS_TEST_TMPDIR/skills/foo:bar"
+    local base_dir="$BATS_TEST_TMPDIR/skills/bar"
+    mkdir -p "$colon_dir" "$base_dir"
+    printf -- '# foo:bar body\n' > "$colon_dir/SKILL.md"
+    printf -- '# bar body\n' > "$base_dir/SKILL.md"
+    local real_colon; real_colon="$(cd "$colon_dir" && pwd -P)"
+    local real_base; real_base="$(cd "$base_dir" && pwd -P)"
+    local colon_text; colon_text="$(printf 'Base directory for this skill: %s\n\n# foo:bar body\n' "$real_colon")"
+    local base_text; base_text="$(printf 'Base directory for this skill: %s\n\n# bar body\n' "$real_base")"
+    local p="$HOME/.claude/projects/-tmp-evolve-skilltest-colon-exact-$$"
+    mkdir -p "$p"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"c1","name":"Skill","input":{"skill":"foo:bar"}}]}}' -n > "$p/colon.jsonl"
+    jq -c --arg t "$colon_text" '{"type":"user","isMeta":true,"sourceToolUseID":"c1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$p/colon.jsonl"
+    jq -c '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"<command-name>/foo:bar</command-name>"}]}}' -n >> "$p/colon.jsonl"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"b1","name":"Skill","input":{"skill":"bar"}}]}}' -n > "$p/base.jsonl"
+    jq -c --arg t "$base_text" '{"type":"user","isMeta":true,"sourceToolUseID":"b1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$p/base.jsonl"
+
+    run bun "$INDEXER" --skill foo:bar --recent 10
+    rm -rf "$p"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '.session_count == 1'
+    echo "$output" | jq -e '[.skills[].name] == ["foo:bar"]'
+    echo "$output" | jq -e '[.skills[0].events[] | select(.kind == "skill" and .name == "foo:bar")] | length == 1'
 }
 
 @test "evolve build-index: --skill filters to the target skill only" {
@@ -534,4 +638,130 @@ EOF
 @test "evolve build-index: --skill and --session together exit 2" {
     run bun "$INDEXER" --skill foo --session abc
     [ "$status" -eq 2 ]
+}
+
+@test "evolve build-index: --dry-run is rejected by indexer" {
+    run bun "$INDEXER" --dry-run
+    [ "$status" -eq 2 ]
+}
+
+@test "evolve build-index: --session without value exits 2" {
+    run bun "$INDEXER" --session
+    [ "$status" -eq 2 ]
+}
+
+@test "evolve build-index: --session rejects flag as value" {
+    run bun "$INDEXER" --session --recent
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"--session requires a session id"* ]]
+}
+
+@test "evolve build-index: --skill without value exits 2" {
+    run bun "$INDEXER" --skill
+    [ "$status" -eq 2 ]
+}
+
+@test "evolve build-index: --skill rejects flag as value" {
+    run bun "$INDEXER" --skill --recent
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"--skill requires a skill name"* ]]
+}
+
+@test "evolve build-index: --recent invalid value exits 2 with clear error" {
+    run bun "$INDEXER" --recent 0
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"--recent requires a positive integer"* ]]
+
+    run bun "$INDEXER" --recent -1
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"--recent requires a positive integer"* ]]
+
+    run bun "$INDEXER" --recent abc
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"--recent requires a positive integer"* ]]
+}
+
+@test "evolve build-index: --skill --recent invalid value exits 2 with clear error" {
+    run bun "$INDEXER" --skill evolve --recent nope
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"--recent requires a positive integer"* ]]
+}
+
+@test "evolve build-index: --skill summary headline reflects filtered skills" {
+    local sa="$BATS_TEST_TMPDIR/skills/sumkeep"; mkdir -p "$sa"; printf -- '# sumkeep\n' > "$sa/SKILL.md"
+    local sb="$BATS_TEST_TMPDIR/skills/sumdrop"; mkdir -p "$sb"; printf -- '# sumdrop changed\n' > "$sb/SKILL.md"
+    local ra; ra="$(cd "$sa" && pwd -P)"; local rb; rb="$(cd "$sb" && pwd -P)"
+    local ta; ta="$(printf 'Base directory for this skill: %s\n\n# sumkeep\n' "$ra")"
+    local tb; tb="$(printf 'Base directory for this skill: %s\n\n# sumdrop\n' "$rb")"
+    local p="$HOME/.claude/projects/-tmp-evolve-skilltest-summary-$$"
+    mkdir -p "$p"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"k1","name":"Skill","input":{"skill":"sumkeep"}}]}}' -n > "$p/s.jsonl"
+    jq -c --arg t "$ta" '{"type":"user","isMeta":true,"sourceToolUseID":"k1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$p/s.jsonl"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"d1","name":"Skill","input":{"skill":"sumdrop"}}]}}' -n >> "$p/s.jsonl"
+    jq -c --arg t "$tb" '{"type":"user","isMeta":true,"sourceToolUseID":"d1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$p/s.jsonl"
+
+    run bun "$INDEXER" --skill sumkeep
+    rm -rf "$p"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '[.skills[].name] == ["sumkeep"]'
+    echo "$output" | jq -e '.summary.headline | test("1 skills · 0 dropped")'
+}
+
+@test "evolve build-index: duplicate singleton flags exit 2" {
+    run bun "$INDEXER" --recent 2 --recent 1
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"--recent can only be specified once"* ]]
+
+    run bun "$INDEXER" --session a --session b
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"--session can only be specified once"* ]]
+
+    run bun "$INDEXER" --skill a --skill b
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"--skill can only be specified once"* ]]
+}
+
+@test "evolve build-index: --session rejects path-like values" {
+    run bun "$INDEXER" --session chosen.jsonl
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"--session expects a transcript session id without .jsonl or path separators"* ]]
+
+    run bun "$INDEXER" --session fixtures/chosen
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"--session expects a transcript session id without .jsonl or path separators"* ]]
+
+    run bun "$INDEXER" --session /tmp/chosen.jsonl
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"--session expects a transcript session id without .jsonl or path separators"* ]]
+}
+
+@test "evolve build-index: --session and positional path together exit 2" {
+    run bun "$INDEXER" --session chosen "$FIXTURE"
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"--session cannot be combined with a transcript path"* ]]
+}
+
+@test "evolve build-index: --skill rejects path-like values" {
+    run bun "$INDEXER" --skill plugins/me/skills/evolve
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"--skill expects a skill name, not a path"* ]]
+
+    run bun "$INDEXER" --skill evolve/SKILL.md
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"--skill expects a skill name, not a path"* ]]
+}
+
+@test "evolve build-index: invalid positional transcript paths exit 14 without stack trace" {
+    local missing="$BATS_TEST_TMPDIR/missing.jsonl"
+    run bun "$INDEXER" "$missing"
+    [ "$status" -eq 14 ]
+    [[ "$output" == *"transcript file not found:"* ]]
+    [[ "$output" != *"ENOENT"* ]]
+
+    local dirpath="$BATS_TEST_TMPDIR/transcript-dir"
+    mkdir -p "$dirpath"
+    run bun "$INDEXER" "$dirpath"
+    [ "$status" -eq 14 ]
+    [[ "$output" == *"transcript path is not a file:"* ]]
+    [[ "$output" != *"EISDIR"* ]]
 }
