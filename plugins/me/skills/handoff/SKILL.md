@@ -1,6 +1,8 @@
 ---
 name: handoff
-description: Use when asked to "handoff", "인수인계", "write a handoff", or before ending a session to preserve context for the next session. Writes a structured markdown file to ~/.claude/handoff/ capturing goals, decisions, open questions, and failed approaches so the next session can resume without losing context.
+description: >-
+  Use when asked to "handoff", "인수인계", "write a handoff", or before ending
+  a session to preserve context for the next session.
 allowed-tools:
   - Bash
   - Read
@@ -9,13 +11,21 @@ allowed-tools:
 
 # /handoff: Write a session handoff file
 
-Save the current session's context to `~/.claude/handoff/YYYY-MM-DD-HHmm-<topic>.md` as a structured markdown file. Runs only when the user explicitly asks for it.
+Save the current session's context to
+`~/.claude/handoff/YYYY-MM-DD-HHmm-<topic>.md` as a structured markdown file.
+Runs only when the user explicitly asks for it.
 
-There is no resume logic in this skill. The next session picks up context either by invoking `/pickup` (which reads the most recent file from `~/.claude/handoff/`) or by pasting the file path or contents directly — Claude reads the frontmatter and the Resume Prompt section and takes it from there.
+There is no resume logic in this skill. The next session picks up context either
+by invoking `/pickup` (which reads the most recent file from
+`~/.claude/handoff/`) or by pasting the file path or contents directly — Claude
+reads the frontmatter and the Resume Prompt section and takes it from there.
 
 ## Arguments
 
-If the user passes text after `/handoff` (e.g. `/handoff now we need to join and index this into search`), treat it as an **explicit next-step instruction** and include it verbatim at the top of the `## Next Steps` section — before any steps inferred from the conversation. Label it: `(from user at handoff time)`.
+If the user passes text after `/handoff` (e.g. `/handoff now we need to join and
+index this into search`), treat it as an **explicit next-step instruction** and
+include it verbatim at the top of the `## Next Steps` section — before any
+steps inferred from the conversation. Label it: `(from user at handoff time)`.
 
 ## What `/handoff` does
 
@@ -44,9 +54,11 @@ If the user passes text after `/handoff` (e.g. `/handoff now we need to join and
 2. **Infer topic** — summarize the session's main work as a 2–4 word kebab-case slug (e.g. `refactor-auth-middleware`, `add-handoff-skill`).
 
 3. **Build filename** — local time:
-   ```
+
+   ```text
    ~/.claude/handoff/YYYY-MM-DD-HHmm-<topic>.md
    ```
+
    e.g. `~/.claude/handoff/2026-04-22-1430-add-handoff-skill.md`
 
 4. **Ensure directory** — `mkdir -p ~/.claude/handoff`
@@ -93,10 +105,11 @@ topic: <kebab-case>
 - Commits: `abc1234 feat: ...`
 - Uncommitted: <git status summary>
 
-## Environment
-- Worktree: `/path`
-- Branch: `feature/xyz`
-- PR/Issue: #123
+## Resume Checkpoint
+- Surface: `/path` on `branch` at `commit` / PR #123 / doc `...`
+- Last verified: `command-or-check` → result
+- Next action: ...
+- Guardrail: verify this checkpoint still matches before continuing
 
 ## User Preferences
 - ...
@@ -106,9 +119,16 @@ topic: <kebab-case>
 
 - **Bullets over prose.** One bullet, one line.
 - **Only what was actually discussed or decided.** No speculative "possible next steps."
+- **Capture resumable state, not logs.** The next session should know where to
+  resume, what was last verified, and what to check first.
+- **Prefer stable pointers.** Use paths, PRs, issues, docs, commands, artifact
+  names, and source links over copied output.
+- **Next Steps should be verifiable.** Prefer "do X → verify with Y" when the check matters.
+- **No secrets or noisy logs.** Summarize evidence; do not paste tokens, credentials, stack dumps, or full command output.
 - **Failed Approaches matter** — they stop the next session from repeating mistakes. One line each: "tried → why it failed."
 - **Open Questions** = unresolved at session end. Anything already decided goes under Design Decisions.
-- **Resume Prompt** must stand alone. Include file paths, ticket numbers, and enough context to be understood without reading the rest of the file.
+- **Resume Prompt** must stand alone. Include file paths, ticket numbers, and
+  enough context to be understood without reading the rest of the file.
 
 ## Red Flags — STOP
 
