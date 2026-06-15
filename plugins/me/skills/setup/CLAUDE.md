@@ -72,6 +72,11 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - Before starting complex tasks, read relevant memory files to build on previous experience
 - Update or remove memories that turn out to be wrong or outdated
 
+## Recalling past context
+
+- When you don't understand the context of the current task, use the `memmem:search-conversation` skill to search past conversation history
+- Use it when the user references prior work, when intent is hard to infer from code alone, or when you're stuck
+
 ## Language
 
 Always communicate in Korean.
