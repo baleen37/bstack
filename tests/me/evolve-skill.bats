@@ -9,13 +9,6 @@ load ../helpers/bats_helper
     [ -f "${PROJECT_ROOT}/plugins/me/skills/evolve/scripts/build-index.ts" ]
 }
 
-@test "evolve: SKILL.md has proper frontmatter" {
-    local f="${PROJECT_ROOT}/plugins/me/skills/evolve/SKILL.md"
-    has_frontmatter_delimiter "$f"
-    has_frontmatter_field "$f" "name"
-    has_frontmatter_field "$f" "description"
-}
-
 @test "evolve: scripts are executable" {
     [ -x "${PROJECT_ROOT}/plugins/me/skills/evolve/scripts/build-index.ts" ]
 }

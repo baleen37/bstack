@@ -11,25 +11,6 @@ load ../helpers/bats_helper
     [ -f "${PROJECT_ROOT}/plugins/jira/skills/daily-standup/SKILL.md" ]
 }
 
-@test "jira: skills have valid frontmatter" {
-    local jira_skills=(
-        "triage-issue"
-        "capture-tasks-from-meeting-notes"
-        "generate-status-report"
-        "search-company-knowledge"
-        "spec-to-backlog"
-        "daily-standup"
-    )
-
-    for skill_name in "${jira_skills[@]}"; do
-        skill_file="${PROJECT_ROOT}/plugins/jira/skills/${skill_name}/SKILL.md"
-        [ -f "${skill_file}" ]
-        grep -q "^---$" "${skill_file}"
-        grep -q "^name:" "${skill_file}"
-        grep -q "^description:" "${skill_file}"
-    done
-}
-
 @test "jira: plugin.json exists and is valid" {
     [ -f "${PROJECT_ROOT}/plugins/jira/.claude-plugin/plugin.json" ]
     jq empty "${PROJECT_ROOT}/plugins/jira/.claude-plugin/plugin.json"

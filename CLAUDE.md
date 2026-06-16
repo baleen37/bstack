@@ -4,7 +4,7 @@
 
 ## Purpose
 
-bstack - AI 코딩 어시스턴트 툴킷 (Claude Code, OpenCode, 그 외)
+bstack - AI 코딩 어시스턴트 툴킷 (Claude Code, Codex)
 
 AI 보조 개발을 위한 도구들을 제공하며, 반복적 자기 참조 AI 개발 루프(Ralph Loop), Git 워크플로우 보호, 개인용 개발 워크플로우 자동화 등의 기능을 포함합니다.
 
@@ -43,6 +43,8 @@ AI 보조 개발을 위한 도구들을 제공하며, 반복적 자기 참조 AI
 
 ### Agent Compatibility
 
+- Claude Code and Codex compatibility is a required baseline. Preserve both when changing
+  project guidance, plugin metadata, skills, hooks, or validation scripts.
 - Treat this file as provider-neutral project guidance. It must remain usable by Claude Code,
   Codex, and future LLM coding agents.
 - Keep durable project rules in this file. Keep provider-specific glue in thin adapter files only
@@ -75,6 +77,8 @@ AI 보조 개발을 위한 도구들을 제공하며, 반복적 자기 참조 AI
 - Hook script requirements: `set -euo pipefail`, jq for JSON parsing, stderr for errors
 - Skill scripts (under `plugins/*/skills/*/scripts/`) are written in **TypeScript** and run with
   `bun` — do NOT propose Python or shell alternatives for these scripts
+- Do not write tests that assert `SKILL.md` content or frontmatter fields. Test executable
+  scripts, generated artifacts, schemas, and packaging structure instead.
 
 ## Dependencies
 
