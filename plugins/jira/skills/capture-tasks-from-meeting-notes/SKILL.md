@@ -3,7 +3,7 @@ name: capture-tasks-from-meeting-notes
 description: >
   Analyze meeting notes to find action items and create Jira tasks for assigned work.
   When Claude needs to: (1) Create Jira tasks or tickets from meeting notes,
-  (2) Extract or find action items from notes or Confluence pages,
+  (2) Extract or find action items from notes,
   (3) Parse meeting notes for assigned tasks, or
   (4) Analyze notes and generate tasks for team members.
   Identifies assignees, looks up account IDs, and creates tasks with proper context.
@@ -21,7 +21,7 @@ create Jira tickets, meeting action items, extract action items, find action ite
 ## Overview
 
 Automatically extract action items from meeting notes and create Jira tasks with proper assignees.
-This skill parses unstructured meeting notes (from Confluence or pasted text), identifies action items
+This skill parses unstructured meeting notes (pasted text), identifies action items
 with assignees, looks up Jira account IDs, and creates tasks - eliminating the tedious post-meeting
 ticket creation process.
 
@@ -35,36 +35,12 @@ Follow this 7-step process to turn meeting notes into actionable Jira tasks:
 
 ### Step 1: Get Meeting Notes
 
-Obtain the meeting notes from the user.
-
-#### Option A: Confluence Page URL
-
-If user provides a Confluence URL:
-
-```text
-getConfluencePage(
-  cloudId="...",
-  pageId="[extracted from URL]",
-  contentFormat="markdown"
-)
-```
-
-**URL patterns:**
-
-- `https://[site].atlassian.net/wiki/spaces/[SPACE]/pages/[PAGE_ID]/[title]`
-- Extract PAGE_ID from the numeric portion
-- Get cloudId from site name or use `getAccessibleAtlassianResources`
-
-#### Option B: Pasted Text
-
-If user pastes meeting notes directly:
+Obtain the meeting notes from the user as pasted text.
 
 - Use the text as-is
 - No fetching needed
 
-#### If Unclear
-
-Ask: "Do you have a Confluence link to the meeting notes, or would you like to paste them directly?"
+If no notes are provided, ask: "Please paste the meeting notes you'd like me to analyze."
 
 ---
 
@@ -334,8 +310,6 @@ Use action verbs and be specific:
 **Context:**
 [Meeting title/date]
 [Relevant discussion points or decisions]
-
-**Source:** [Link to Confluence meeting notes if available]
 
 **Original Note:**
 > [Exact quote from meeting notes]
