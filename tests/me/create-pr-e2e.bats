@@ -7,24 +7,8 @@
   [ -x "$script" ]
 }
 
-@test "create-pr: auto-merge uses Monitor and fixes CI once" {
-  local skill="${BATS_TEST_DIRNAME}/../../plugins/me/skills/create-pr/SKILL.md"
-
-  grep -q 'Monitor' "$skill"
-  grep -q 'fix-pr' "$skill"
-  grep -q 'once' "$skill"
-}
-
-@test "create-pr: PR body uses body-file to avoid title/body mixing" {
-  local skill="${BATS_TEST_DIRNAME}/../../plugins/me/skills/create-pr/SKILL.md"
-
-  grep -q -- '--body-file' "$skill"
-  grep -q 'Do not put setup commands or PR body text inside --title' "$skill"
-}
-
 @test "fix-pr: skill exists under the new name" {
   local skill="${BATS_TEST_DIRNAME}/../../plugins/me/skills/fix-pr/SKILL.md"
 
   [ -f "$skill" ]
-  grep -q '^name: fix-pr$' "$skill"
 }

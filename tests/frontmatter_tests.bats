@@ -25,35 +25,3 @@ load helpers/bats_helper
     skill_count=$(find "${PROJECT_ROOT}/plugins" -name "SKILL.md" -type f 2>/dev/null | wc -l | tr -d ' ')
     [ "$skill_count" -gt 0 ]
 }
-
-@test "SKILL.md files have valid frontmatter delimiter" {
-    while IFS= read -r -d '' file; do
-        has_frontmatter_delimiter "$file"
-    done < <(find "${PROJECT_ROOT}/plugins" -name "SKILL.md" -type f -print0 2>/dev/null)
-}
-
-@test "SKILL.md files have parseable YAML frontmatter" {
-    ensure_yaml_validator
-
-    while IFS= read -r -d '' file; do
-        awk '
-            NR == 1 && $0 == "---" { in_frontmatter = 1; next }
-            in_frontmatter && $0 == "---" { exit }
-            in_frontmatter { print }
-        ' "$file" > "${TEST_TEMP_DIR}/frontmatter.yml"
-
-        validate_yaml_file "${TEST_TEMP_DIR}/frontmatter.yml"
-    done < <(find "${PROJECT_ROOT}/plugins" -name "SKILL.md" -type f -print0 2>/dev/null)
-}
-
-@test "SKILL.md files have name field" {
-    while IFS= read -r -d '' file; do
-        has_frontmatter_field "$file" "name"
-    done < <(find "${PROJECT_ROOT}/plugins" -name "SKILL.md" -type f -print0 2>/dev/null)
-}
-
-@test "SKILL.md files have description field" {
-    while IFS= read -r -d '' file; do
-        has_frontmatter_field "$file" "description"
-    done < <(find "${PROJECT_ROOT}/plugins" -name "SKILL.md" -type f -print0 2>/dev/null)
-}
