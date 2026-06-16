@@ -24,7 +24,7 @@
       "Task",
       "mcp__context7__*"
     ],
-    "deny": [],
+    "deny": ["Workflow"],
     "additionalDirectories": ["~/.claude/handoff/"],
     "defaultMode": "auto"
   },
