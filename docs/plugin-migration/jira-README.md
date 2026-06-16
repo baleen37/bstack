@@ -179,7 +179,7 @@ When you first use any Jira-related skill, Claude Code will initiate the OAuth 2
 3. **Authorize Access**: Log in to your Atlassian account and authorize Claude Code
 4. **Automatic Completion**: Authentication completes automatically - return to Claude Code
 
-The OAuth 2.1 flow is handled entirely by Atlassian's MCP server at `https://mcp.atlassian.com/v1/mcp`.
+The OAuth 2.1 flow is handled entirely by Atlassian's MCP server at `https://mcp.atlassian.com/v1/mcp/authv2`.
 Your credentials are never stored locally.
 
 ### Step 3: Verify Connection
@@ -225,7 +225,7 @@ The plugin connects to Atlassian's official MCP server:
 {
   "atlassian": {
     "type": "http",
-    "url": "https://mcp.atlassian.com/v1/mcp"
+    "url": "https://mcp.atlassian.com/v1/mcp/authv2"
   }
 }
 ```
