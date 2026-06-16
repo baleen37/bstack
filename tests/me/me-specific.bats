@@ -57,6 +57,14 @@ load ../helpers/bats_helper
     done
 }
 
+@test "me: qa skill treats named environments and execution paths as scope refinement" {
+    local skill_file="${PROJECT_ROOT}/plugins/me/skills/qa/SKILL.md"
+    grep -q "scope refinement" "$skill_file"
+    grep -q "local/alpha/beta/prod" "$skill_file"
+    grep -q "Jenkins" "$skill_file"
+    grep -q "batch" "$skill_file"
+}
+
 @test "me: release-with-github-app doc uses bun release flow" {
     local release_doc="${PROJECT_ROOT}/docs/release-with-github-app.yml"
 

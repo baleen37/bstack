@@ -10,6 +10,7 @@ import { createHash } from "node:crypto";
 
 // ── 타입 ───────────────────────────────────────────────
 type EventKind = "user" | "skill" | "interrupt" | "error" | "agent" | "repeat";
+type DropReason = "stale" | "missing_current_body";
 
 interface Event {
   t: number;
@@ -61,6 +62,7 @@ interface RecentSkill {
   skill_path: string;     // transcript가 가리킨 호출 시점 base 경로의 SKILL.md (보통 캐시 경로)
   repo_path?: string;     // cwd repo 안에서 찾은 편집 가능한 SKILL.md (있으면 직접 edit 대상)
   current_hash?: string;
+  drop_reason?: DropReason;
   observed_bodies: ObservedBody[];
   stale: boolean;         // 세션 이후 본문 변경 여부
   dropped: boolean;       // stale 또는 파일없음 → events 제외됨
@@ -104,6 +106,11 @@ interface LoadedTranscript {
   turns: Turn[];
   sessionTitle?: string;
   skillInvocations: SkillInvocation[];
+}
+
+interface SignalSummary {
+  signal: string;
+  weight: number;
 }
 
 function normalizeToolResultContent(raw: any): string {
@@ -431,6 +438,19 @@ function buildSummary(turns: number, events: Event[]): Summary {
   };
 }
 
+// kind별 카운트 → 한 줄 요약. interrupt/error/repeat은 개선 신호가 농축된 종류라 앞세운다.
+function summarizeSignal(events: Event[]): SignalSummary {
+  const counts: Record<string, number> = {};
+  for (const event of events) counts[event.kind] = (counts[event.kind] ?? 0) + 1;
+
+  const order: EventKind[] = ["interrupt", "error", "repeat", "user", "agent", "skill"];
+  const parts = order.filter((kind) => counts[kind]).map((kind) => `${counts[kind]} ${kind}`);
+  return {
+    signal: parts.length ? parts.join(", ") : "no events",
+    weight: (counts["interrupt"] ?? 0) + (counts["error"] ?? 0) + (counts["repeat"] ?? 0),
+  };
+}
+
 function buildIndex(jsonlPath: string): SessionIndex {
   const { turns, sessionTitle } = loadTurns(jsonlPath);
   const events = buildEvents(turns);
@@ -472,6 +492,26 @@ function repoSkillPath(repoRoot: string | null, name: string): string | undefine
 function currentBodyHash(skillMd: string): string | null {
   if (!existsSync(skillMd)) return null;
   return bodyHash(stripFrontmatter(readFileSync(skillMd, "utf8")));
+}
+
+function formatRecentHeadline(sessionCount: number, skills: RecentSkill[]): string {
+  const dropped = skills.filter((s) => s.dropped);
+  let droppedPart = `${dropped.length} dropped`;
+  if (dropped.length > 0) {
+    const counts = new Map<string, number>();
+    for (const skill of dropped) {
+      if (!skill.drop_reason) continue;
+      counts.set(skill.drop_reason, (counts.get(skill.drop_reason) ?? 0) + 1);
+    }
+    const reasons = [...counts.entries()].map(([reason, n]) => `${n} ${reason}`);
+    if (reasons.length > 0) droppedPart += `: ${reasons.join(", ")}`;
+  }
+  return `${sessionCount} sessions · ${skills.length} skills · ${droppedPart}`;
+}
+
+function dropReasonFor(currentHash: string | null, hasCurrentBody: boolean): DropReason | undefined {
+  if (hasCurrentBody) return undefined;
+  return currentHash === null ? "missing_current_body" : "stale";
 }
 
 function buildRecentIndex(paths: string[], cwd: string): RecentIndex {
@@ -537,16 +577,6 @@ function buildRecentIndex(paths: string[], cwd: string): RecentIndex {
     }
   }
 
-  // kind별 카운트 → 한 줄 요약. interrupt/error/repeat은 개선 신호가 농축된 종류라 앞세운다.
-  function summarizeSignal(events: Event[]): { signal: string; weight: number } {
-    const c: Record<string, number> = {};
-    for (const e of events) c[e.kind] = (c[e.kind] ?? 0) + 1;
-    const order: EventKind[] = ["interrupt", "error", "repeat", "user", "agent", "skill"];
-    const parts = order.filter((k) => c[k]).map((k) => `${c[k]} ${k}`);
-    const weight = (c["interrupt"] ?? 0) + (c["error"] ?? 0) + (c["repeat"] ?? 0);
-    return { signal: parts.length ? parts.join(", ") : "no events", weight };
-  }
-
   const skills: Array<RecentSkill & { _weight: number }> = [];
   for (const [name, a] of acc) {
     const cacheSkillMd = join(a.baseDir, "SKILL.md");
@@ -554,29 +584,33 @@ function buildRecentIndex(paths: string[], cwd: string): RecentIndex {
     const repoPath = repoSkillPath(repoRoot, name);
     const nowHashFull = currentBodyHash(repoPath ?? cacheSkillMd);
     const hasCurrentBody = nowHashFull !== null && a.versionsByHash.has(nowHashFull);
+    const summariesByHash = new Map(
+      [...a.versionsByHash.keys()].map((hash) => [hash, summarizeSignal(a.eventsByHash.get(hash) ?? [])]),
+    );
     const matchingEvents = hasCurrentBody ? a.eventsByHash.get(nowHashFull) ?? [] : [];
-    // stale = 현재 본문이 호출시점 본문들 중 어느 것과도 일치하지 않음
-    const stale = !hasCurrentBody;
-    const dropped = stale;
+    const dropReason = dropReasonFor(nowHashFull, hasCurrentBody);
+    const dropped = dropReason !== undefined;
+    const stale = dropped;
     const evs = dropped ? [] : matchingEvents;
-    const { signal, weight } = summarizeSignal(evs);
+    const { signal, weight } = hasCurrentBody ? summariesByHash.get(nowHashFull)! : summarizeSignal([]);
     const observed_bodies = [...a.versionsByHash.keys()].sort().map((hash) => ({
       hash: shortHash(hash),
       current: hash === nowHashFull,
       versions: [...(a.versionsByHash.get(hash) ?? [])].sort(),
       seen_in: [...(a.seenByHash.get(hash) ?? [])].sort(),
-      signal: summarizeSignal(a.eventsByHash.get(hash) ?? []).signal,
+      signal: summariesByHash.get(hash)!.signal,
     }));
     skills.push({
       name,
       skill_path: cacheSkillMd,
       ...(repoPath ? { repo_path: repoPath } : {}),
       ...(nowHashFull ? { current_hash: shortHash(nowHashFull) } : {}),
+      ...(dropReason ? { drop_reason: dropReason } : {}),
       observed_bodies,
       stale,
       dropped,
       seen_in: [...a.seen].sort(),
-      signal: dropped ? "dropped (stale)" : signal,
+      signal: dropped ? `dropped (${dropReason})` : signal,
       events: evs,
       _weight: weight,
     });
@@ -585,13 +619,12 @@ function buildRecentIndex(paths: string[], cwd: string): RecentIndex {
   skills.sort((x, y) => y._weight - x._weight || y.events.length - x.events.length || x.name.localeCompare(y.name));
   for (const s of skills) delete (s as { _weight?: number })._weight;
 
-  const droppedN = skills.filter((s) => s.dropped).length;
   return {
     mode: "recent",
     session_count: sessions.length,
     sessions,
     skills,
-    summary: { headline: `${sessions.length} sessions · ${skills.length} skills · ${droppedN} dropped` },
+    summary: { headline: formatRecentHeadline(sessions.length, skills) },
   };
 }
 
@@ -684,15 +717,24 @@ function findSkillSessionPaths(names: string[], n: number): string[] {
     .map((f) => f.path);
 }
 
+function noSkillSessions(name: string): never {
+  console.error(`no sessions invoking skill '${name}' found under ${join(homedir(), ".claude", "projects")}`);
+  process.exit(14);
+}
+
 // ~/.claude/projects 전체에서 `<name>` skill이 호출된 세션을 mtime 순 최근 N개 수집.
-// --recent 가 현재 프로젝트+worktree로 한정되는 것과 달리, --skill 은 프로젝트 경계를 넘는다.
-function skillSessionPaths(names: string[], n: number): string[] {
-  const files = findSkillSessionPaths(names, n);
-  if (files.length === 0) {
-    console.error(`no sessions invoking skill '${names[0]}' found under ${join(homedir(), ".claude", "projects")}`);
-    process.exit(14);
-  }
-  return files;
+// Exact skill names win. If there is no exact match for a qualified name like `me:research`,
+// fall back to its basename (`research`) without scanning exact sessions twice.
+function resolveSkillSessionPaths(name: string, n: number): { paths: string[]; skillNames: string[] } {
+  const exactPaths = findSkillSessionPaths([name], n);
+  if (exactPaths.length > 0) return { paths: exactPaths, skillNames: [name] };
+
+  const fallbackNames = skillNameCandidates(name).filter((candidate) => candidate !== name);
+  if (fallbackNames.length === 0) noSkillSessions(name);
+
+  const paths = findSkillSessionPaths(fallbackNames, n);
+  if (paths.length === 0) noSkillSessions(name);
+  return { paths, skillNames: fallbackNames };
 }
 
 function resolveTranscriptPath(opts: { jsonlPath?: string; sessionId?: string; cwd: string }): string {
@@ -818,14 +860,11 @@ function parseArgs(argv: string[]): { jsonlPath?: string; sessionId?: string; re
 const opts = parseArgs(process.argv);
 if (opts.skill !== undefined) {
   const n = opts.recent ?? 10;
-  const exactPaths = findSkillSessionPaths([opts.skill], n);
-  const skillNames = exactPaths.length > 0 ? [opts.skill] : skillNameCandidates(opts.skill);
-  const paths = exactPaths.length > 0 ? exactPaths : skillSessionPaths(skillNames, n);
+  const { paths, skillNames } = resolveSkillSessionPaths(opts.skill, n);
   const index = buildRecentIndex(paths, process.cwd());
   // --skill 은 대상 스킬 하나로 좁혀서 내보낸다 (같은 세션의 다른 스킬은 제외).
   index.skills = index.skills.filter((s) => skillNames.includes(s.name));
-  const droppedN = index.skills.filter((s) => s.dropped).length;
-  index.summary.headline = `${index.session_count} sessions · ${index.skills.length} skills · ${droppedN} dropped`;
+  index.summary.headline = formatRecentHeadline(index.session_count, index.skills);
   console.log(JSON.stringify(index, null, 2));
 } else if (opts.recent !== undefined) {
   const paths = recentSessionPaths(process.cwd(), opts.recent);
