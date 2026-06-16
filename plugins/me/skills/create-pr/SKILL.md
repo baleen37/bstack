@@ -11,12 +11,14 @@ S="${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts"
 "$S/preflight-check.sh"          # syncs if behind base
 git add <files> && git commit -m "type(scope): msg"
 git push -u origin HEAD
-gh pr create --title "$(git log -1 --pretty=%s)" --body "<body>"
+gh pr create --title "$(git log -1 --pretty=%s)" --body-file /tmp/pr_body.md
 # Auto merge: only if user explicitly requests it
 # gh pr merge --auto --squash
 # REQUIRED: invoke via Monitor tool — streams per-check events + terminal event.
 # Monitor({command: "\"$S/wait-for-merge.sh\"", description: "PR checks", timeout_ms: 1800000, persistent: false})
 ```
+
+Write the PR body to a file and pass it with `--body-file`. Do not put setup commands or PR body text inside --title.
 
 If user requests auto merge: `gh pr merge --auto --squash` → invoke `"$S/wait-for-merge.sh"` via the Monitor tool. Each `check: <name>: <bucket>` line streams as a notification; the terminal event has one of these prefixes — branch on it:
 - `MERGED:` → done

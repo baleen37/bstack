@@ -355,11 +355,11 @@ EOF
     run bun "$INDEXER" --recent 3
     rm -rf "$pdir"
     [ "$status" -eq 0 ]
-    # signal 필드가 문자열로 존재하고, interrupt가 집계되어 있다 (skill은 stale-dropped일 수 있으나
-    # 이 세션은 skilldir에 디스크 SKILL.md가 없으므로 dropped → signal=="dropped (stale)").
+    # signal 필드가 문자열로 존재하고, interrupt가 집계되어 있다 (skill은 dropped일 수 있으나
+    # 이 세션은 skilldir에 디스크 SKILL.md가 없으므로 dropped → signal=="dropped (missing_current_body)").
     # dropped 케이스의 signal 표기를 검증.
     echo "$output" | jq -e '[.skills[] | select(.name == "sig")][0].signal | type == "string"'
-    echo "$output" | jq -e '[.skills[] | select(.name == "sig")][0].signal == "dropped (stale)"'
+    echo "$output" | jq -e '[.skills[] | select(.name == "sig")][0].signal == "dropped (missing_current_body)"'
 }
 
 @test "evolve build-index: --recent live skill signal counts interrupt/error/repeat first" {
