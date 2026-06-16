@@ -20,12 +20,26 @@ user before applying.
 /me:evolve
 /me:evolve --session <transcript-session-id>
 /me:evolve --recent [N]
+/me:evolve --cwd <worktree-dir> --recent [N]
+/me:evolve --cwd <worktree-dir> --skill <name> [--recent N]
 /me:evolve --skill <name> [--recent N]
+/me:evolve <skill> [<skill> ...]
+/me:evolve <worktree-or-transcript-path>
 /me:evolve --dry-run
 ```
 
 `--session` expects the `.jsonl` transcript id, not the slash-command `ARGUMENTS` uuid. If the user did not explicitly
 pass `--session`, do not invent one from `ARGUMENTS`.
+
+Plain skill arguments are slash-command shorthand. For example, `/me:evolve handoff pickup` means run separate
+`--skill handoff` and `--skill pickup` indexes; do not pass the raw positional list to `build-index.ts`.
+
+Plain directory or `.jsonl` path arguments are analysis targets. A directory means "use the latest transcript for that
+cwd". If the argument mixes a path with natural-language intent, interpret the intent first; do not forward the whole
+sentence to the indexer.
+
+Use `--cwd <worktree-dir>` when the user wants recent or skill-focused analysis for another worktree. This changes
+transcript discovery and repo-owned skill mapping for `--recent`, `--skill`, or `--session`.
 
 ## Guardrails
 
@@ -33,30 +47,33 @@ pass `--session`, do not invent one from `ARGUMENTS`.
 - Do not edit external plugin cache paths under `~/.claude/plugins/cache/`; append those proposals to
   `docs/superpowers/evolutions/YYYY-MM-DD-upstream-suggestions.md`.
 - Do not create new skills.
-- Do not auto-commit, auto-push, or apply patches without user approval.
+- Do not apply patches, commit, or push without explicit user approval.
 - Repo-owned `plugins/*/skills/<name>/SKILL.md` files are valid edit targets.
 - Skill scripts are TypeScript for Bun. Do not add shell or Python alternatives.
 
 ## Phase 0: Build Index
 
-1. Refuse dirty trees: if `git status --porcelain` is non-empty, print `commit or stash first, then re-run` and stop.
+1. Dirty trees may still run read-only index and proposal discovery. Do not commit, stash, revert, or clean user
+   changes.
 2. Run the indexer from the skill base directory:
 
 ```bash
-bun "<Base directory>/scripts/build-index.ts" [--session <id> | --recent N | --skill <name>]
+bun "<Base directory>/scripts/build-index.ts" [<jsonl-path-or-worktree-dir> | --cwd <dir>] [--session <id> | --recent N | --skill <name>]
 ```
 
 Do not forward `--dry-run` to the indexer. It is handled by the main agent.
 
 Exit codes: `0` ok, `2` bad args, `14` transcript/project/session/skill not found.
 
-Stop early when the index has no current evidence:
+Stop early when the index has no current evidence. Evaluate these conditions in order:
 
 - Single session with empty `events[]`: print `no improvement signals found in this session`.
 - Recent mode with empty `skills[]`: print `no invoked skills found in recent sessions`.
 - All candidate skills dropped: report `drop_reason`, `skill_path`, and `observed_bodies[].versions`; do not run proposal
   subagents.
+  Example: `11 sessions · 1 skills · 1 dropped: 1 stale` means report diagnostics only, with no proposal.
 - No current skill has events: print `no improvement signals found in current skill bodies`.
+- Some current skills have events: probe only those skills; mention dropped or empty skills as diagnostics.
 
 ## Index Notes
 
@@ -164,7 +181,8 @@ Reject broad rewrites, proposals without direct `event_indexes`, or patches base
 After parsing proposals:
 
 1. Divert `is_external_cache:true` proposals to upstream suggestions; do not apply them.
-2. Present one plan and ask once:
+2. If `--dry-run` was passed, show the plan only; do not ask for approval, apply patches, or commit.
+3. Present one plan and ask once:
 
 ```text
 Plan (N patches, one commit each):
@@ -173,12 +191,13 @@ P1  <target_file> - <rationale>
     addresses: <addresses_signal>
     <full diff>
 
-Apply? [all / none / P1 P3]
+Apply and commit? [all / none / P1 P3]
 ```
 
+1. Before applying or committing selected patches, require `git status --porcelain` to be empty except for
+   upstream-suggestions files created by this run. If dirty, stop and ask the user to clean the tree.
 1. Apply selected patches sequentially: `git apply` then one commit per patch.
 1. If any patch fails, stop. Report the failed id, git error, and already-created commit SHAs.
-1. If `--dry-run` was passed, show the plan only and stop.
 1. Finalize with:
    - Probe summary: scenarios checked, proposal-worthy count, diagnostic-only/no-signal reasons
    - applied proposal ids with `probe_scenario` and `event_indexes`
