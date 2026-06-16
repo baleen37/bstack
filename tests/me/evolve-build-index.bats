@@ -283,6 +283,8 @@ EOF
     rm -rf "$pdir"
     [ "$status" -eq 0 ]
     echo "$output" | jq -e '[.skills[] | select(.name == "demo2")][0].stale == true'
+    echo "$output" | jq -e '[.skills[] | select(.name == "demo2")][0].drop_reason == "stale"'
+    echo "$output" | jq -e '[.skills[] | select(.name == "demo2")][0].signal == "dropped (stale)"'
     echo "$output" | jq -e '[.skills[] | select(.name == "demo2")][0].dropped == true'
     echo "$output" | jq -e '[.skills[] | select(.name == "demo2")][0].events | length == 0'
 }
@@ -303,6 +305,9 @@ EOF
     rm -rf "$pdir"
     [ "$status" -eq 0 ]
     echo "$output" | jq -e '[.skills[] | select(.name == "ghost")][0].stale == true'
+    echo "$output" | jq -e '[.skills[] | select(.name == "ghost")][0].drop_reason == "missing_current_body"'
+    echo "$output" | jq -e '[.skills[] | select(.name == "ghost")][0].dropped == true'
+    echo "$output" | jq -e '[.skills[] | select(.name == "ghost")][0].events | length == 0'
 }
 
 @test "evolve build-index: --recent merges sessions across worktree sibling dirs" {
@@ -417,6 +422,7 @@ EOF
     echo "$output" | jq -e '[.skills[] | select(.name == "observed")][0].observed_bodies | length == 2'
     echo "$output" | jq -e '[.skills[] | select(.name == "observed")][0].observed_bodies[] | select(.current == true) | .versions == ["17.18.0","17.19.1"]'
     echo "$output" | jq -e '[.skills[] | select(.name == "observed")][0].observed_bodies[] | select(.current == false) | .versions == ["17.17.0"]'
+    echo "$output" | jq -e '[.skills[] | select(.name == "observed")][0] | .current_hash == (.observed_bodies[] | select(.current == true) | .hash)'
     echo "$output" | jq -e '[.skills[] | select(.name == "observed")][0] | .events | map(select(.text == "current user signal")) | length == 1'
     echo "$output" | jq -e '[.skills[] | select(.name == "observed")][0] | .events | map(select(.text == "old user signal")) | length == 0'
 }
@@ -504,6 +510,7 @@ EOF
     [ "$status" -eq 0 ]
     # repo_path가 repo 소스를 가리킨다
     echo "$output" | jq -e '[.skills[] | select(.name == "mapme")][0].repo_path | test("plugins/me/skills/mapme/SKILL.md")'
+    echo "$output" | jq -e '[.skills[] | select(.name == "mapme")][0].skill_path | test("/cache/mapme/SKILL.md$")'
     # 캐시 디렉터리는 디스크에 없지만(null이 아니라) repo 본문으로 비교해 stale:false
     echo "$output" | jq -e '[.skills[] | select(.name == "mapme")][0].stale == false'
 }
@@ -640,9 +647,23 @@ EOF
     [ "$status" -eq 2 ]
 }
 
+@test "evolve build-index: raw multi-skill shorthand is rejected clearly" {
+    run bun "$INDEXER" --skill handoff pickup
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"do not combine --skill with positional arguments"* ]]
+}
+
 @test "evolve build-index: --dry-run is rejected by indexer" {
     run bun "$INDEXER" --dry-run
     [ "$status" -eq 2 ]
+}
+
+@test "evolve build-index: --help prints usage" {
+    run bun "$INDEXER" --help
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Usage: bun build-index.ts"* ]]
+    [[ "$output" == *"--cwd <dir>"* ]]
+    [[ "$output" == *"--dry-run is handled by the /me:evolve skill"* ]]
 }
 
 @test "evolve build-index: --session without value exits 2" {
@@ -681,6 +702,12 @@ EOF
     [[ "$output" == *"--recent requires a positive integer"* ]]
 }
 
+@test "evolve build-index: --recent rejects transcript paths with clear error" {
+    run bun "$INDEXER" --recent fixtures/chosen.jsonl
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"--recent cannot be combined with a transcript path"* ]]
+}
+
 @test "evolve build-index: --skill --recent invalid value exits 2 with clear error" {
     run bun "$INDEXER" --skill evolve --recent nope
     [ "$status" -eq 2 ]
@@ -701,10 +728,15 @@ EOF
     jq -c --arg t "$tb" '{"type":"user","isMeta":true,"sourceToolUseID":"d1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$p/s.jsonl"
 
     run bun "$INDEXER" --skill sumkeep
-    rm -rf "$p"
     [ "$status" -eq 0 ]
     echo "$output" | jq -e '[.skills[].name] == ["sumkeep"]'
     echo "$output" | jq -e '.summary.headline | test("1 skills · 0 dropped")'
+
+    run bun "$INDEXER" --skill sumdrop
+    rm -rf "$p"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '[.skills[].name] == ["sumdrop"]'
+    echo "$output" | jq -e '.summary.headline | test("1 skills · 1 dropped: 1 stale")'
 }
 
 @test "evolve build-index: duplicate singleton flags exit 2" {
@@ -719,6 +751,30 @@ EOF
     run bun "$INDEXER" --skill a --skill b
     [ "$status" -eq 2 ]
     [[ "$output" == *"--skill can only be specified once"* ]]
+
+    run bun "$INDEXER" --cwd /tmp --cwd /tmp
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"--cwd can only be specified once"* ]]
+}
+
+@test "evolve build-index: --cwd without value exits 2" {
+    run bun "$INDEXER" --cwd
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"--cwd requires a directory"* ]]
+}
+
+@test "evolve build-index: --cwd rejects file path" {
+    local f="$BATS_TEST_TMPDIR/not-a-dir"
+    touch "$f"
+    run bun "$INDEXER" --cwd "$f"
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"--cwd expects a directory:"* ]]
+}
+
+@test "evolve build-index: --cwd cannot combine with positional path" {
+    run bun "$INDEXER" --cwd /tmp "$FIXTURE"
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"--cwd cannot be combined with a transcript path"* ]]
 }
 
 @test "evolve build-index: --session rejects path-like values" {
@@ -762,6 +818,123 @@ EOF
     mkdir -p "$dirpath"
     run bun "$INDEXER" "$dirpath"
     [ "$status" -eq 14 ]
-    [[ "$output" == *"transcript path is not a file:"* ]]
+    [[ "$output" == *"transcript directory not found:"* ]]
     [[ "$output" != *"EISDIR"* ]]
+}
+
+@test "evolve build-index: positional directory resolves that cwd latest transcript" {
+    local target="$BATS_TEST_TMPDIR/target-worktree"
+    mkdir -p "$target"
+    local real_target; real_target="$(cd "$target" && pwd -P)"
+    local pdir="$HOME/.claude/projects/$(echo "$real_target" | sed 's/[/.]/-/g')"
+    mkdir -p "$pdir"
+    jq -c '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"target cwd signal"}]}}' -n > "$pdir/old.jsonl"
+    jq -c '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"newest target signal"}]}}' -n > "$pdir/new.jsonl"
+    touch -t 202001010101 "$pdir/old.jsonl"
+    touch -t 202001010102 "$pdir/new.jsonl"
+
+    run bun "$INDEXER" "$target"
+    rm -rf "$pdir"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '.session_id == "new"'
+    echo "$output" | jq -e '.events[0].text == "newest target signal"'
+}
+
+@test "evolve build-index: --cwd resolves another cwd latest transcript" {
+    local target="$BATS_TEST_TMPDIR/cwd-current-target"
+    mkdir -p "$target"
+    local real_target; real_target="$(cd "$target" && pwd -P)"
+    local pdir="$HOME/.claude/projects/$(echo "$real_target" | sed 's/[/.]/-/g')"
+    mkdir -p "$pdir"
+    jq -c '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"cwd current signal"}]}}' -n > "$pdir/current.jsonl"
+
+    run bun "$INDEXER" --cwd "$target"
+    rm -rf "$pdir"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '.session_id == "current"'
+    echo "$output" | jq -e '.events[0].text == "cwd current signal"'
+}
+
+@test "evolve build-index: --cwd --session resolves session in target cwd" {
+    local target="$BATS_TEST_TMPDIR/cwd-session-target"
+    mkdir -p "$target"
+    local real_target; real_target="$(cd "$target" && pwd -P)"
+    local pdir="$HOME/.claude/projects/$(echo "$real_target" | sed 's/[/.]/-/g')"
+    mkdir -p "$pdir"
+    jq -c '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"chosen target session"}]}}' -n > "$pdir/chosen.jsonl"
+
+    run bun "$INDEXER" --cwd "$target" --session chosen
+    rm -rf "$pdir"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '.session_id == "chosen"'
+    echo "$output" | jq -e '.events[0].text == "chosen target session"'
+}
+
+@test "evolve build-index: --cwd --recent uses target cwd worktree group" {
+    local base="$BATS_TEST_TMPDIR/cwd-recent"
+    local wt="$base/.worktrees/wt1"
+    mkdir -p "$wt"
+    local real_base; real_base="$(cd "$base" && pwd -P)"
+    local real_wt; real_wt="$(cd "$wt" && pwd -P)"
+    local base_pdir="$HOME/.claude/projects/$(echo "$real_base" | sed 's/[/.]/-/g')"
+    local wt_pdir="$HOME/.claude/projects/$(echo "$real_wt" | sed 's/[/.]/-/g')"
+    mkdir -p "$base_pdir" "$wt_pdir"
+    local skilldir="$BATS_TEST_TMPDIR/skills/cwdrecent"; mkdir -p "$skilldir"; printf -- '# cwdrecent\n' > "$skilldir/SKILL.md"
+    local real_skill; real_skill="$(cd "$skilldir" && pwd -P)"
+    local text; text="$(printf 'Base directory for this skill: %s\n\n# cwdrecent\n' "$real_skill")"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"a1","name":"Skill","input":{"skill":"cwdrecent"}}]}}' -n > "$base_pdir/a.jsonl"
+    jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"a1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$base_pdir/a.jsonl"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"b1","name":"Skill","input":{"skill":"cwdrecent"}}]}}' -n > "$wt_pdir/b.jsonl"
+    jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"b1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$wt_pdir/b.jsonl"
+
+    run bun "$INDEXER" --cwd "$wt" --recent 10
+    rm -rf "$base_pdir" "$wt_pdir"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '.session_count == 2'
+    echo "$output" | jq -e '[.skills[].name] == ["cwdrecent"]'
+}
+
+@test "evolve build-index: --cwd --skill maps repo_path from target cwd" {
+    local repo="$BATS_TEST_TMPDIR/cwd-skill-repo"
+    mkdir -p "$repo/plugins/me/skills/cwdskill"
+    printf -- '# cwdskill\n' > "$repo/plugins/me/skills/cwdskill/SKILL.md"
+    local real_repo; real_repo="$(cd "$repo" && pwd -P)"
+    local pdir="$HOME/.claude/projects/-tmp-evolve-cwd-skill-$$"
+    mkdir -p "$pdir"
+    local cachedir="$BATS_TEST_TMPDIR/cache/cwdskill"
+    local text; text="$(printf 'Base directory for this skill: %s\n\n# cwdskill\n' "$cachedir")"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"c1","name":"Skill","input":{"skill":"cwdskill"}}]}}' -n > "$pdir/s.jsonl"
+    jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"c1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/s.jsonl"
+
+    run bun "$INDEXER" --cwd "$repo" --skill cwdskill --recent 1
+    rm -rf "$pdir"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '[.skills[] | select(.name == "cwdskill")][0].repo_path | test("plugins/me/skills/cwdskill/SKILL.md")'
+    echo "$output" | jq -e '[.skills[] | select(.name == "cwdskill")][0].stale == false'
+}
+
+@test "evolve build-index: noisy local command markers are not user events" {
+    local noise_fixture="$BATS_TEST_TMPDIR/noisy-markers.jsonl"
+    cat > "$noise_fixture" <<'EOF'
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"real user message"}]}}
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"<local-command-stdout>\noutput\n</local-command-stdout>"}]}}
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"<bash-input>pwd</bash-input>"}]}}
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"<bash-stdout>/tmp</bash-stdout>"}]}}
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"[Request interrupted by user]"}]}}
+EOF
+    run bun "$INDEXER" "$noise_fixture"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '[.events[] | select(.kind == "user")] | length == 1'
+    echo "$output" | jq -e '[.events[] | select(.kind == "user")][0].text == "real user message"'
+}
+
+@test "evolve build-index: short approval replies remain user events" {
+    local approval_fixture="$BATS_TEST_TMPDIR/approval-markers.jsonl"
+    cat > "$approval_fixture" <<'EOF'
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"ok"}]}}
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"1"}]}}
+EOF
+    run bun "$INDEXER" "$approval_fixture"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '[.events[] | select(.kind == "user") | .text] == ["ok","1"]'
 }
