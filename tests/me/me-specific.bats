@@ -30,8 +30,8 @@ load ../helpers/bats_helper
     grep -q "git rev-parse.*git-dir" "$script"
 }
 
-@test "me: lifecycle skills include build, test, review, and ship" {
-    for skill in build test review ship; do
+@test "me: lifecycle skills include test, review, and ship" {
+    for skill in test review ship; do
         [ -f "${PROJECT_ROOT}/plugins/me/skills/${skill}/SKILL.md" ]
     done
 }

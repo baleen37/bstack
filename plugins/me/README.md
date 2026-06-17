@@ -6,21 +6,16 @@ Personal Claude Code workflow toolkit for git safety, session continuity, verifi
 
 ### Define
 
-- `to-prd` — Convert conversation context into a PRD and GitHub issue.
-- `gh-to-issue` — Break a plan, spec, or PRD into independently grabbable GitHub issues.
+- `to-prd` — Convert conversation context into a PRD and GitHub issue, optionally breaking it into independently grabbable implementation issues.
 
 ### Plan
 
 - `research` — Explore evidence before acting.
 - `competitive-agents` — Compare parallel approaches for architecture, API, or system decisions.
-- `documentation-and-adrs` — Capture decisions, public API changes, and future context.
 
 ### Build
 
-- `build` — Incrementally implement features or fixes with tests and subagent validation.
 - `setup` — Bootstrap global Claude Code configuration on a new machine.
-- `git-workflow-and-versioning` — Manage branch, commit, conflict, and worktree workflows.
-- `deprecation-and-migration` — Remove old systems and migrate users safely.
 
 ### Verify
 
