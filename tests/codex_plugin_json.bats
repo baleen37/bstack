@@ -57,6 +57,24 @@ eligible_codex_plugins() {
     done <<< "$expected_plugins"
 }
 
+@test "codex and claude share the same skill sources" {
+    local expected_plugins
+    expected_plugins="$(eligible_codex_plugins)"
+
+    while IFS= read -r plugin; do
+        [ -n "$plugin" ] || continue
+
+        local codex_manifest="${PROJECT_ROOT}/plugins/${plugin}/.codex-plugin/plugin.json"
+        local skills_path
+        skills_path=$(jq -r '.skills' "$codex_manifest")
+
+        [ "$skills_path" = "./skills/" ]
+        [ -d "${PROJECT_ROOT}/plugins/${plugin}/skills" ]
+        [ ! -d "${PROJECT_ROOT}/plugins/${plugin}/.codex-plugin/skills" ]
+        [ ! -d "${PROJECT_ROOT}/plugins/${plugin}/.claude-plugin/skills" ]
+    done <<< "$expected_plugins"
+}
+
 @test "codex plugin manifests copy core metadata from claude manifests" {
     local expected_plugins
     expected_plugins="$(eligible_codex_plugins)"
