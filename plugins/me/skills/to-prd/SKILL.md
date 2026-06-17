@@ -1,6 +1,6 @@
 ---
 name: to-prd
-description: Turn the current conversation context into a PRD and submit it as a GitHub issue. Use when user wants to create a PRD from the current context.
+description: Turn the current conversation context into a PRD, submit it as a GitHub issue, and optionally break it into independently-grabbable implementation issues. Use when user wants to create a PRD, or convert a plan/spec into implementation tickets.
 disable-model-invocation: true
 ---
 
@@ -71,3 +71,18 @@ A description of the things that are out of scope for this PRD.
 Any further notes about the feature.
 
 </prd-template>
+
+## Optional: break the PRD into implementation issues
+
+When the user wants implementation tickets (not just the PRD), break the work into **tracer bullet** issues — thin vertical slices that each cut through ALL layers (schema, API, UI, tests) end-to-end, never a horizontal slice of one layer.
+
+<vertical-slice-rules>
+- Each slice delivers a narrow but COMPLETE path through every layer
+- A completed slice is demoable or verifiable on its own
+- Prefer many thin slices over few thick ones
+- Mark each slice HITL (needs human decision/review) or AFK (mergeable without interaction); prefer AFK
+</vertical-slice-rules>
+
+Present the breakdown as a numbered list — for each slice show **Title**, **Type** (HITL/AFK), **Blocked by**, and **User stories covered**. Ask whether the granularity and dependencies are right, and iterate until the user approves.
+
+Then create one GitHub issue per approved slice with `gh issue create`, in dependency order (blockers first) so "Blocked by" can reference real issue numbers. Each issue body: parent reference (`#<prd-issue>`), "What to build" (end-to-end behavior, not layer-by-layer), and "Acceptance criteria" checkboxes. Do NOT close or modify the parent PRD issue.
