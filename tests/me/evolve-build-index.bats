@@ -14,6 +14,16 @@ TAG_FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/slash-cmd-tag-session.jsonl"
 RICH_FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/rich-signals-session.jsonl"
 SKILL_INVOCATION_FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/skill-invocation-session.jsonl"
 
+# 트랜스크립트 스캔을 라이브 ~/.claude/projects 가 아닌 격리된 임시 디렉터리로 돌린다.
+# 이게 없으면 --skill/--recent 가 실행 중인 현재 세션까지 끌어와 결과가 비결정적이 된다
+# (특히 --skill … --recent 1 은 전역 newest 세션 하나만 남겨 fixture를 라이브 세션이 가려버린다).
+# cwd 기반 탐지 테스트도 같은 인코딩(transcriptProjectDir)을 쓰므로 EVOLVE_PROJECTS_DIR 하위에
+# 동일하게 <encoded-cwd> 디렉터리를 만들면 그대로 동작한다.
+setup() {
+    export EVOLVE_PROJECTS_DIR="${BATS_TEST_TMPDIR}/projects"
+    mkdir -p "$EVOLVE_PROJECTS_DIR"
+}
+
 @test "evolve build-index: counts turns" {
     run bun "$INDEXER" "$FIXTURE"
     [ "$status" -eq 0 ]
@@ -185,7 +195,7 @@ EOF
     # process.cwd()는 심볼릭 링크를 해제한 실제 경로를 반환하므로 pwd -P 사용
     local real_proj
     real_proj="$(pwd -P)"
-    local pdir="$HOME/.claude/projects/$(echo "$real_proj" | sed 's/[/.]/-/g')"
+    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_proj" | sed 's/[/.]/-/g')"
     mkdir -p "$pdir"
     cp "$SKILL_INVOCATION_FIXTURE" "$pdir/sess1.jsonl"
     run bun "$INDEXER" --recent 5
@@ -206,7 +216,7 @@ EOF
     cd "$proj"
     local real_proj; real_proj="$(pwd -P)"
     local real_skilldir; real_skilldir="$(cd "$skilldir" && pwd -P)"
-    local pdir="$HOME/.claude/projects/$(echo "$real_proj" | sed 's/[/.]/-/g')"
+    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_proj" | sed 's/[/.]/-/g')"
     mkdir -p "$pdir"
     # printf expands \n to real newlines so jq --arg receives actual multiline text
     local text; text="$(printf 'Base directory for this skill: %s\n\n# demo body\n\nidentical line.\n' "$real_skilldir")"
@@ -229,7 +239,7 @@ EOF
     cd "$proj"
     local real_proj; real_proj="$(pwd -P)"
     local real_skilldir; real_skilldir="$(cd "$skilldir" && pwd -P)"
-    local pdir="$HOME/.claude/projects/$(echo "$real_proj" | sed 's/[/.]/-/g')"
+    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_proj" | sed 's/[/.]/-/g')"
     mkdir -p "$pdir"
     local text; text="$(printf 'Base directory for this skill: %s\r\n\r\n# crlfskill body\r\n\r\nsame line.\r\n' "$real_skilldir")"
     jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"c1","name":"Skill","input":{"skill":"crlfskill"}}]}}' -n > "$pdir/s.jsonl"
@@ -251,7 +261,7 @@ EOF
     cd "$proj"
     local real_proj; real_proj="$(pwd -P)"
     local real_skilldir; real_skilldir="$(cd "$skilldir" && pwd -P)"
-    local pdir="$HOME/.claude/projects/$(echo "$real_proj" | sed 's/[/.]/-/g')"
+    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_proj" | sed 's/[/.]/-/g')"
     mkdir -p "$pdir"
     local text; text="$(printf 'Base directory for this skill: %s\r\r# crskill body\r\rsame line.\r' "$real_skilldir")"
     jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"c1","name":"Skill","input":{"skill":"crskill"}}]}}' -n > "$pdir/s.jsonl"
@@ -273,7 +283,7 @@ EOF
     cd "$proj"
     local real_proj; real_proj="$(pwd -P)"
     local real_skilldir; real_skilldir="$(cd "$skilldir" && pwd -P)"
-    local pdir="$HOME/.claude/projects/$(echo "$real_proj" | sed 's/[/.]/-/g')"
+    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_proj" | sed 's/[/.]/-/g')"
     mkdir -p "$pdir"
     local text; text="$(printf 'Base directory for this skill: %s\n\n# demo body\n\nOLD VERSION AT INVOCATION.\n' "$real_skilldir")"
     jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Skill","input":{"skill":"demo2"}}]}}' -n > "$pdir/s.jsonl"
@@ -294,7 +304,7 @@ EOF
     mkdir -p "$proj"
     cd "$proj"
     local real_proj; real_proj="$(pwd -P)"
-    local pdir="$HOME/.claude/projects/$(echo "$real_proj" | sed 's/[/.]/-/g')"
+    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_proj" | sed 's/[/.]/-/g')"
     mkdir -p "$pdir"
     local ghost="$BATS_TEST_TMPDIR/skills/ghost"
     local text; text="$(printf 'Base directory for this skill: %s\n\n# ghost body\n' "$ghost")"
@@ -319,8 +329,8 @@ EOF
     cd "$wt"
     local real_wt; real_wt="$(pwd -P)"
     local real_base; real_base="$(cd "$base" && pwd -P)"
-    local base_pdir="$HOME/.claude/projects/$(echo "$real_base" | sed 's/[/.]/-/g')"
-    local wt_pdir="$HOME/.claude/projects/$(echo "$real_wt" | sed 's/[/.]/-/g')"
+    local base_pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_base" | sed 's/[/.]/-/g')"
+    local wt_pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_wt" | sed 's/[/.]/-/g')"
     mkdir -p "$base_pdir" "$wt_pdir"
 
     # base 디렉터리 세션: skillA 호출
@@ -348,7 +358,7 @@ EOF
     mkdir -p "$proj"
     cd "$proj"
     local real_proj; real_proj="$(pwd -P)"
-    local pdir="$HOME/.claude/projects/$(echo "$real_proj" | sed 's/[/.]/-/g')"
+    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_proj" | sed 's/[/.]/-/g')"
     mkdir -p "$pdir"
     local skilldir="$BATS_TEST_TMPDIR/skills/sig"
     local text; text="$(printf 'Base directory for this skill: %s\n\n# sig body\n' "$skilldir")"
@@ -377,7 +387,7 @@ EOF
     cd "$proj"
     local real_proj; real_proj="$(pwd -P)"
     local real_skilldir; real_skilldir="$(cd "$skilldir" && pwd -P)"
-    local pdir="$HOME/.claude/projects/$(echo "$real_proj" | sed 's/[/.]/-/g')"
+    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_proj" | sed 's/[/.]/-/g')"
     mkdir -p "$pdir"
     local text; text="$(printf 'Base directory for this skill: %s\n\n# live body\n\nsame.\n' "$real_skilldir")"
     jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"l1","name":"Skill","input":{"skill":"live"}}]}}' -n > "$pdir/s.jsonl"
@@ -398,7 +408,7 @@ EOF
     printf -- '# observed body\n\nsame.\n' > "$repo/plugins/me/skills/observed/SKILL.md"
     cd "$repo"
     local real_repo; real_repo="$(pwd -P)"
-    local pdir="$HOME/.claude/projects/$(echo "$real_repo" | sed 's/[/.]/-/g')"
+    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_repo" | sed 's/[/.]/-/g')"
     mkdir -p "$pdir"
 
     local current18; current18="$(printf 'Base directory for this skill: %s\n\n# observed body\n\nsame.\n' "$BATS_TEST_TMPDIR/cache/bstack/bstack/17.18.0/skills/observed")"
@@ -440,7 +450,7 @@ EOF
     local real_proj; real_proj="$(pwd -P)"
     local real_cache_new; real_cache_new="$(cd "$cache_new" && pwd -P)"
     local real_cache_old; real_cache_old="$(cd "$cache_old" && pwd -P)"
-    local pdir="$HOME/.claude/projects/$(echo "$real_proj" | sed 's/[/.]/-/g')"
+    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_proj" | sed 's/[/.]/-/g')"
     mkdir -p "$pdir"
 
     local old_text; old_text="$(printf 'Base directory for this skill: %s\n\n# cached body\n\nold.\n' "$real_cache_old")"
@@ -475,7 +485,7 @@ EOF
     cd "$proj"
     local real_proj; real_proj="$(pwd -P)"
     local real_skilldir; real_skilldir="$(cd "$skilldir" && pwd -P)"
-    local pdir="$HOME/.claude/projects/$(echo "$real_proj" | sed 's/[/.]/-/g')"
+    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_proj" | sed 's/[/.]/-/g')"
     mkdir -p "$pdir"
     local text; text="$(printf 'Base directory for this skill: %s\n\n# noevents body\n' "$real_skilldir")"
     jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"n1","name":"Skill","input":{"skill":"noevents"}}]}}' -n > "$pdir/s.jsonl"
@@ -497,7 +507,7 @@ EOF
     printf -- '---\nname: mapme\n---\n# mapme body\n\nrepo content.\n' > "$repo/plugins/me/skills/mapme/SKILL.md"
     cd "$repo"
     local real_repo; real_repo="$(pwd -P)"
-    local pdir="$HOME/.claude/projects/$(echo "$real_repo" | sed 's/[/.]/-/g')"
+    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_repo" | sed 's/[/.]/-/g')"
     mkdir -p "$pdir"
     # transcript는 캐시 경로(존재하지 않는 디렉터리)를 가리키지만 본문은 repo 본문과 동일
     local cachedir="$BATS_TEST_TMPDIR/cache/mapme"
@@ -526,7 +536,7 @@ EOF
     cd "$proj"
     local real_proj; real_proj="$(pwd -P)"
     local real_skilldir; real_skilldir="$(cd "$skilldir" && pwd -P)"
-    local pdir="$HOME/.claude/projects/$(echo "$real_proj" | sed 's/[/.]/-/g')"
+    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_proj" | sed 's/[/.]/-/g')"
     mkdir -p "$pdir"
     # 주입 본문 = Base directory + 동일 본문 + 끝에 ARGUMENTS 블록
     local text; text="$(printf 'Base directory for this skill: %s\n\n# argskill body\n\nsame.\n\n\nARGUMENTS: "some user input here"' "$real_skilldir")"
@@ -549,8 +559,8 @@ EOF
     local real_skilldir; real_skilldir="$(cd "$skilldir" && pwd -P)"
     local text; text="$(printf 'Base directory for this skill: %s\n\n# findme body\n\nbody.\n' "$real_skilldir")"
     # 무관한 두 프로젝트 디렉터리 (worktree 형제 아님)
-    local pA="$HOME/.claude/projects/-tmp-evolve-skilltest-projA-$$"
-    local pB="$HOME/.claude/projects/-tmp-evolve-skilltest-projB-$$"
+    local pA="$EVOLVE_PROJECTS_DIR/-tmp-evolve-skilltest-projA-$$"
+    local pB="$EVOLVE_PROJECTS_DIR/-tmp-evolve-skilltest-projB-$$"
     mkdir -p "$pA" "$pB"
     for p in "$pA" "$pB"; do
         jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"f1","name":"Skill","input":{"skill":"findme"}}]}}' -n > "$p/s.jsonl"
@@ -573,7 +583,7 @@ EOF
     printf -- '# evolve body\n' > "$skilldir/SKILL.md"
     local real_skilldir; real_skilldir="$(cd "$skilldir" && pwd -P)"
     local text; text="$(printf 'Base directory for this skill: %s\n\n# evolve body\n' "$real_skilldir")"
-    local p="$HOME/.claude/projects/-tmp-evolve-skilltest-prefixed-$$"
+    local p="$EVOLVE_PROJECTS_DIR/-tmp-evolve-skilltest-prefixed-$$"
     mkdir -p "$p"
     jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"e1","name":"Skill","input":{"skill":"me:evolve"}}]}}' -n > "$p/s.jsonl"
     jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"e1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$p/s.jsonl"
@@ -596,7 +606,7 @@ EOF
     local real_base; real_base="$(cd "$base_dir" && pwd -P)"
     local colon_text; colon_text="$(printf 'Base directory for this skill: %s\n\n# foo:bar body\n' "$real_colon")"
     local base_text; base_text="$(printf 'Base directory for this skill: %s\n\n# bar body\n' "$real_base")"
-    local p="$HOME/.claude/projects/-tmp-evolve-skilltest-colon-exact-$$"
+    local p="$EVOLVE_PROJECTS_DIR/-tmp-evolve-skilltest-colon-exact-$$"
     mkdir -p "$p"
     jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"c1","name":"Skill","input":{"skill":"foo:bar"}}]}}' -n > "$p/colon.jsonl"
     jq -c --arg t "$colon_text" '{"type":"user","isMeta":true,"sourceToolUseID":"c1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$p/colon.jsonl"
@@ -619,7 +629,7 @@ EOF
     local ra; ra="$(cd "$sa" && pwd -P)"; local rb; rb="$(cd "$sb" && pwd -P)"
     local ta; ta="$(printf 'Base directory for this skill: %s\n\n# keep\n' "$ra")"
     local tb; tb="$(printf 'Base directory for this skill: %s\n\n# drop\n' "$rb")"
-    local p="$HOME/.claude/projects/-tmp-evolve-skilltest-filter-$$"
+    local p="$EVOLVE_PROJECTS_DIR/-tmp-evolve-skilltest-filter-$$"
     mkdir -p "$p"
     jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"k1","name":"Skill","input":{"skill":"keep"}}]}}' -n > "$p/s.jsonl"
     jq -c --arg t "$ta" '{"type":"user","isMeta":true,"sourceToolUseID":"k1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$p/s.jsonl"
@@ -720,7 +730,7 @@ EOF
     local ra; ra="$(cd "$sa" && pwd -P)"; local rb; rb="$(cd "$sb" && pwd -P)"
     local ta; ta="$(printf 'Base directory for this skill: %s\n\n# sumkeep\n' "$ra")"
     local tb; tb="$(printf 'Base directory for this skill: %s\n\n# sumdrop\n' "$rb")"
-    local p="$HOME/.claude/projects/-tmp-evolve-skilltest-summary-$$"
+    local p="$EVOLVE_PROJECTS_DIR/-tmp-evolve-skilltest-summary-$$"
     mkdir -p "$p"
     jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"k1","name":"Skill","input":{"skill":"sumkeep"}}]}}' -n > "$p/s.jsonl"
     jq -c --arg t "$ta" '{"type":"user","isMeta":true,"sourceToolUseID":"k1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$p/s.jsonl"
@@ -826,7 +836,7 @@ EOF
     local target="$BATS_TEST_TMPDIR/target-worktree"
     mkdir -p "$target"
     local real_target; real_target="$(cd "$target" && pwd -P)"
-    local pdir="$HOME/.claude/projects/$(echo "$real_target" | sed 's/[/.]/-/g')"
+    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_target" | sed 's/[/.]/-/g')"
     mkdir -p "$pdir"
     jq -c '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"target cwd signal"}]}}' -n > "$pdir/old.jsonl"
     jq -c '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"newest target signal"}]}}' -n > "$pdir/new.jsonl"
@@ -844,7 +854,7 @@ EOF
     local target="$BATS_TEST_TMPDIR/cwd-current-target"
     mkdir -p "$target"
     local real_target; real_target="$(cd "$target" && pwd -P)"
-    local pdir="$HOME/.claude/projects/$(echo "$real_target" | sed 's/[/.]/-/g')"
+    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_target" | sed 's/[/.]/-/g')"
     mkdir -p "$pdir"
     jq -c '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"cwd current signal"}]}}' -n > "$pdir/current.jsonl"
 
@@ -859,7 +869,7 @@ EOF
     local target="$BATS_TEST_TMPDIR/cwd-session-target"
     mkdir -p "$target"
     local real_target; real_target="$(cd "$target" && pwd -P)"
-    local pdir="$HOME/.claude/projects/$(echo "$real_target" | sed 's/[/.]/-/g')"
+    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_target" | sed 's/[/.]/-/g')"
     mkdir -p "$pdir"
     jq -c '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"chosen target session"}]}}' -n > "$pdir/chosen.jsonl"
 
@@ -876,8 +886,8 @@ EOF
     mkdir -p "$wt"
     local real_base; real_base="$(cd "$base" && pwd -P)"
     local real_wt; real_wt="$(cd "$wt" && pwd -P)"
-    local base_pdir="$HOME/.claude/projects/$(echo "$real_base" | sed 's/[/.]/-/g')"
-    local wt_pdir="$HOME/.claude/projects/$(echo "$real_wt" | sed 's/[/.]/-/g')"
+    local base_pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_base" | sed 's/[/.]/-/g')"
+    local wt_pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_wt" | sed 's/[/.]/-/g')"
     mkdir -p "$base_pdir" "$wt_pdir"
     local skilldir="$BATS_TEST_TMPDIR/skills/cwdrecent"; mkdir -p "$skilldir"; printf -- '# cwdrecent\n' > "$skilldir/SKILL.md"
     local real_skill; real_skill="$(cd "$skilldir" && pwd -P)"
@@ -899,7 +909,7 @@ EOF
     mkdir -p "$repo/plugins/me/skills/cwdskill"
     printf -- '# cwdskill\n' > "$repo/plugins/me/skills/cwdskill/SKILL.md"
     local real_repo; real_repo="$(cd "$repo" && pwd -P)"
-    local pdir="$HOME/.claude/projects/-tmp-evolve-cwd-skill-$$"
+    local pdir="$EVOLVE_PROJECTS_DIR/-tmp-evolve-cwd-skill-$$"
     mkdir -p "$pdir"
     local cachedir="$BATS_TEST_TMPDIR/cache/cwdskill"
     local text; text="$(printf 'Base directory for this skill: %s\n\n# cwdskill\n' "$cachedir")"
@@ -937,4 +947,175 @@ EOF
     run bun "$INDEXER" "$approval_fixture"
     [ "$status" -eq 0 ]
     echo "$output" | jq -e '[.events[] | select(.kind == "user") | .text] == ["ok","1"]'
+}
+
+@test "evolve build-index: absolute-path user message is NOT a skill event (P3)" {
+    # 사용자가 절대경로로 시작하는 발화를 하면 가짜 skill(name="Users")로 오분류되면 안 됨
+    local fixture="$BATS_TEST_TMPDIR/abspath.jsonl"
+    cat > "$fixture" <<'EOF'
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"/Users/jito/dev/foo.ts 를 읽고 고쳐줘"}]}}
+EOF
+    run bun "$INDEXER" "$fixture"
+    [ "$status" -eq 0 ]
+    # 가짜 skill 이벤트 없음
+    echo "$output" | jq -e '[.events[] | select(.kind == "skill")] | length == 0'
+    # 실제 user 발화는 보존됨
+    echo "$output" | jq -e '[.events[] | select(.kind == "user")] | length == 1'
+}
+
+@test "evolve build-index: real slash command still detected after P3 fix" {
+    local fixture="$BATS_TEST_TMPDIR/realslash.jsonl"
+    cat > "$fixture" <<'EOF'
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"/me:handoff"}]}}
+EOF
+    run bun "$INDEXER" "$fixture"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '[.events[] | select(.kind == "skill")][0].name == "me:handoff"'
+}
+
+@test "evolve build-index: trivial shell prefixes do not produce repeat events (P2)" {
+    local fixture="$BATS_TEST_TMPDIR/trivial-repeat.jsonl"
+    : > "$fixture"
+    # cd 보일러플레이트 5회 — repeat 신호로 잡히면 안 됨
+    for i in 1 2 3 4 5; do
+      jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"a","name":"Bash","input":{"command":"cd /tmp/work && ls"}}]}}' -n >> "$fixture"
+    done
+    run bun "$INDEXER" "$fixture"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '[.events[] | select(.kind == "repeat")] | length == 0'
+}
+
+@test "evolve build-index: meaningful Bash prefix still produces repeat events" {
+    local fixture="$BATS_TEST_TMPDIR/real-repeat.jsonl"
+    : > "$fixture"
+    for i in 1 2 3 4; do
+      jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"a","name":"Bash","input":{"command":"bun test foo"}}]}}' -n >> "$fixture"
+    done
+    run bun "$INDEXER" "$fixture"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '[.events[] | select(.kind == "repeat")] | length == 1'
+}
+
+@test "evolve build-index: prior summarizes Skill tool by skill name not raw JSON (P4)" {
+    local fixture="$BATS_TEST_TMPDIR/prior-skill.jsonl"
+    : > "$fixture"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"a","name":"Skill","input":{"skill":"superpowers:brainstorming"}}]}}' -n >> "$fixture"
+    jq -c '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"그게 아니라 다르게 해줘"}]}}' -n >> "$fixture"
+    run bun "$INDEXER" "$fixture"
+    [ "$status" -eq 0 ]
+    # prior에 raw JSON("{\"skill\"...)이 아니라 사람이 읽을 수 있는 요약이 들어가야 함
+    echo "$output" | jq -e '[.events[] | select(.kind == "user")][0].prior | any(test("superpowers:brainstorming"))'
+    # JSON 중괄호가 전혀 없어야 함 (raw 덤프 금지)
+    echo "$output" | jq -e '[.events[] | select(.kind == "user")][0].prior | all(test("[{}]") | not)'
+}
+
+@test "evolve build-index: --recent scopes non-skill events to nearest prior skill (DEFECT1)" {
+    # 한 세션에서 skillA → error → skillB → error 순서.
+    # 첫 error는 skillA에만, 둘째 error는 skillB에만 귀속되어야 한다 (양쪽 복사 금지).
+    local skillsroot="$BATS_TEST_TMPDIR/skills"
+    mkdir -p "$skillsroot/skilla" "$skillsroot/skillb"
+    printf -- '# skilla body\n' > "$skillsroot/skilla/SKILL.md"
+    printf -- '# skillb body\n' > "$skillsroot/skillb/SKILL.md"
+
+    local proj="$BATS_TEST_TMPDIR/projdefect1"
+    mkdir -p "$proj"; cd "$proj"
+    local real_proj; real_proj="$(pwd -P)"
+    local da; da="$(cd "$skillsroot/skilla" && pwd -P)"
+    local db; db="$(cd "$skillsroot/skillb" && pwd -P)"
+    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_proj" | sed 's/[/.]/-/g')"
+    mkdir -p "$pdir"
+    local f="$pdir/s.jsonl"; : > "$f"
+    # skillA 호출 + 주입 본문
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"s1","name":"Skill","input":{"skill":"skilla"}}]}}' -n >> "$f"
+    jq -c --arg t "$(printf 'Base directory for this skill: %s\n\n# skilla body\n' "$da")" '{"type":"user","isMeta":true,"sourceToolUseID":"s1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$f"
+    # skillA 구간의 error
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"e1","name":"Read","input":{"file_path":"/x"}}]}}' -n >> "$f"
+    jq -c '{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"e1","is_error":true,"content":"error in A"}]}}' -n >> "$f"
+    # skillB 호출 + 주입 본문
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"s2","name":"Skill","input":{"skill":"skillb"}}]}}' -n >> "$f"
+    jq -c --arg t "$(printf 'Base directory for this skill: %s\n\n# skillb body\n' "$db")" '{"type":"user","isMeta":true,"sourceToolUseID":"s2","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$f"
+    # skillB 구간의 error
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"e2","name":"Read","input":{"file_path":"/y"}}]}}' -n >> "$f"
+    jq -c '{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"e2","is_error":true,"content":"error in B"}]}}' -n >> "$f"
+
+    run bun "$INDEXER" --recent 3
+    rm -rf "$pdir"
+    [ "$status" -eq 0 ]
+    # skillA는 error 1개("error in A")만, skillB는 error 1개("error in B")만
+    echo "$output" | jq -e '[.skills[] | select(.name=="skilla")][0].events | map(select(.kind=="error")) | length == 1'
+    echo "$output" | jq -e '[.skills[] | select(.name=="skilla")][0].events | any(.kind=="error" and (.text | test("error in A")))'
+    echo "$output" | jq -e '[.skills[] | select(.name=="skilla")][0].events | any(.kind=="error" and (.text | test("error in B"))) | not'
+    echo "$output" | jq -e '[.skills[] | select(.name=="skillb")][0].events | map(select(.kind=="error")) | length == 1'
+    echo "$output" | jq -e '[.skills[] | select(.name=="skillb")][0].events | any(.kind=="error" and (.text | test("error in B")))'
+}
+
+# ── 하네스 포맷 의존성 골든 테스트 ──
+# 인덱서는 공개 스키마가 없는 트랜스크립트 라인 포맷(FMT.*)에 의존한다. 하네스가 그 포맷을
+# 바꾸면 프로덕션이 조용히 빈 결과를 내기 전에 이 테스트들이 먼저 깨져 변경을 알린다.
+
+@test "evolve build-index: golden line format wires through FMT fields (single session)" {
+    # 단일 세션이 의존하는 FMT 필드를 한 번에 고정: ai-title/aiTitle → session_title,
+    # interrupt 마커 두 종류(user interruptedMessageId / assistant stop_reason).
+    # (skillInjectionMarker+metaFlag → skill 귀속은 --recent 경로라 DEFECT1/prefixed 테스트가 커버한다.)
+    local f="$BATS_TEST_TMPDIR/golden.jsonl"; : > "$f"
+    jq -c '{"type":"ai-title","aiTitle":"golden session"}' -n >> "$f"
+    jq -c '{"type":"user","message":{"role":"user","content":"work on it"}}' -n >> "$f"
+    jq -c '{"type":"user","interruptedMessageId":"x","message":{"role":"user","content":"stop"}}' -n >> "$f"
+    jq -c '{"type":"assistant","message":{"role":"assistant","stop_reason":"interrupted","content":[{"type":"text","text":"…"}]}}' -n >> "$f"
+
+    run bun "$INDEXER" "$f"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '.session_title == "golden session"'           # FMT.aiTitleType/aiTitleField
+    echo "$output" | jq -e '[.events[] | select(.kind=="interrupt" and .by=="user")] | length >= 1'       # FMT.userInterruptField
+    echo "$output" | jq -e '[.events[] | select(.kind=="interrupt" and .by=="assistant")] | length >= 1'  # FMT.assistantInterruptStopReason
+}
+
+@test "evolve build-index: golden skill injection wires through FMT marker (recent)" {
+    # skillInjectionMarker + metaFlag 경로: isMeta user 라인의 "Base directory for this skill:" 본문이
+    # skill 호출로 인식되어 --recent 집계의 skills[]에 잡혀야 한다.
+    local skilldir="$BATS_TEST_TMPDIR/skills/research"
+    mkdir -p "$skilldir"
+    printf -- '# research body\n' > "$skilldir/SKILL.md"
+    local real_skilldir; real_skilldir="$(cd "$skilldir" && pwd -P)"
+    local text; text="$(printf 'Base directory for this skill: %s\n\n# research body\n' "$real_skilldir")"
+    local proj="$BATS_TEST_TMPDIR/projgolden"; mkdir -p "$proj"; cd "$proj"
+    local real_proj; real_proj="$(pwd -P)"
+    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_proj" | sed 's/[/.]/-/g')"
+    mkdir -p "$pdir"
+    local f="$pdir/s.jsonl"; : > "$f"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"s1","name":"Skill","input":{"skill":"research"}}]}}' -n >> "$f"
+    jq -c --arg t "$text" '{"type":"user","isMeta":true,"message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$f"
+
+    run bun "$INDEXER" --skill research
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '[.skills[].name] == ["research"]'
+}
+
+@test "evolve build-index: health-check warns when format extracts nothing" {
+    # turn은 많은데 tool_use·skill 주입이 0 → 포맷이 깨졌을 가능성. stderr 경고로 표면화.
+    local f="$BATS_TEST_TMPDIR/broken.jsonl"; : > "$f"
+    for i in $(seq 1 12); do
+        jq -c --arg n "$i" '{"type":"user","message":{"role":"user","content":("hello "+$n)}}' -n >> "$f"
+    done
+    bun "$INDEXER" "$f" >/dev/null 2>"$BATS_TEST_TMPDIR/err.txt"
+    grep -qF "[evolve] warning" "$BATS_TEST_TMPDIR/err.txt"
+    grep -qF "extraction may be silently failing" "$BATS_TEST_TMPDIR/err.txt"
+}
+
+@test "evolve build-index: health-check warns on zero parsed turns" {
+    # user/assistant 라인이 하나도 없으면 0 turns → 라인 포맷 변경 의심 경고.
+    local f="$BATS_TEST_TMPDIR/zero.jsonl"
+    jq -c '{"type":"queue-operation","operation":"enqueue"}' -n > "$f"
+    bun "$INDEXER" "$f" >/dev/null 2>"$BATS_TEST_TMPDIR/err.txt"
+    grep -qF "parsed to 0 turns" "$BATS_TEST_TMPDIR/err.txt"
+}
+
+@test "evolve build-index: health-check stays silent on short healthy session" {
+    # 짧은 정상 세션(< 10 turns)은 도구가 없어도 경고하지 않는다 — 과잉 경고 금지.
+    local f="$BATS_TEST_TMPDIR/short.jsonl"; : > "$f"
+    jq -c '{"type":"user","message":{"role":"user","content":"hi"}}' -n >> "$f"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"hey"}]}}' -n >> "$f"
+    bun "$INDEXER" "$f" >/dev/null 2>"$BATS_TEST_TMPDIR/err.txt"
+    run grep -F "[evolve] warning" "$BATS_TEST_TMPDIR/err.txt"
+    [ "$status" -ne 0 ]
 }
