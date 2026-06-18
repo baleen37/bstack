@@ -8,6 +8,25 @@ import { basename, join, resolve } from "node:path";
 import { homedir } from "node:os";
 import { createHash } from "node:crypto";
 
+// ── 하네스 트랜스크립트 포맷 의존 상수 ──────────────────
+// 이 인덱서는 Claude Code가 기록하는 트랜스크립트 .jsonl 의 내부 라인 포맷에 의존한다.
+// 이 포맷은 공개 스키마가 없고 하네스 버전업으로 조용히 바뀔 수 있다. 깨질 때 throw가 아니라
+// 빈 결과를 내므로(=신호 없음과 구분 불가) 의존 지점을 여기 한 곳에 모아 추적·점검을 쉽게 한다.
+// 라인 단위 객체를 하네스는 "event"라 부르지만(공식 용어), 이 코드의 Signal/Event 출력 타입과
+// 충돌하므로 여기서는 "라인(line)"으로 부른다. 새 의존이 생기면 반드시 이 블록에 추가할 것.
+const FMT = {
+  // 슬래시 스킬 호출 시 user 라인에 주입되는 본문의 첫 줄. 스킬 호출 검출의 유일한 앵커.
+  skillInjectionMarker: "Base directory for this skill:",
+  // 세션 제목 라인: { type: aiTitleType, [aiTitleField]: "..." }
+  aiTitleType: "ai-title",
+  aiTitleField: "aiTitle",
+  // user 라인이 하네스 주입 메타(스킬 본문 등)임을 표시하는 불리언 필드.
+  metaFlag: "isMeta",
+  // 인터럽트 마커: user 라인의 interruptedMessageId 존재 / assistant message.stop_reason 값.
+  userInterruptField: "interruptedMessageId",
+  assistantInterruptStopReason: "interrupted",
+} as const;
+
 // ── 타입 ───────────────────────────────────────────────
 type EventKind = "user" | "skill" | "interrupt" | "error" | "agent" | "repeat";
 type DropReason = "stale" | "missing_current_body";
@@ -100,6 +119,7 @@ interface SkillInvocation {
   baseDir: string;       // 주입 본문의 Base directory 절대경로
   version: string;
   hash: string;
+  turn: number;          // 주입 시점까지 누적된 turn 수 (= 직전 호출 turn). 이후 신호의 소유 스킬 결정용.
 }
 
 interface LoadedTranscript {
@@ -136,16 +156,16 @@ function loadTurns(jsonlPath: string): LoadedTranscript {
   let sessionTitle: string | undefined;
   for (const line of lines) {
     const obj = JSON.parse(line);
-    if (obj.type === "ai-title" && typeof obj.aiTitle === "string") {
-      sessionTitle = obj.aiTitle;
+    if (obj.type === FMT.aiTitleType && typeof obj[FMT.aiTitleField] === "string") {
+      sessionTitle = obj[FMT.aiTitleField];
       continue;
     }
     // skill 호출시점 주입 본문 (isMeta user/text, 첫 줄 "Base directory for this skill:")
-    if (obj.type === "user" && obj.isMeta === true) {
+    if (obj.type === "user" && obj[FMT.metaFlag] === true) {
       const c = obj.message?.content;
       const text = Array.isArray(c) && c[0]?.type === "text" ? c[0].text : undefined;
       if (typeof text === "string") {
-        const m = text.match(new RegExp(`^Base directory for this skill:\\s*(.+?)\\s*(?:${LINE_BREAK}|$)`));
+        const m = text.match(new RegExp(`^${escapeRegExp(FMT.skillInjectionMarker)}\\s*(.+?)\\s*(?:${LINE_BREAK}|$)`));
         if (m) {
           const baseDir = m[1];
           const injectedBody = restorePluginRoot(stripBaseDirLine(text), baseDir);
@@ -154,14 +174,15 @@ function loadTurns(jsonlPath: string): LoadedTranscript {
             baseDir,
             version: skillVersion(baseDir),
             hash: bodyHash(injectedBody),
+            turn: turns.length, // 주입은 turn으로 안 세므로 직전까지의 turn 수가 이 호출의 활성 시작점
           });
         }
       }
       continue; // 주입 메시지는 turn으로 세지 않음
     }
     if (obj.type !== "user" && obj.type !== "assistant") continue;
-    const userInterruptedMarker = obj.interruptedMessageId !== undefined;
-    const assistantInterruptedMarker = obj.message?.stop_reason === "interrupted";
+    const userInterruptedMarker = obj[FMT.userInterruptField] !== undefined;
+    const assistantInterruptedMarker = obj.message?.stop_reason === FMT.assistantInterruptStopReason;
     const t: Turn = {
       index: turns.length + 1,
       type: obj.type,
@@ -190,9 +211,34 @@ function loadTurns(jsonlPath: string): LoadedTranscript {
   return { turns, sessionTitle, skillInvocations };
 }
 
+// 하네스 포맷이 바뀌면 파싱은 throw 없이 빈 결과를 내고, evolve는 그걸 "신호 없음"으로 오인한다.
+// 실제 세션이라면 거의 항상 성립하는 불변식이 깨졌을 때 stderr로 경고해 둘을 구분한다.
+// 경고는 진단용일 뿐 결과를 바꾸지 않는다(과잉 필터 금지: 실제로 비어있을 수도 있으므로 막지 않는다).
+const HEALTHCHECK_MIN_TURNS = 10;
+function warnIfFormatLooksBroken(jsonlPath: string, loaded: LoadedTranscript): void {
+  const { turns, skillInvocations } = loaded;
+  if (turns.length === 0) {
+    console.error(`[evolve] warning: ${basename(jsonlPath)} parsed to 0 turns — transcript line format may have changed`);
+    return;
+  }
+  if (turns.length < HEALTHCHECK_MIN_TURNS) return; // 짧은 세션은 도구·스킬이 없어도 정상
+  const sawToolUse = turns.some((t) => t.toolUses.length > 0);
+  if (!sawToolUse && skillInvocations.length === 0) {
+    console.error(
+      `[evolve] warning: ${basename(jsonlPath)} has ${turns.length} turns but 0 tool_use and 0 skill injections — ` +
+        `extraction may be silently failing (check FMT.* against the current harness transcript format)`,
+    );
+  }
+}
+
+// 정규식에 리터럴을 안전하게 끼워넣기 위한 메타문자 이스케이프.
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 // ── skill 본문 정규화 + 해시 (stale 판정용) ──
 const LINE_BREAK = "(?:\\r\\n|\\n|\\r)";
-const BASE_DIR_LINE = new RegExp(`^Base directory for this skill:.*${LINE_BREAK}+`);
+const BASE_DIR_LINE = new RegExp(`^${escapeRegExp(FMT.skillInjectionMarker)}.*${LINE_BREAK}+`);
 // 슬래시 커맨드를 인자와 함께 호출하면 주입 본문 끝에 "ARGUMENTS: …" 블록이 덧붙는다.
 // 이는 SKILL.md 본문이 아니라 호출 인자이므로 stale 해시 비교 전에 제거해야
 // 같은 본문이 인자 유무/내용에 따라 stale로 오판되지 않는다.
@@ -245,11 +291,28 @@ function summarizeToolUse(tu: { name: string; input: any }): string {
   else if (name === "Read" || name === "Edit" || name === "Write") arg = tu.input?.file_path ?? "";
   else if (name === "Grep" || name === "Glob") arg = tu.input?.pattern ?? "";
   else if (name === "Agent") arg = tu.input?.description ?? "";
-  else arg = JSON.stringify(tu.input ?? {}).slice(0, 60);
+  else if (name === "Skill") arg = tu.input?.skill ?? "";
+  // 그 외 도구(MCP, PushNotification, Monitor 등)는 raw JSON을 덤프하지 않는다 — 도구 이름만.
   return arg ? `${name}: ${arg}` : name;
 }
 
 const BOOKKEEPING_TOOLS = new Set(["TaskCreate", "TaskUpdate", "TaskList", "TaskGet", "AskUserQuestion"]);
+
+// 거의 모든 Bash 호출에 붙는 셸 보일러플레이트. 이걸 repeat 키로 쓰면 "cd <worktree>"
+// 같은 비신호가 최상위 repeat을 차지한다. 키 산출 시 이런 세그먼트는 건너뛴다.
+const REPEAT_NOISE_PREFIXES = new Set(["cd", "echo", "ls", "pwd", "cat", "export", "true", "set"]);
+
+// repeat 집계용 Bash 키. &&/;/| 로 분리해 보일러플레이트 세그먼트를 버리고 첫 의미있는 명령의
+// 앞 2토큰을 키로 쓴다. 의미있는 세그먼트가 없으면 빈 문자열(=repeat 후보 제외).
+function repeatBashKey(cmd: string): string {
+  for (const segment of cmd.split(/&&|\|\||;|\|/)) {
+    const tokens = segment.trim().split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) continue;
+    if (REPEAT_NOISE_PREFIXES.has(tokens[0])) continue;
+    return tokens.slice(0, 2).join(" ");
+  }
+  return "";
+}
 
 function priorAssistantActions(turns: Turn[], currentIdx: number): string[] {
   const actions: string[] = [];
@@ -285,12 +348,16 @@ function detectSlashCommand(userText: string): DetectedSlash | undefined {
   }
   const prefix = userText.trim().match(SLASH_CMD_PREFIX);
   if (!prefix) return undefined;
-  const args = prefix[2]?.trim();
+  const rest = prefix[2] ?? "";
+  // 슬래시 커맨드 이름에는 경로 구분자가 없다. 이름 바로 뒤에 "/"가 오면 이건
+  // 슬래시 커맨드가 아니라 절대경로("/Users/…")로 시작하는 사용자 발화다. skill로 오분류하지 않는다.
+  if (rest.startsWith("/")) return undefined;
+  const args = rest.trim();
   return args ? { name: prefix[1], args: args.slice(0, 200) } : { name: prefix[1] };
 }
 
 const PSEUDO_USER_PREFIXES = [
-  "Base directory for this skill:",
+  FMT.skillInjectionMarker,
   "<bash-input>",
   "<bash-stdout>",
   "<bash-stderr>",
@@ -369,8 +436,7 @@ function buildEvents(turns: Turn[]): Event[] {
   for (const t of turns) {
     for (const tu of t.toolUses) {
       if (tu.name === "Bash") {
-        const cmd: string = tu.input?.command ?? "";
-        const prefix = cmd.split(/\s+/).slice(0, 2).join(" ");
+        const prefix = repeatBashKey(tu.input?.command ?? "");
         if (!prefix) continue;
         getOrCreate(bashOccur, prefix, () => []).push(t.index);
       } else if (tu.name === "Read") {
@@ -458,7 +524,9 @@ function summarizeSignal(events: Event[]): SignalSummary {
 }
 
 function buildIndex(jsonlPath: string): SessionIndex {
-  const { turns, sessionTitle } = loadTurns(jsonlPath);
+  const loaded = loadTurns(jsonlPath);
+  warnIfFormatLooksBroken(jsonlPath, loaded);
+  const { turns, sessionTitle } = loaded;
   const events = buildEvents(turns);
   return {
     session_id: basename(jsonlPath, ".jsonl"),
@@ -547,15 +615,15 @@ function buildRecentIndex(paths: string[], cwd: string): RecentIndex {
 
   for (const p of paths) {
     const sessionId = basename(p, ".jsonl");
-    const { turns, sessionTitle, skillInvocations } = loadTurns(p);
+    const loaded = loadTurns(p);
+    warnIfFormatLooksBroken(p, loaded);
+    const { turns, sessionTitle, skillInvocations } = loaded;
     const events = buildEvents(turns);
     sessions.push({ session_id: sessionId, ...(sessionTitle ? { session_title: sessionTitle } : {}), turns: turns.length });
 
-    // 이 세션에서 호출된 skill 이름 집합 + 호출시점 본문 해시
-    const invokedNames = new Set<string>();
+    // 이 세션에서 호출된 skill 이름별 호출시점 본문 해시
     const invokedHashesByName = new Map<string, Set<string>>();
     for (const inv of skillInvocations) {
-      invokedNames.add(inv.name);
       getOrCreate(invokedHashesByName, inv.name, () => new Set()).add(inv.hash);
       const a = getOrCreate(acc, inv.name, () => ({
         baseDir: inv.baseDir,
@@ -573,9 +641,19 @@ function buildRecentIndex(paths: string[], cwd: string): RecentIndex {
 
     // events를 해당 세션에서 호출된 skill의 호출시점 본문 해시로 귀속.
     // events의 session 식별을 위해 session 필드 마킹.
+    // 비-skill 신호(error/interrupt/repeat/user/agent)는 시간상 그 직전에 호출된 스킬에만 귀속한다.
+    // 이렇게 해야 한 세션에서 여러 스킬이 호출됐을 때 같은 error가 모든 스킬에 복사되어
+    // per-skill signal·정렬 가중치를 오염시키는 일을 막는다. 첫 스킬 호출 이전 신호는 어디에도 안 붙는다.
+    // 활성 스킬은 호출 turn(invocation.turn) 시퀀스로 결정한다 — 슬래시 텍스트 유무와 무관.
+    // skillInvocations와 events는 둘 다 turn 오름차순이므로 포인터 하나로 함께 훑는다.
+    let invIdx = 0;
+    let activeName: string | undefined;
     for (const ev of events) {
+      while (invIdx < skillInvocations.length && skillInvocations[invIdx].turn <= ev.t) {
+        activeName = skillInvocations[invIdx].name;
+        invIdx++;
+      }
       const tagged: Event = { ...ev, session: sessionId };
-      // skill 이벤트는 그 세션에서 관측된 해당 skill의 모든 body hash에, 그 외 신호는 같은 세션에서 호출된 모든 skill hash에 귀속
       if (ev.kind === "skill" && ev.name) {
         const fallback = ev.name.includes(":") ? ev.name.split(":").pop()! : ev.name;
         const target = invokedHashesByName.has(ev.name) ? ev.name : fallback;
@@ -583,8 +661,10 @@ function buildRecentIndex(paths: string[], cwd: string): RecentIndex {
         if (!hashes) continue;
         for (const hash of hashes) acc.get(target)!.eventsByHash.get(hash)!.push(tagged);
       } else {
-        for (const name of invokedNames) {
-          for (const hash of invokedHashesByName.get(name) ?? []) acc.get(name)!.eventsByHash.get(hash)!.push(tagged);
+        const owner = activeName;
+        if (owner === undefined) continue;
+        for (const hash of invokedHashesByName.get(owner) ?? []) {
+          acc.get(owner)!.eventsByHash.get(hash)!.push(tagged);
         }
       }
     }
@@ -642,6 +722,13 @@ function buildRecentIndex(paths: string[], cwd: string): RecentIndex {
 }
 
 // ── Phase 0: transcript 자동 탐지 ──────────────────────
+// 트랜스크립트 저장소 루트. 기본은 ~/.claude/projects. 테스트는 라이브 세션과 섞이지 않도록
+// EVOLVE_PROJECTS_DIR 로 격리된 디렉터리를 주입한다(이 override가 없으면 --skill/--recent 스캔이
+// 실행 중인 현재 세션까지 끌어와 결과가 비결정적이 된다).
+function projectsRoot(): string {
+  return process.env.EVOLVE_PROJECTS_DIR || join(homedir(), ".claude", "projects");
+}
+
 function encodeCwd(cwd: string): string {
   return cwd.replace(/[/.]/g, "-");
 }
@@ -654,28 +741,28 @@ function projectBasePrefix(cwd: string): string {
 }
 
 function recentSessionPaths(cwd: string, n: number): string[] {
-  const projectsRoot = join(homedir(), ".claude", "projects");
-  if (!existsSync(projectsRoot)) {
-    console.error(`transcript directory not found: ${projectsRoot}`);
+  const root = projectsRoot();
+  if (!existsSync(root)) {
+    console.error(`transcript directory not found: ${root}`);
     process.exit(14);
   }
   // 같은 프로젝트의 모든 worktree 디렉터리를 합친다: base 자체 + base--worktrees-* 형제들.
   // bstack처럼 worktree마다 transcript가 쪼개지는 경우 "최근 N개 세션"이 전체에서 모이게.
   const base = projectBasePrefix(cwd);
-  const dirs = readdirSync(projectsRoot).filter((d) => d === base || d.startsWith(base + "--worktrees-"));
+  const dirs = readdirSync(root).filter((d) => d === base || d.startsWith(base + "--worktrees-"));
   const files = dirs
-    .flatMap((d) => jsonlFilesInDir(join(projectsRoot, d)))
+    .flatMap((d) => jsonlFilesInDir(join(root, d)))
     .sort((a, b) => b.mtime - a.mtime)
     .slice(0, n);
   if (files.length === 0) {
-    console.error(`no .jsonl files for project ${base} (and its worktrees) under ${projectsRoot}`);
+    console.error(`no .jsonl files for project ${base} (and its worktrees) under ${root}`);
     process.exit(14);
   }
   return files.map((f) => f.path);
 }
 
 function transcriptProjectDir(cwd: string): string {
-  return join(homedir(), ".claude", "projects", encodeCwd(cwd));
+  return join(projectsRoot(), encodeCwd(cwd));
 }
 
 function latestTranscriptPathForCwd(cwd: string): string {
@@ -703,9 +790,9 @@ function transcriptInvokesSkill(jsonlPath: string, name: string): boolean {
   } catch {
     return false;
   }
-  const esc = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const esc = escapeRegExp(name);
   // baseDir 마지막 세그먼트가 정확히 <name> 이어야 한다: …/skills/<name> 뒤에 / 또는 escape개행(\n) 또는 따옴표.
-  const re = new RegExp(`Base directory for this skill:[^\\n"]*?/${esc}(?:/|\\\\n|")`);
+  const re = new RegExp(`${escapeRegExp(FMT.skillInjectionMarker)}[^\\n"]*?/${esc}(?:/|\\\\n|")`);
   return re.test(text);
 }
 
@@ -715,14 +802,14 @@ function skillNameCandidates(name: string): string[] {
 }
 
 function findSkillSessionPaths(names: string[], n: number): string[] {
-  const projectsRoot = join(homedir(), ".claude", "projects");
-  if (!existsSync(projectsRoot)) {
-    console.error(`transcript directory not found: ${projectsRoot}`);
+  const root = projectsRoot();
+  if (!existsSync(root)) {
+    console.error(`transcript directory not found: ${root}`);
     process.exit(14);
   }
-  return readdirSync(projectsRoot)
+  return readdirSync(root)
     .flatMap((d) => {
-      const full = join(projectsRoot, d);
+      const full = join(root, d);
       try {
         if (!statSync(full).isDirectory()) return [];
         return jsonlFilesInDir(full).map((f) => f.path);
@@ -738,7 +825,7 @@ function findSkillSessionPaths(names: string[], n: number): string[] {
 }
 
 function noSkillSessions(name: string): never {
-  console.error(`no sessions invoking skill '${name}' found under ${join(homedir(), ".claude", "projects")}`);
+  console.error(`no sessions invoking skill '${name}' found under ${projectsRoot()}`);
   process.exit(14);
 }
 

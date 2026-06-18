@@ -38,8 +38,20 @@ Plain directory or `.jsonl` path arguments are analysis targets. A directory mea
 cwd". If the argument mixes a path with natural-language intent, interpret the intent first; do not forward the whole
 sentence to the indexer.
 
-Use `--cwd <worktree-dir>` when the user wants recent or skill-focused analysis for another worktree. This changes
-transcript discovery and repo-owned skill mapping for `--recent`, `--skill`, or `--session`.
+Use `--cwd <worktree-dir>` when the user wants recent or skill-focused analysis for another worktree. For `--recent`
+and `--session` this changes transcript discovery and repo-owned skill mapping. For `--skill` it only changes
+repo-owned edit-target mapping — session discovery still scans all projects regardless of `--cwd`.
+
+### Argument mapping rules
+
+The indexer's `parseArgs` rejects conflicting flags with exit code `2`. Translate user input so it never trips these:
+
+- A skill name plus a recent window is `--skill <name> --recent N`, never `--recent N <name>`. A bare skill name
+  after `--recent` is parsed as a transcript path and exits `2`.
+- One `--skill <name>` per indexer run. For multiple skills, run the indexer once per skill and treat each index
+  independently through Phase 0/1. Never pass two `--skill` flags or a positional skill list.
+- A positional path/dir is standalone. It cannot combine with `--cwd`, `--session`, `--skill`, or `--recent`. To
+  focus a skill inside a worktree, use `--cwd <dir> --skill <name>` instead of a path plus a flag.
 
 ## Guardrails
 
@@ -65,6 +77,11 @@ Do not forward `--dry-run` to the indexer. It is handled by the main agent.
 
 Exit codes: `0` ok, `2` bad args, `14` transcript/project/session/skill not found.
 
+If the indexer prints a `[evolve] warning: …` line to stderr (e.g. `0 tool_use and 0 skill injections`, or
+`parsed to 0 turns`), the harness transcript line format may have changed and extraction is silently producing empty
+results. Do not treat an empty index as "no signals" in that case — surface the warning to the user and stop, since the
+`FMT.*` format constants in `build-index.ts` likely need updating against the current transcript format.
+
 Stop early when the index has no current evidence. Evaluate these conditions in order:
 
 - Single session with empty `events[]`: print `no improvement signals found in this session`.
@@ -89,9 +106,11 @@ Recent and skill output has `mode:"recent"` and `skills[]`. Each skill includes:
 
 Use `summary.headline` as the freshness check. Treat `observed_bodies` as diagnostics, not proposal evidence.
 
-In `--recent`, non-skill events are copied to every skill invoked in that session. If several skills share the same
-`signal` and `seen_in`, do not treat those counts as per-skill evidence. Inspect event content and prefer `kind:"skill"`
-events before assigning ownership.
+In `--recent` and `--skill`, each non-skill event (error/interrupt/repeat/user/agent) is attributed to the skill that
+was active at its turn — the most recently invoked skill before that turn — not copied to every skill in the session.
+Signals before the first skill invocation belong to no skill. So per-skill `signal` counts are scoped, but they are
+turn-proximity heuristics: an event during one skill's run that was really caused by adjacent work can still be
+mis-owned. Confirm ownership from event content before proposing, and prefer `kind:"skill"` events as anchors.
 
 ## Phase 1: Probe, Then Propose
 
