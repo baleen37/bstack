@@ -413,7 +413,15 @@ function buildEvents(turns: Turn[]): Event[] {
         if (!tr.isError) continue;
         const prevAssist = [...turns.slice(0, i)].reverse().find((a) => a.type === "assistant" && a.toolUses.length > 0);
         const toolName = prevAssist?.toolUses[prevAssist.toolUses.length - 1]?.name ?? "unknown";
-        events.push({ t: t.index, kind: "error", tool: toolName, text: tr.content.slice(0, 200) });
+        // tool 이름만으로는 "어떤 인자로 호출하다 났는지"를 알 수 없어 소유권 판정이 막힌다.
+        // user처럼 직전 행동을 prior로 담아(예: "Edit: /path") 어느 파일/명령이 에러를 냈는지 보이게 한다.
+        events.push({
+          t: t.index,
+          kind: "error",
+          tool: toolName,
+          text: tr.content.slice(0, 200),
+          prior: priorAssistantActions(turns, i),
+        });
       }
     } else {
       // assistant

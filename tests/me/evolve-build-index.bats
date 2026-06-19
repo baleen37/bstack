@@ -120,6 +120,16 @@ setup() {
     echo "$output" | jq -e '[.events[] | select(.kind == "error")] | length >= 1'
 }
 
+@test "evolve build-index: error event carries prior actions for ownership" {
+    # error 신호만으로는 "어떤 도구 호출이 이걸 냈는가"를 알 수 없어 소유권/원인 판정이 막힌다.
+    # error 이벤트도 user처럼 직전 assistant 행동(prior)을 담아 LLM이 근거를 잡을 수 있게 한다.
+    run bun "$INDEXER" "$RICH_FIXTURE"
+    [ "$status" -eq 0 ]
+    # rich fixture의 첫 error 직전에는 Bash 호출이 있다 → prior에 Bash가 잡혀야 한다
+    echo "$output" | jq -e '[.events[] | select(.kind == "error")][0].prior | length >= 1'
+    echo "$output" | jq -e '[.events[] | select(.kind == "error")][0].prior | any(startswith("Bash"))'
+}
+
 @test "evolve build-index: detects agent event with subagent type and model" {
     run bun "$INDEXER" "$RICH_FIXTURE"
     [ "$status" -eq 0 ]
