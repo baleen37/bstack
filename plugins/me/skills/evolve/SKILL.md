@@ -82,35 +82,45 @@ If the indexer prints a `[evolve] warning: …` line to stderr (e.g. `0 tool_use
 results. Do not treat an empty index as "no signals" in that case — surface the warning to the user and stop, since the
 `FMT.*` format constants in `build-index.ts` likely need updating against the current transcript format.
 
-Stop early when the index has no current evidence. Evaluate these conditions in order:
+Stop early when the index has no friction signal. A `kind:"skill"` event is an anchor (which skill was
+active), not a friction signal — "has signals" means having interrupt/error/repeat/user events, not just
+skill anchors. Evaluate these conditions in order:
 
 - Single session with empty `events[]`: print `no improvement signals found in this session`.
-- Recent mode with empty `skills[]`: print `no invoked skills found in recent sessions`.
-- All candidate skills dropped: report `drop_reason`, `skill_path`, and `observed_bodies[].versions`; do not run proposal
-  subagents.
-  Example: `11 sessions · 1 skills · 1 dropped: 1 stale` means report diagnostics only, with no proposal.
-- No current skill has events: print `no improvement signals found in current skill bodies`.
-- Some current skills have events: probe only those skills; mention dropped or empty skills as diagnostics.
+- Recent/skill mode with empty `skills[]`: print `no invoked skills found in recent sessions`.
+- All skills have signal `no events` (zero interrupt+error+repeat+user): print `no improvement signals found`.
+- Otherwise: probe the skills with the strongest signal first.
 
 ## Index Notes
 
 Single-session output has `summary` and `events[]`.
 
-Recent and skill output has `mode:"recent"` and `skills[]`. Each skill includes:
+Recent and skill output has `mode:"recent"` and `skills[]`. The shape is flat and version-agnostic — the indexer
+sums signals across every session that invoked a skill name and does not compare against the current disk body. Each
+skill includes:
 
-- `signal`: one-line event counts, or `dropped (<drop_reason>)`
-- `drop_reason`: `stale` or `missing_current_body`
-- `observed_bodies`: diagnostic body hashes and versions
-- `repo_path`: editable repo-owned source when available
-- `events[]`: only events matching the current skill body
+- `name`: plugin-qualified (`me:evolve`) when a qualifier is known (Skill-tool `input.skill` or an adjacent
+  slash command), else the bare basename (`evolve`). Qualification keeps same-named skills from different plugins
+  separate so their signals never merge.
+- `signal`: one-line event counts (e.g. `3 interrupt, 3 error, 6 repeat, 10 user`), or `no events`
+- `versions`: every skill version seen across sessions — context only, not used for matching
+- `seen_in`: the `session_id`s where this skill was invoked
+- `skill_path`: the cache SKILL.md path at invocation time (edit-target mapping is the proposal subagent's job)
+- `events[]`: all friction signals for this skill name, summed across sessions, each tagged with `session`
 
-Use `summary.headline` as the freshness check. Treat `observed_bodies` as diagnostics, not proposal evidence.
+`--skill <name>` matches by qualifier: a qualified request (`--skill me:evolve`) returns only that plugin's skill;
+a bare request (`--skill evolve`) returns every plugin's `evolve` (e.g. `me:evolve` and a bare `evolve`).
+
+Because the indexer no longer tracks current-body state, the proposal subagent reads the actual repo-owned
+SKILL.md to judge whether a surfaced signal is already fixed before proposing a patch.
 
 In `--recent` and `--skill`, each non-skill event (error/interrupt/repeat/user/agent) is attributed to the skill that
 was active at its turn — the most recently invoked skill before that turn — not copied to every skill in the session.
 Signals before the first skill invocation belong to no skill. So per-skill `signal` counts are scoped, but they are
 turn-proximity heuristics: an event during one skill's run that was really caused by adjacent work can still be
 mis-owned. Confirm ownership from event content before proposing, and prefer `kind:"skill"` events as anchors.
+Each event carries `session` (its source `session_id`). The same failure recurring across distinct `session`
+values is a strong signal; one concentrated in a single `session` is weak — likely steering noise from that run.
 
 ## Phase 1: Probe, Then Propose
 
@@ -126,12 +136,12 @@ Useful lenses:
 
 - correction chain
 - cross-skill ownership
-- stale/drop diagnostics
 - noisy directives
 - repeated exploration
 - shared-session signals in `--recent`
 
-Each probe may inspect only relevant `events[]` items and narrow transcript turn ranges. It returns:
+Each probe may inspect only relevant `events[]` items and narrow
+transcript turn ranges. It returns:
 
 ```json
 {
@@ -193,7 +203,7 @@ Required output is one JSON block:
 }
 ```
 
-Reject broad rewrites, proposals without direct `event_indexes`, or patches based only on dropped/stale bodies.
+Reject broad rewrites or proposals without direct `event_indexes`.
 
 ## Phase 2: Approval And Apply
 

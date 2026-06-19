@@ -1,0 +1,5 @@
+{"type": "ai-title", "aiTitle": "Plugin a dup invocation"}
+{"type": "user", "message": {"role": "user", "content": [{"type": "text", "text": "/a:dup go"}]}}
+{"type": "assistant", "message": {"role": "assistant", "content": [{"type": "text", "text": "Running a:dup."}, {"type": "tool_use", "id": "toolu_dupa", "name": "Skill", "input": {"skill": "a:dup"}}]}}
+{"type": "user", "isMeta": true, "sourceToolUseID": "toolu_dupa", "message": {"role": "user", "content": [{"type": "text", "text": "Base directory for this skill: /Users/x/.claude/plugins/cache/a-marketplace/a/1.0.0/skills/dup\n\n# dup skill body (plugin a)\n"}]}}
+{"type": "user", "message": {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "toolu_dupa", "content": "Launching skill: a:dup"}]}}
