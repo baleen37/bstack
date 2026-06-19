@@ -653,7 +653,8 @@ function buildRecentIndex(paths: string[], cwd: string): RecentIndex {
     }
   }
 
-  const skills: Array<RecentSkill & { _weight: number; _staleWeight: number }> = [];
+  // skill + 정렬 키(weight)를 함께 모은다. 정렬 키는 출력 타입(RecentSkill)을 오염시키지 않게 분리한다.
+  const ranked: Array<{ skill: RecentSkill; weight: number; staleWeight: number }> = [];
   for (const [name, a] of acc) {
     const cacheSkillMd = join(a.baseDir, "SKILL.md");
     // cwd repo에 같은 skill 소스가 있으면 그게 편집 가능한 "현재 본문"의 진짜 출처다 (캐시는 구버전일 수 있음).
@@ -686,36 +687,35 @@ function buildRecentIndex(paths: string[], cwd: string): RecentIndex {
     // _weight는 현재 본문 weight를 그대로 쓰되, stale-only(현재 weight 0)일 때만 staleWeight를
     // 음수 보조키로 반영해 missing_current_body(신호 0)보다는 위로 올린다.
     const staleSignal = staleEvents.length > 0 ? summarizeSignal(staleEvents).signal : "no signals";
-    skills.push({
-      name,
-      skill_path: cacheSkillMd,
-      ...(repoPath ? { repo_path: repoPath } : {}),
-      ...(nowHashFull ? { current_hash: shortHash(nowHashFull) } : {}),
-      ...(dropReason ? { drop_reason: dropReason } : {}),
-      observed_bodies,
-      stale,
-      dropped,
-      seen_in: [...a.seen].sort(),
-      signal: dropped ? `dropped (${dropReason})` : dropReason === "stale" ? `stale (${staleSignal})` : signal,
-      events: evs,
-      stale_events: staleEvents,
-      _weight: weight,
-      _staleWeight: staleWeight,
+    ranked.push({
+      skill: {
+        name,
+        skill_path: cacheSkillMd,
+        ...(repoPath ? { repo_path: repoPath } : {}),
+        ...(nowHashFull ? { current_hash: shortHash(nowHashFull) } : {}),
+        ...(dropReason ? { drop_reason: dropReason } : {}),
+        observed_bodies,
+        stale,
+        dropped,
+        seen_in: [...a.seen].sort(),
+        signal: dropped ? `dropped (${dropReason})` : dropReason === "stale" ? `stale (${staleSignal})` : signal,
+        events: evs,
+        stale_events: staleEvents,
+      },
+      weight,
+      staleWeight,
     });
   }
   // 개선 신호(interrupt+error+repeat) 많은 순 → 동률이면 전체 event 수 순 → stale 강등 신호 순 → 이름순.
-  // 현재 본문 신호가 stale 강등 신호보다 항상 우선한다(_weight 먼저).
-  skills.sort(
+  // 현재 본문 신호가 stale 강등 신호보다 항상 우선한다(weight 먼저).
+  ranked.sort(
     (x, y) =>
-      y._weight - x._weight ||
-      y.events.length - x.events.length ||
-      y._staleWeight - x._staleWeight ||
-      x.name.localeCompare(y.name),
+      y.weight - x.weight ||
+      y.skill.events.length - x.skill.events.length ||
+      y.staleWeight - x.staleWeight ||
+      x.skill.name.localeCompare(y.skill.name),
   );
-  for (const s of skills) {
-    delete (s as { _weight?: number })._weight;
-    delete (s as { _staleWeight?: number })._staleWeight;
-  }
+  const skills = ranked.map((r) => r.skill);
 
   return {
     mode: "recent",
