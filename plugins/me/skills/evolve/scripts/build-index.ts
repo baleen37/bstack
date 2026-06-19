@@ -45,7 +45,7 @@ interface Event {
   model?: string;
   pattern?: string;
   n?: number;
-  session?: string;
+  session?: string; // --recent/--skill에서만. 신호의 출처 session_id (cross-session 반복 판정용).
 }
 
 interface Cluster {
@@ -591,6 +591,9 @@ function jsonlFilesInDir(dir: string): Array<{ path: string; mtime: number }> {
   }
 }
 
+// transcript 파일을 최신순(mtime 내림차순)으로 정렬하는 비교자.
+const byNewest = (a: { mtime: number }, b: { mtime: number }): number => b.mtime - a.mtime;
+
 function formatRecentHeadline(sessionCount: number, skills: RecentSkill[]): string {
   const dropped = skills.filter((s) => s.dropped);
   let droppedPart = `${dropped.length} dropped`;
@@ -796,7 +799,7 @@ function recentSessionPaths(cwd: string, n: number): string[] {
   const dirs = readdirSync(root).filter((d) => d === base || d.startsWith(base + "--worktrees-"));
   const files = dirs
     .flatMap((d) => jsonlFilesInDir(join(root, d)))
-    .sort((a, b) => b.mtime - a.mtime)
+    .sort(byNewest)
     .slice(0, n);
   if (files.length === 0) {
     console.error(`no .jsonl files for project ${base} (and its worktrees) under ${root}`);
@@ -815,7 +818,7 @@ function latestTranscriptPathForCwd(cwd: string): string {
     console.error(`transcript directory not found: ${projectDir}`);
     process.exit(14);
   }
-  const files = jsonlFilesInDir(projectDir).sort((a, b) => b.mtime - a.mtime);
+  const files = jsonlFilesInDir(projectDir).sort(byNewest);
   if (files.length === 0) {
     console.error(`no .jsonl files in ${projectDir}`);
     process.exit(14);
@@ -863,7 +866,7 @@ function findSkillSessionPaths(names: string[], n: number): string[] {
     })
     .filter((p) => names.some((name) => transcriptInvokesSkill(p, name)))
     .map((p) => ({ path: p, mtime: statSync(p).mtimeMs }))
-    .sort((a, b) => b.mtime - a.mtime)
+    .sort(byNewest)
     .slice(0, n)
     .map((f) => f.path);
 }

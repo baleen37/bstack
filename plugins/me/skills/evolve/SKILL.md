@@ -119,6 +119,8 @@ was active at its turn — the most recently invoked skill before that turn — 
 Signals before the first skill invocation belong to no skill. So per-skill `signal` counts are scoped, but they are
 turn-proximity heuristics: an event during one skill's run that was really caused by adjacent work can still be
 mis-owned. Confirm ownership from event content before proposing, and prefer `kind:"skill"` events as anchors.
+Each event carries `session` (its source `session_id`). The same failure recurring across distinct `session`
+values is a strong signal; one concentrated in a single `session` is weak — likely steering noise from that run.
 
 ## Phase 1: Probe, Then Propose
 

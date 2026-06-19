@@ -1089,6 +1089,8 @@ EOF
     echo "$output" | jq -e '[.skills[] | select(.name=="skilla")][0].events | any(.kind=="error" and (.text | test("error in B"))) | not'
     echo "$output" | jq -e '[.skills[] | select(.name=="skillb")][0].events | map(select(.kind=="error")) | length == 1'
     echo "$output" | jq -e '[.skills[] | select(.name=="skillb")][0].events | any(.kind=="error" and (.text | test("error in B")))'
+    # --recent 이벤트는 출처 session_id를 담는다 (cross-session 반복 판정용). 파일명 s.jsonl → "s".
+    echo "$output" | jq -e '[.skills[] | select(.name=="skilla")][0].events[0].session == "s"'
 }
 
 # ── 하네스 포맷 의존성 골든 테스트 ──
