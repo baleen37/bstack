@@ -243,152 +243,6 @@ EOF
     echo "$output" | jq -e '[.skills[] | select(.name == "qa")] | length == 1'
 }
 
-@test "evolve build-index: identical body → stale:false (version-agnostic)" {
-    local skilldir="$BATS_TEST_TMPDIR/skills/demo"
-    mkdir -p "$skilldir"
-    # disk has frontmatter; injected body will NOT have frontmatter — bodies otherwise identical
-    printf -- '---\nname: demo\ndescription: d\n---\n# demo body\n\nidentical line.\n' > "$skilldir/SKILL.md"
-
-    local proj="$BATS_TEST_TMPDIR/proj1"
-    mkdir -p "$proj"
-    cd "$proj"
-    local real_proj; real_proj="$(pwd -P)"
-    local real_skilldir; real_skilldir="$(cd "$skilldir" && pwd -P)"
-    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_proj" | sed 's/[/.]/-/g')"
-    mkdir -p "$pdir"
-    # printf expands \n to real newlines so jq --arg receives actual multiline text
-    local text; text="$(printf 'Base directory for this skill: %s\n\n# demo body\n\nidentical line.\n' "$real_skilldir")"
-    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Skill","input":{"skill":"demo"}}]}}' -n > "$pdir/s.jsonl"
-    jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"t1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/s.jsonl"
-
-    run bun "$INDEXER" --recent 3
-    rm -rf "$pdir"
-    [ "$status" -eq 0 ]
-    echo "$output" | jq -e '[.skills[] | select(.name == "demo")][0].stale == false'
-}
-
-@test "evolve build-index: CRLF injected body matches LF disk body for stale" {
-    local skilldir="$BATS_TEST_TMPDIR/skills/crlfskill"
-    mkdir -p "$skilldir"
-    printf -- '# crlfskill body\n\nsame line.\n' > "$skilldir/SKILL.md"
-
-    local proj="$BATS_TEST_TMPDIR/crlfproj"
-    mkdir -p "$proj"
-    cd "$proj"
-    local real_proj; real_proj="$(pwd -P)"
-    local real_skilldir; real_skilldir="$(cd "$skilldir" && pwd -P)"
-    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_proj" | sed 's/[/.]/-/g')"
-    mkdir -p "$pdir"
-    local text; text="$(printf 'Base directory for this skill: %s\r\n\r\n# crlfskill body\r\n\r\nsame line.\r\n' "$real_skilldir")"
-    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"c1","name":"Skill","input":{"skill":"crlfskill"}}]}}' -n > "$pdir/s.jsonl"
-    jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"c1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/s.jsonl"
-
-    run bun "$INDEXER" --recent 3
-    rm -rf "$pdir"
-    [ "$status" -eq 0 ]
-    echo "$output" | jq -e '[.skills[] | select(.name == "crlfskill")][0].stale == false'
-}
-
-@test "evolve build-index: CR-only injected body matches LF disk body for stale" {
-    local skilldir="$BATS_TEST_TMPDIR/skills/crskill"
-    mkdir -p "$skilldir"
-    printf -- '# crskill body\n\nsame line.\n' > "$skilldir/SKILL.md"
-
-    local proj="$BATS_TEST_TMPDIR/crproj"
-    mkdir -p "$proj"
-    cd "$proj"
-    local real_proj; real_proj="$(pwd -P)"
-    local real_skilldir; real_skilldir="$(cd "$skilldir" && pwd -P)"
-    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_proj" | sed 's/[/.]/-/g')"
-    mkdir -p "$pdir"
-    local text; text="$(printf 'Base directory for this skill: %s\r\r# crskill body\r\rsame line.\r' "$real_skilldir")"
-    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"c1","name":"Skill","input":{"skill":"crskill"}}]}}' -n > "$pdir/s.jsonl"
-    jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"c1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/s.jsonl"
-
-    run bun "$INDEXER" --recent 3
-    rm -rf "$pdir"
-    [ "$status" -eq 0 ]
-    echo "$output" | jq -e '[.skills[] | select(.name == "crskill")][0].stale == false'
-}
-
-@test "evolve build-index: changed body → stale:true, demoted to advisory (not dropped)" {
-    local skilldir="$BATS_TEST_TMPDIR/skills/demo2"
-    mkdir -p "$skilldir"
-    printf -- '---\nname: demo2\n---\n# demo body\n\nCHANGED ON DISK.\n' > "$skilldir/SKILL.md"
-
-    local proj="$BATS_TEST_TMPDIR/proj2"
-    mkdir -p "$proj"
-    cd "$proj"
-    local real_proj; real_proj="$(pwd -P)"
-    local real_skilldir; real_skilldir="$(cd "$skilldir" && pwd -P)"
-    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_proj" | sed 's/[/.]/-/g')"
-    mkdir -p "$pdir"
-    local text; text="$(printf 'Base directory for this skill: %s\n\n# demo body\n\nOLD VERSION AT INVOCATION.\n' "$real_skilldir")"
-    # interrupt 신호를 한 줄 넣어 stale_events에 보존되는지 검증
-    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Skill","input":{"skill":"demo2"}}]}}' -n > "$pdir/s.jsonl"
-    jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"t1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/s.jsonl"
-    jq -c '{"type":"user","interruptedMessageId":"x","message":{"role":"user","content":[{"type":"text","text":"stop that"}]}}' -n >> "$pdir/s.jsonl"
-
-    run bun "$INDEXER" --recent 3
-    rm -rf "$pdir"
-    [ "$status" -eq 0 ]
-    # stale은 여전히 true지만 더는 drop되지 않는다 (advisory 강등)
-    echo "$output" | jq -e '[.skills[] | select(.name == "demo2")][0].stale == true'
-    echo "$output" | jq -e '[.skills[] | select(.name == "demo2")][0].drop_reason == "stale"'
-    echo "$output" | jq -e '[.skills[] | select(.name == "demo2")][0].dropped == false'
-    # 현재 본문 매칭 신호는 없지만(events 빈 배열) 이전 본문 신호는 stale_events로 보존된다
-    echo "$output" | jq -e '[.skills[] | select(.name == "demo2")][0].events | length == 0'
-    echo "$output" | jq -e '[.skills[] | select(.name == "demo2")][0].stale_events | length >= 1'
-    echo "$output" | jq -e '[.skills[] | select(.name == "demo2")][0].signal | startswith("stale (")'
-}
-
-@test "evolve build-index: missing disk SKILL.md → stale:true" {
-    local proj="$BATS_TEST_TMPDIR/proj3"
-    mkdir -p "$proj"
-    cd "$proj"
-    local real_proj; real_proj="$(pwd -P)"
-    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_proj" | sed 's/[/.]/-/g')"
-    mkdir -p "$pdir"
-    local ghost="$BATS_TEST_TMPDIR/skills/ghost"
-    local text; text="$(printf 'Base directory for this skill: %s\n\n# ghost body\n' "$ghost")"
-    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Skill","input":{"skill":"ghost"}}]}}' -n > "$pdir/s.jsonl"
-    jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"t1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/s.jsonl"
-
-    run bun "$INDEXER" --recent 3
-    rm -rf "$pdir"
-    [ "$status" -eq 0 ]
-    echo "$output" | jq -e '[.skills[] | select(.name == "ghost")][0].stale == true'
-    echo "$output" | jq -e '[.skills[] | select(.name == "ghost")][0].drop_reason == "missing_current_body"'
-    echo "$output" | jq -e '[.skills[] | select(.name == "ghost")][0].dropped == true'
-    echo "$output" | jq -e '[.skills[] | select(.name == "ghost")][0].events | length == 0'
-    # 검증 불가(missing)는 stale_events도 비운다 — diagnostic 강등 대상이 아니다
-    echo "$output" | jq -e '[.skills[] | select(.name == "ghost")][0].stale_events | length == 0'
-}
-
-@test "evolve build-index: stale skill counts as advisory in headline, not dropped" {
-    local skilldir="$BATS_TEST_TMPDIR/skills/advskill"
-    mkdir -p "$skilldir"
-    printf -- '---\nname: advskill\n---\n# adv body\n\nCHANGED ON DISK.\n' > "$skilldir/SKILL.md"
-
-    local proj="$BATS_TEST_TMPDIR/projadv"
-    mkdir -p "$proj"
-    cd "$proj"
-    local real_proj; real_proj="$(pwd -P)"
-    local real_skilldir; real_skilldir="$(cd "$skilldir" && pwd -P)"
-    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_proj" | sed 's/[/.]/-/g')"
-    mkdir -p "$pdir"
-    local text; text="$(printf 'Base directory for this skill: %s\n\n# adv body\n\nOLD VERSION.\n' "$real_skilldir")"
-    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Skill","input":{"skill":"advskill"}}]}}' -n > "$pdir/s.jsonl"
-    jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"t1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/s.jsonl"
-
-    run bun "$INDEXER" --recent 3
-    rm -rf "$pdir"
-    [ "$status" -eq 0 ]
-    # 헤드라인에 "0 dropped"와 "1 stale (advisory)"가 분리 표기된다
-    echo "$output" | jq -e '.summary.headline | contains("0 dropped")'
-    echo "$output" | jq -e '.summary.headline | contains("stale (advisory)")'
-}
-
 @test "evolve build-index: --recent merges sessions across worktree sibling dirs" {
     # cwd가 worktree 안일 때, base 프로젝트 디렉터리 + base--worktrees-* 형제 디렉터리의
     # 세션을 모두 합쳐 모은다. base 디렉터리에 skillA, worktree cwd에 skillB 세션을 둔다.
@@ -439,15 +293,14 @@ EOF
     run bun "$INDEXER" --recent 3
     rm -rf "$pdir"
     [ "$status" -eq 0 ]
-    # signal 필드가 문자열로 존재하고, interrupt가 집계되어 있다 (skill은 dropped일 수 있으나
-    # 이 세션은 skilldir에 디스크 SKILL.md가 없으므로 dropped → signal=="dropped (missing_current_body)").
-    # dropped 케이스의 signal 표기를 검증.
+    # signal 필드가 문자열로 존재하고, interrupt가 집계되어 있다 (body-hash 매칭 폐기 후로는
+    # 디스크 SKILL.md 유무와 무관하게 관측 신호를 그대로 합산한다).
     echo "$output" | jq -e '[.skills[] | select(.name == "sig")][0].signal | type == "string"'
-    echo "$output" | jq -e '[.skills[] | select(.name == "sig")][0].signal == "dropped (missing_current_body)"'
+    echo "$output" | jq -e '[.skills[] | select(.name == "sig")][0].signal | test("interrupt")'
 }
 
 @test "evolve build-index: --recent live skill signal counts interrupt/error/repeat first" {
-    # 디스크 SKILL.md를 호출 본문과 동일하게 두어 NOT stale → events 보존 → signal에 kind 카운트.
+    # body-hash 매칭 폐기 후로는 디스크 SKILL.md 유무와 무관하게 관측 신호를 그대로 합산한다.
     local skilldir="$BATS_TEST_TMPDIR/skills/live"
     mkdir -p "$skilldir"
     printf -- '# live body\n\nsame.\n' > "$skilldir/SKILL.md"
@@ -466,158 +319,47 @@ EOF
     run bun "$INDEXER" --recent 3
     rm -rf "$pdir"
     [ "$status" -eq 0 ]
-    echo "$output" | jq -e '[.skills[] | select(.name == "live")][0].dropped == false'
-    # 보존된 skill의 signal은 kind 카운트 문자열이며 interrupt를 포함한다
+    # 합산된 skill의 signal은 kind 카운트 문자열이며 interrupt를 포함한다
     echo "$output" | jq -e '[.skills[] | select(.name == "live")][0].signal | test("interrupt")'
 }
 
-@test "evolve build-index: observed_bodies show versions and keep current-body events only" {
-    local repo="$BATS_TEST_TMPDIR/observed-repo"
-    mkdir -p "$repo/plugins/me/skills/observed"
-    printf -- '# observed body\n\nsame.\n' > "$repo/plugins/me/skills/observed/SKILL.md"
-    cd "$repo"
-    local real_repo; real_repo="$(pwd -P)"
-    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_repo" | sed 's/[/.]/-/g')"
+@test "evolve build-index: --recent skill carries flat versions and seen_in" {
+    # body-hash 매칭 폐기 후: 같은 skill을 여러 버전 본문으로 호출해도 단일 skill 항목으로 평면화되고
+    # 모든 버전이 versions[]에, 모든 세션이 seen_in[]에 합쳐진다. events는 전 본문 신호 합산.
+    local proj="$BATS_TEST_TMPDIR/flatproj"
+    mkdir -p "$proj"
+    cd "$proj"
+    local real_proj; real_proj="$(pwd -P)"
+    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_proj" | sed 's/[/.]/-/g')"
     mkdir -p "$pdir"
 
-    local current18; current18="$(printf 'Base directory for this skill: %s\n\n# observed body\n\nsame.\n' "$BATS_TEST_TMPDIR/cache/bstack/bstack/17.18.0/skills/observed")"
-    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"o1","name":"Skill","input":{"skill":"observed"}}]}}' -n > "$pdir/current18.jsonl"
-    jq -c --arg t "$current18" '{"type":"user","isMeta":true,"sourceToolUseID":"o1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/current18.jsonl"
-    jq -c '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"current user signal"}]}}' -n >> "$pdir/current18.jsonl"
+    local v18; v18="$(printf 'Base directory for this skill: %s\n\n# flat body\n\nv18.\n' "$BATS_TEST_TMPDIR/cache/bstack/bstack/17.18.0/skills/flat")"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"o1","name":"Skill","input":{"skill":"flat"}}]}}' -n > "$pdir/v18.jsonl"
+    jq -c --arg t "$v18" '{"type":"user","isMeta":true,"sourceToolUseID":"o1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/v18.jsonl"
+    jq -c '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"v18 signal"}]}}' -n >> "$pdir/v18.jsonl"
 
-    local current19; current19="$(printf 'Base directory for this skill: %s\n\n# observed body\n\nsame.\n' "$BATS_TEST_TMPDIR/cache/bstack/bstack/17.19.1/skills/observed")"
-    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"o2","name":"Skill","input":{"skill":"observed"}}]}}' -n > "$pdir/current19.jsonl"
-    jq -c --arg t "$current19" '{"type":"user","isMeta":true,"sourceToolUseID":"o2","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/current19.jsonl"
-
-    local old17; old17="$(printf 'Base directory for this skill: %s\n\n# observed body\n\nold.\n' "$BATS_TEST_TMPDIR/cache/bstack/bstack/17.17.0/skills/observed")"
-    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"o3","name":"Skill","input":{"skill":"observed"}}]}}' -n > "$pdir/old17.jsonl"
-    jq -c --arg t "$old17" '{"type":"user","isMeta":true,"sourceToolUseID":"o3","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/old17.jsonl"
-    jq -c '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"old user signal"}]}}' -n >> "$pdir/old17.jsonl"
+    local v19; v19="$(printf 'Base directory for this skill: %s\n\n# flat body\n\nv19.\n' "$BATS_TEST_TMPDIR/cache/bstack/bstack/17.19.1/skills/flat")"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"o2","name":"Skill","input":{"skill":"flat"}}]}}' -n > "$pdir/v19.jsonl"
+    jq -c --arg t "$v19" '{"type":"user","isMeta":true,"sourceToolUseID":"o2","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/v19.jsonl"
+    jq -c '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"v19 signal"}]}}' -n >> "$pdir/v19.jsonl"
 
     run bun "$INDEXER" --recent 10
     rm -rf "$pdir"
     [ "$status" -eq 0 ]
-    echo "$output" | jq -e '[.skills[] | select(.name == "observed")][0].dropped == false'
-    echo "$output" | jq -e '[.skills[] | select(.name == "observed")][0].observed_bodies | length == 2'
-    echo "$output" | jq -e '[.skills[] | select(.name == "observed")][0].observed_bodies[] | select(.current == true) | .versions == ["17.18.0","17.19.1"]'
-    echo "$output" | jq -e '[.skills[] | select(.name == "observed")][0].observed_bodies[] | select(.current == false) | .versions == ["17.17.0"]'
-    echo "$output" | jq -e '[.skills[] | select(.name == "observed")][0] | .current_hash == (.observed_bodies[] | select(.current == true) | .hash)'
-    echo "$output" | jq -e '[.skills[] | select(.name == "observed")][0] | .events | map(select(.text == "current user signal")) | length == 1'
-    echo "$output" | jq -e '[.skills[] | select(.name == "observed")][0] | .events | map(select(.text == "old user signal")) | length == 0'
-}
-
-@test "evolve build-index: cache-only keeps newest baseDir for observed_bodies" {
-    local cache_new="$BATS_TEST_TMPDIR/cache/bstack/bstack/17.19.1/skills/cached"
-    local cache_old="$BATS_TEST_TMPDIR/cache/bstack/bstack/17.17.0/skills/cached"
-    mkdir -p "$cache_new" "$cache_old"
-    printf -- '# cached body\n\nnew.\n' > "$cache_new/SKILL.md"
-    printf -- '# cached body\n\nold.\n' > "$cache_old/SKILL.md"
-
-    local proj="$BATS_TEST_TMPDIR/cache-only-proj"
-    mkdir -p "$proj"
-    cd "$proj"
-    local real_proj; real_proj="$(pwd -P)"
-    local real_cache_new; real_cache_new="$(cd "$cache_new" && pwd -P)"
-    local real_cache_old; real_cache_old="$(cd "$cache_old" && pwd -P)"
-    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_proj" | sed 's/[/.]/-/g')"
-    mkdir -p "$pdir"
-
-    local old_text; old_text="$(printf 'Base directory for this skill: %s\n\n# cached body\n\nold.\n' "$real_cache_old")"
-    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"c1","name":"Skill","input":{"skill":"cached"}}]}}' -n > "$pdir/old.jsonl"
-    jq -c --arg t "$old_text" '{"type":"user","isMeta":true,"sourceToolUseID":"c1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/old.jsonl"
-    jq -c '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"old signal"}]}}' -n >> "$pdir/old.jsonl"
-
-    local new_text; new_text="$(printf 'Base directory for this skill: %s\n\n# cached body\n\nnew.\n' "$real_cache_new")"
-    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"c2","name":"Skill","input":{"skill":"cached"}}]}}' -n > "$pdir/new.jsonl"
-    jq -c --arg t "$new_text" '{"type":"user","isMeta":true,"sourceToolUseID":"c2","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/new.jsonl"
-    jq -c '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"new signal"}]}}' -n >> "$pdir/new.jsonl"
-    touch -t 202001010101 "$pdir/old.jsonl"
-    touch -t 202001010102 "$pdir/new.jsonl"
-
-    run bun "$INDEXER" --recent 10
-    rm -rf "$pdir"
-    [ "$status" -eq 0 ]
-    echo "$output" | jq -e '[.skills[] | select(.name == "cached")][0].dropped == false'
-    echo "$output" | jq -e '[.skills[] | select(.name == "cached")][0].observed_bodies[] | select(.current == true) | .versions == ["17.19.1"]'
-    echo "$output" | jq -e '[.skills[] | select(.name == "cached")][0].observed_bodies[] | select(.current == false) | .versions == ["17.17.0"]'
-    echo "$output" | jq -e '[.skills[] | select(.name == "cached")][0] | .events | map(select(.text == "new signal")) | length == 1'
-    echo "$output" | jq -e '[.skills[] | select(.name == "cached")][0] | .events | map(select(.text == "old signal")) | length == 0'
-}
-
-@test "evolve build-index: current body with no events is not stale" {
-    local skilldir="$BATS_TEST_TMPDIR/skills/noevents"
-    mkdir -p "$skilldir"
-    printf -- '# noevents body\n' > "$skilldir/SKILL.md"
-
-    local proj="$BATS_TEST_TMPDIR/noevents-proj"
-    mkdir -p "$proj"
-    cd "$proj"
-    local real_proj; real_proj="$(pwd -P)"
-    local real_skilldir; real_skilldir="$(cd "$skilldir" && pwd -P)"
-    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_proj" | sed 's/[/.]/-/g')"
-    mkdir -p "$pdir"
-    local text; text="$(printf 'Base directory for this skill: %s\n\n# noevents body\n' "$real_skilldir")"
-    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"n1","name":"Skill","input":{"skill":"noevents"}}]}}' -n > "$pdir/s.jsonl"
-    jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"n1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/s.jsonl"
-
-    run bun "$INDEXER" --recent 3
-    rm -rf "$pdir"
-    [ "$status" -eq 0 ]
-    echo "$output" | jq -e '[.skills[] | select(.name == "noevents")][0].stale == false'
-    # skill anchor 외에 개선 신호(비-skill 이벤트)는 없다 — 호출 자체는 마찰 신호가 아니다.
-    echo "$output" | jq -e '[.skills[] | select(.name == "noevents")][0].events | map(select(.kind != "skill")) | length == 0'
-}
-
-@test "evolve build-index: --recent maps cache skill to editable repo_path and uses it for stale" {
-    # cwd repo(=plugins/ 보유)에 같은 이름 skill 소스를 두면, transcript가 캐시 경로를 가리켜도
-    # repo_path로 매핑되고 stale 비교를 repo 본문 기준으로 한다.
-    local repo="$BATS_TEST_TMPDIR/myrepo"
-    mkdir -p "$repo/plugins/me/skills/mapme"
-    # repo 소스(편집 대상): frontmatter + 본문
-    printf -- '---\nname: mapme\n---\n# mapme body\n\nrepo content.\n' > "$repo/plugins/me/skills/mapme/SKILL.md"
-    cd "$repo"
-    local real_repo; real_repo="$(pwd -P)"
-    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_repo" | sed 's/[/.]/-/g')"
-    mkdir -p "$pdir"
-    # transcript는 캐시 경로(존재하지 않는 디렉터리)를 가리키지만 본문은 repo 본문과 동일
-    local cachedir="$BATS_TEST_TMPDIR/cache/mapme"
-    local text; text="$(printf 'Base directory for this skill: %s\n\n# mapme body\n\nrepo content.\n' "$cachedir")"
-    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"m1","name":"Skill","input":{"skill":"mapme"}}]}}' -n > "$pdir/s.jsonl"
-    jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"m1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/s.jsonl"
-
-    run bun "$INDEXER" --recent 3
-    rm -rf "$pdir"
-    [ "$status" -eq 0 ]
-    # repo_path가 repo 소스를 가리킨다
-    echo "$output" | jq -e '[.skills[] | select(.name == "mapme")][0].repo_path | test("plugins/me/skills/mapme/SKILL.md")'
-    echo "$output" | jq -e '[.skills[] | select(.name == "mapme")][0].skill_path | test("/cache/mapme/SKILL.md$")'
-    # 캐시 디렉터리는 디스크에 없지만(null이 아니라) repo 본문으로 비교해 stale:false
-    echo "$output" | jq -e '[.skills[] | select(.name == "mapme")][0].stale == false'
-}
-
-@test "evolve build-index: --recent ignores trailing ARGUMENTS block in stale comparison" {
-    # 슬래시 커맨드를 인자와 함께 호출하면 주입 본문 끝에 "ARGUMENTS: …" 블록이 붙는다.
-    # 이는 SKILL.md 본문이 아니므로 stale 비교에서 무시되어야 한다 (본문 동일 → stale:false).
-    local skilldir="$BATS_TEST_TMPDIR/skills/argskill"
-    mkdir -p "$skilldir"
-    printf -- '# argskill body\n\nsame.\n' > "$skilldir/SKILL.md"
-    local proj="$BATS_TEST_TMPDIR/argproj"
-    mkdir -p "$proj"
-    cd "$proj"
-    local real_proj; real_proj="$(pwd -P)"
-    local real_skilldir; real_skilldir="$(cd "$skilldir" && pwd -P)"
-    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_proj" | sed 's/[/.]/-/g')"
-    mkdir -p "$pdir"
-    # 주입 본문 = Base directory + 동일 본문 + 끝에 ARGUMENTS 블록
-    local text; text="$(printf 'Base directory for this skill: %s\n\n# argskill body\n\nsame.\n\n\nARGUMENTS: "some user input here"' "$real_skilldir")"
-    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"g1","name":"Skill","input":{"skill":"argskill"}}]}}' -n > "$pdir/s.jsonl"
-    jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"g1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/s.jsonl"
-
-    run bun "$INDEXER" --recent 3
-    rm -rf "$pdir"
-    [ "$status" -eq 0 ]
-    # ARGUMENTS 꼬리에도 불구하고 본문이 같으므로 stale:false (오판하면 dropped 됨)
-    echo "$output" | jq -e '[.skills[] | select(.name == "argskill")][0].stale == false'
+    # 단일 skill 항목으로 평면화 (per-version 분기 없음)
+    echo "$output" | jq -e '[.skills[] | select(.name == "flat")] | length == 1'
+    # 모든 버전이 정렬되어 versions[]에 합쳐진다
+    echo "$output" | jq -e '[.skills[] | select(.name == "flat")][0].versions == ["17.18.0","17.19.1"]'
+    # 두 세션이 모두 seen_in[]에 (정렬)
+    echo "$output" | jq -e '[.skills[] | select(.name == "flat")][0].seen_in == ["v18","v19"]'
+    # events는 양쪽 본문 신호를 모두 보존한다 (drop 없음)
+    echo "$output" | jq -e '[.skills[] | select(.name == "flat")][0].events | map(select(.text == "v18 signal")) | length == 1'
+    echo "$output" | jq -e '[.skills[] | select(.name == "flat")][0].events | map(select(.text == "v19 signal")) | length == 1'
+    # 제거된 분기 키는 더는 존재하지 않는다
+    echo "$output" | jq -e '[.skills[] | select(.name == "flat")][0] | has("observed_bodies") | not'
+    echo "$output" | jq -e '[.skills[] | select(.name == "flat")][0] | has("stale") | not'
+    echo "$output" | jq -e '[.skills[] | select(.name == "flat")][0] | has("dropped") | not'
+    echo "$output" | jq -e '[.skills[] | select(.name == "flat")][0] | has("repo_path") | not'
 }
 
 @test "evolve build-index: --skill collects sessions across project boundaries" {
@@ -810,14 +552,13 @@ EOF
     run bun "$INDEXER" --skill sumkeep
     [ "$status" -eq 0 ]
     echo "$output" | jq -e '[.skills[].name] == ["sumkeep"]'
-    echo "$output" | jq -e '.summary.headline | test("1 skills · 0 dropped")'
+    echo "$output" | jq -e '.summary.headline | test("1 sessions · 1 skills")'
 
     run bun "$INDEXER" --skill sumdrop
     rm -rf "$p"
     [ "$status" -eq 0 ]
     echo "$output" | jq -e '[.skills[].name] == ["sumdrop"]'
-    # stale은 더는 dropped가 아니라 advisory로 분리 표기된다
-    echo "$output" | jq -e '.summary.headline | test("1 skills · 0 dropped · 1 stale .advisory.")'
+    echo "$output" | jq -e '.summary.headline | test("1 sessions · 1 skills")'
 }
 
 @test "evolve build-index: duplicate singleton flags exit 2" {
@@ -975,11 +716,12 @@ EOF
     echo "$output" | jq -e '[.skills[].name] == ["cwdrecent"]'
 }
 
-@test "evolve build-index: --cwd --skill maps repo_path from target cwd" {
+@test "evolve build-index: --cwd --skill resolves target cwd worktree group" {
+    # --cwd 가 --skill 의 세션 탐지에 영향을 주지 않는다(--skill 은 전역 스캔). 단 결과 build에는
+    # 평면 shape가 그대로 나온다. repo_path 매핑은 폐기됐으므로 더는 검증하지 않는다.
     local repo="$BATS_TEST_TMPDIR/cwd-skill-repo"
     mkdir -p "$repo/plugins/me/skills/cwdskill"
     printf -- '# cwdskill\n' > "$repo/plugins/me/skills/cwdskill/SKILL.md"
-    local real_repo; real_repo="$(cd "$repo" && pwd -P)"
     local pdir="$EVOLVE_PROJECTS_DIR/-tmp-evolve-cwd-skill-$$"
     mkdir -p "$pdir"
     local cachedir="$BATS_TEST_TMPDIR/cache/cwdskill"
@@ -990,8 +732,8 @@ EOF
     run bun "$INDEXER" --cwd "$repo" --skill cwdskill --recent 1
     rm -rf "$pdir"
     [ "$status" -eq 0 ]
-    echo "$output" | jq -e '[.skills[] | select(.name == "cwdskill")][0].repo_path | test("plugins/me/skills/cwdskill/SKILL.md")'
-    echo "$output" | jq -e '[.skills[] | select(.name == "cwdskill")][0].stale == false'
+    echo "$output" | jq -e '[.skills[] | select(.name == "cwdskill")][0].versions | type == "array"'
+    echo "$output" | jq -e '[.skills[] | select(.name == "cwdskill")][0] | has("repo_path") | not'
 }
 
 @test "evolve build-index: noisy local command markers are not user events" {

@@ -22,7 +22,7 @@ load ../helpers/bats_helper
 @test "evolve: SKILL.md defines ordered no-signal handling" {
     local f="${PROJECT_ROOT}/plugins/me/skills/evolve/SKILL.md"
     grep -q "Evaluate these conditions in order" "$f"
-    grep -q "Some current skills have non-skill events" "$f"
+    grep -q "probe the skills with the strongest signal first" "$f"
 }
 
 @test "evolve: SKILL.md documents real multi-skill shorthand" {
@@ -40,13 +40,6 @@ load ../helpers/bats_helper
     grep -q "latest transcript for that" "$f"
     grep -q "recent or skill-focused analysis for another worktree" "$f"
     grep -q "do not forward the whole" "$f"
-}
-
-@test "evolve: SKILL.md blocks proposals when all skills are dropped" {
-    local f="${PROJECT_ROOT}/plugins/me/skills/evolve/SKILL.md"
-    grep -q "All candidate skills dropped" "$f"
-    grep -q "do not run proposal" "$f"
-    grep -q "1 dropped: 1 missing_current_body" "$f"
 }
 
 @test "evolve: SKILL.md approval prompt includes commit scope" {

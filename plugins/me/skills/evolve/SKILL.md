@@ -82,39 +82,31 @@ If the indexer prints a `[evolve] warning: …` line to stderr (e.g. `0 tool_use
 results. Do not treat an empty index as "no signals" in that case — surface the warning to the user and stop, since the
 `FMT.*` format constants in `build-index.ts` likely need updating against the current transcript format.
 
-Stop early when the index has no current evidence. A `kind:"skill"` event is an anchor (which skill was
+Stop early when the index has no friction signal. A `kind:"skill"` event is an anchor (which skill was
 active), not a friction signal — "has signals" means having interrupt/error/repeat/user events, not just
 skill anchors. Evaluate these conditions in order:
 
-- Single session with no non-skill events: print `no improvement signals found in this session`.
-- Recent mode with empty `skills[]`: print `no invoked skills found in recent sessions`.
-- All candidate skills dropped (`missing_current_body` only): report `drop_reason`, `skill_path`, and
-  `observed_bodies[].versions`; do not run proposal subagents.
-  Example: `11 sessions · 1 skills · 1 dropped: 1 missing_current_body` means report diagnostics only.
-- No current skill has events but some are `stale` (advisory): do not stop. Stale skills carry `stale_events[]`
-  from a prior body — run the stale-signal revalidation probe to see if any signal is still unaddressed by the
-  current body. Headline shows these as `N stale (advisory)`, separate from `dropped`.
-- No current skill has non-skill events and none are stale: print `no improvement signals found in current skill bodies`.
-- Some current skills have non-skill events: probe those first; treat `stale` skills as a secondary, advisory source.
+- Single session with empty `events[]`: print `no improvement signals found in this session`.
+- Recent/skill mode with empty `skills[]`: print `no invoked skills found in recent sessions`.
+- All skills have signal `no events` (zero interrupt+error+repeat+user): print `no improvement signals found`.
+- Otherwise: probe the skills with the strongest signal first.
 
 ## Index Notes
 
 Single-session output has `summary` and `events[]`.
 
-Recent and skill output has `mode:"recent"` and `skills[]`. Each skill includes:
+Recent and skill output has `mode:"recent"` and `skills[]`. The shape is flat and version-agnostic — the indexer
+sums signals across every observed body of a skill name and does not compare against the current disk body. Each
+skill includes:
 
-- `signal`: one-line event counts, `stale (<counts>)` for advisory bodies, or `dropped (<drop_reason>)`
-- `drop_reason`: `stale` (body changed — advisory, kept) or `missing_current_body` (no disk file — dropped)
-- `observed_bodies`: diagnostic body hashes and versions
-- `repo_path`: editable repo-owned source when available
-- `events[]`: only events matching the current skill body — the sole direct proposal evidence
-- `stale_events[]`: events from a prior body when the skill is `stale`. These are advisory: a signal here may
-  already be fixed by the current body. Use as proposal evidence **only after** confirming, against the current
-  `repo_path`/`skill_path` body, that the signal is still unaddressed. Empty when `dropped`.
+- `signal`: one-line event counts (e.g. `3 interrupt, 3 error, 6 repeat, 10 user`), or `no events`
+- `versions`: every skill version seen across sessions — context only, not used for matching
+- `seen_in`: the `session_id`s where this skill was invoked
+- `skill_path`: the cache SKILL.md path at invocation time (edit-target mapping is the proposal subagent's job)
+- `events[]`: all friction signals for this skill name, summed across bodies, each tagged with `session`
 
-Use `summary.headline` as the freshness check. Treat `observed_bodies` as diagnostics, not proposal evidence.
-`stale` skills are not dropped — a fast-evolving skill (body hash changes every release) still surfaces its
-accumulated friction via `stale_events` instead of being silently discarded.
+Because the indexer no longer tracks current-body state, the proposal subagent reads the actual repo-owned
+SKILL.md to judge whether a surfaced signal is already fixed before proposing a patch.
 
 In `--recent` and `--skill`, each non-skill event (error/interrupt/repeat/user/agent) is attributed to the skill that
 was active at its turn — the most recently invoked skill before that turn — not copied to every skill in the session.
@@ -138,15 +130,11 @@ Useful lenses:
 
 - correction chain
 - cross-skill ownership
-- stale/drop diagnostics
-- stale-signal revalidation: for a `stale` skill, compare each `stale_events[]` item against the current body
-  (`repo_path`/`skill_path`). Promote to `proposal-worthy` only the signals the current body still fails to
-  address; mark the rest `no-signal` (already fixed by a later edit). This is advisory, not a gate.
 - noisy directives
 - repeated exploration
 - shared-session signals in `--recent`
 
-Each probe may inspect only relevant `events[]` (or `stale_events[]` for the revalidation lens) items and narrow
+Each probe may inspect only relevant `events[]` items and narrow
 transcript turn ranges. It returns:
 
 ```json
@@ -209,7 +197,7 @@ Required output is one JSON block:
 }
 ```
 
-Reject broad rewrites, proposals without direct `event_indexes`, or patches based only on dropped/stale bodies.
+Reject broad rewrites or proposals without direct `event_indexes`.
 
 ## Phase 2: Approval And Apply
 

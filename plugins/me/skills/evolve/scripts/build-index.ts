@@ -6,7 +6,6 @@
 import { readFileSync, existsSync, readdirSync, statSync, realpathSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { homedir } from "node:os";
-import { createHash } from "node:crypto";
 
 // ── 하네스 트랜스크립트 포맷 의존 상수 ──────────────────
 // 이 인덱서는 Claude Code가 기록하는 트랜스크립트 .jsonl 의 내부 라인 포맷에 의존한다.
@@ -29,7 +28,6 @@ const FMT = {
 
 // ── 타입 ───────────────────────────────────────────────
 type EventKind = "user" | "skill" | "interrupt" | "error" | "agent" | "repeat";
-type DropReason = "stale" | "missing_current_body";
 
 interface Event {
   t: number;
@@ -60,28 +58,13 @@ interface SessionIndex {
   events: Event[];
 }
 
-interface ObservedBody {
-  hash: string;
-  current: boolean;
-  versions: string[];
-  seen_in: string[];
-  signal: string;
-}
-
 interface RecentSkill {
   name: string;
   skill_path: string;     // transcript가 가리킨 호출 시점 base 경로의 SKILL.md (보통 캐시 경로)
-  repo_path?: string;     // cwd repo 안에서 찾은 편집 가능한 SKILL.md (있으면 직접 edit 대상)
-  current_hash?: string;
-  drop_reason?: DropReason;
-  observed_bodies: ObservedBody[];
-  stale: boolean;         // current body가 관측된 본문과 매칭되지 않음 (본문이 바뀌었거나 디스크에 없음)
-  dropped: boolean;       // true면 events·stale_events 모두 제외 (missing_current_body 한정)
-  seen_in: string[];      // 등장한 session_id 목록
+  versions: string[];     // 등장한 모든 버전 (정렬, 컨텍스트용). 신호 귀속에는 안 씀.
+  seen_in: string[];      // 등장한 session_id 목록 (정렬)
   signal: string;         // kind별 카운트 한 줄 요약 (LLM이 어디부터 볼지 판단용)
-  events: Event[];        // 현재 본문과 매칭된 신호. stale/dropped면 빈 배열
-  stale_events: Event[];  // 이전 본문에서 관측된 신호(diagnostic 강등). 현재 본문에 여전히 유효한지
-                          // LLM이 확인한 뒤에만 제안 근거로 쓴다. dropped면 빈 배열
+  events: Event[];        // 모든 본문 신호 합산. 각 event에 출처 session 태그.
 }
 
 interface RecentIndex {
@@ -112,7 +95,6 @@ interface SkillInvocation {
   name: string;          // skill 식별자 (Base directory의 마지막 디렉터리명)
   baseDir: string;       // 주입 본문의 Base directory 절대경로
   version: string;
-  hash: string;
   turn: number;          // 주입 시점까지 누적된 turn 수 (= 직전 호출 turn). 이후 신호의 소유 스킬 결정용.
 }
 
@@ -162,12 +144,10 @@ function loadTurns(jsonlPath: string): LoadedTranscript {
         const m = text.match(new RegExp(`^${escapeRegExp(FMT.skillInjectionMarker)}\\s*(.+?)\\s*(?:${LINE_BREAK}|$)`));
         if (m) {
           const baseDir = m[1];
-          const injectedBody = restorePluginRoot(stripBaseDirLine(text), baseDir);
           skillInvocations.push({
             name: basename(baseDir),
             baseDir,
             version: skillVersion(baseDir),
-            hash: bodyHash(injectedBody),
             turn: turns.length, // 주입은 turn으로 안 세므로 직전까지의 turn 수가 이 호출의 활성 시작점
           });
         }
@@ -230,45 +210,8 @@ function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-// ── skill 본문 정규화 + 해시 (stale 판정용) ──
+// 스킬 호출 본문 주입의 줄바꿈 변종(LF/CRLF/CR)을 매칭하기 위한 패턴. loadTurns의 Base directory 추출에 사용.
 const LINE_BREAK = "(?:\\r\\n|\\n|\\r)";
-const BASE_DIR_LINE = new RegExp(`^${escapeRegExp(FMT.skillInjectionMarker)}.*${LINE_BREAK}+`);
-// 슬래시 커맨드를 인자와 함께 호출하면 주입 본문 끝에 "ARGUMENTS: …" 블록이 덧붙는다.
-// 이는 SKILL.md 본문이 아니라 호출 인자이므로 stale 해시 비교 전에 제거해야
-// 같은 본문이 인자 유무/내용에 따라 stale로 오판되지 않는다.
-const ARGUMENTS_TAIL = new RegExp(`${LINE_BREAK}${LINE_BREAK}ARGUMENTS:[\\s\\S]*$`);
-
-// transcript 주입 본문에서 "Base directory" 첫 줄(+뒤 빈 줄)과 끝의 "ARGUMENTS:" 블록을 제거
-function stripBaseDirLine(injected: string): string {
-  return injected.replace(BASE_DIR_LINE, "").replace(ARGUMENTS_TAIL, "");
-}
-
-// 스킬 주입 시 Claude Code는 본문의 ${CLAUDE_PLUGIN_ROOT}를 plugin root 절대경로로 치환한다.
-// 디스크 SKILL.md는 리터럴 ${CLAUDE_PLUGIN_ROOT}를 그대로 보존하므로, 동일 본문이라도
-// 치환 여부 때문에 해시가 어긋나 false-stale로 dropped된다. 해싱 전에 치환을 되돌린다.
-// plugin root = baseDir에서 끝의 "/skills/<name>"을 제거한 경로.
-function restorePluginRoot(injectedBody: string, baseDir: string): string {
-  const root = baseDir.replace(/[\\/]skills[\\/][^\\/]+[\\/]?$/, "");
-  if (!root || root === baseDir) return injectedBody;
-  return injectedBody.split(root).join("${CLAUDE_PLUGIN_ROOT}");
-}
-
-// 디스크 SKILL.md에서 YAML frontmatter(--- … ---) 제거
-function stripFrontmatter(raw: string): string {
-  if (!raw.startsWith("---")) return raw;
-  const end = raw.indexOf("\n---", 3);
-  if (end === -1) return raw;
-  const after = raw.indexOf("\n", end + 1);
-  return after === -1 ? "" : raw.slice(after + 1);
-}
-
-function bodyHash(body: string): string {
-  return createHash("sha256").update(body.replace(/\r\n?/g, "\n").trim()).digest("hex");
-}
-
-function shortHash(hash: string): string {
-  return hash.slice(0, 8);
-}
 
 function skillVersion(baseDir: string): string {
   const parts = baseDir.split(/[\\/]/);
@@ -516,37 +459,6 @@ function buildIndex(jsonlPath: string): SessionIndex {
   };
 }
 
-// cwd에서 위로 올라가며 `plugins/` 를 가진 디렉터리(=이 repo 루트)를 찾는다.
-function findRepoRoot(cwd: string): string | null {
-  let dir = cwd;
-  for (let i = 0; i < 30; i++) {
-    if (existsSync(join(dir, "plugins"))) return dir;
-    const parent = join(dir, "..");
-    const resolved = resolve(parent);
-    if (resolved === dir) break;
-    dir = resolved;
-  }
-  return null;
-}
-
-// repo 안에서 같은 이름 skill의 편집 가능한 SKILL.md 경로를 찾는다 (plugins/*/skills/<name>/SKILL.md).
-// transcript가 캐시 경로를 가리켜도, cwd repo에 그 skill 소스가 있으면 그걸 직접 편집 대상으로 쓴다.
-function repoSkillPath(repoRoot: string | null, name: string): string | undefined {
-  if (!repoRoot) return undefined;
-  const pluginsDir = join(repoRoot, "plugins");
-  if (!existsSync(pluginsDir)) return undefined;
-  for (const plugin of readdirSync(pluginsDir).sort()) {
-    const candidate = join(pluginsDir, plugin, "skills", name, "SKILL.md");
-    if (existsSync(candidate)) return candidate;
-  }
-  return undefined;
-}
-
-function currentBodyHash(skillMd: string): string | null {
-  if (!existsSync(skillMd)) return null;
-  return bodyHash(stripFrontmatter(readFileSync(skillMd, "utf8")));
-}
-
 function jsonlFilesInDir(dir: string): Array<{ path: string; mtime: number }> {
   try {
     return readdirSync(dir)
@@ -564,56 +476,22 @@ function jsonlFilesInDir(dir: string): Array<{ path: string; mtime: number }> {
 const byNewest = (a: { mtime: number }, b: { mtime: number }): number => b.mtime - a.mtime;
 
 function formatRecentHeadline(sessionCount: number, skills: RecentSkill[]): string {
-  const dropped = skills.filter((s) => s.dropped);
-  let droppedPart = `${dropped.length} dropped`;
-  if (dropped.length > 0) {
-    const counts = new Map<string, number>();
-    for (const skill of dropped) {
-      if (!skill.drop_reason) continue;
-      counts.set(skill.drop_reason, (counts.get(skill.drop_reason) ?? 0) + 1);
-    }
-    const reasons = [...counts.entries()].map(([reason, n]) => `${n} ${reason}`);
-    if (reasons.length > 0) droppedPart += `: ${reasons.join(", ")}`;
-  }
-  // stale은 drop이 아니라 advisory 강등이므로 dropped와 분리 집계한다.
-  const staleCount = skills.filter((s) => s.stale && !s.dropped).length;
-  const stalePart = staleCount > 0 ? ` · ${staleCount} stale (advisory)` : "";
-  return `${sessionCount} sessions · ${skills.length} skills · ${droppedPart}${stalePart}`;
+  return `${sessionCount} sessions · ${skills.length} skills`;
 }
 
-function dropReasonFor(currentHash: string | null, hasCurrentBody: boolean): DropReason | undefined {
-  if (hasCurrentBody) return undefined;
-  return currentHash === null ? "missing_current_body" : "stale";
-}
-
-// 한 skill 이름에 대한 multi-session 누적 상태. 모두 호출시점 본문 hash로 쪼개 보관한다.
+// 한 skill 이름에 대한 multi-session 누적 상태. body-hash 폐기 후로는 버전 무관하게 평면 합산한다.
 interface SkillAccumulator {
-  baseDir: string;                          // newest-first 입력에서 처음 본 호출 경로 (cache 본문 조회용)
-  versionsByHash: Map<string, Set<string>>; // hash -> 그 본문으로 관측된 버전들
-  seenByHash: Map<string, Set<string>>;     // hash -> 그 본문이 등장한 session_id들
-  seen: Set<string>;                        // 이 skill이 등장한 모든 session_id
-  eventsByHash: Map<string, Event[]>;       // hash -> 그 본문에 귀속된 신호들
+  baseDir: string;       // 입력에서 처음 본 호출 경로 (cache SKILL.md 경로 노출용)
+  versions: Set<string>; // 등장한 모든 버전 (컨텍스트용)
+  seen: Set<string>;     // 이 skill이 등장한 모든 session_id
+  events: Event[];       // 이 skill에 귀속된 모든 신호 (전 본문 합산)
 }
 
 function newAccumulator(baseDir: string): SkillAccumulator {
-  return { baseDir, versionsByHash: new Map(), seenByHash: new Map(), seen: new Set(), eventsByHash: new Map() };
+  return { baseDir, versions: new Set(), seen: new Set(), events: [] };
 }
 
-// stale 강등 시 advisory로 노출할 본문을 고른다: 관측 본문 중 개선 신호(weight) 최대인 것.
-function strongestObservedBody(
-  a: SkillAccumulator,
-  summariesByHash: Map<string, SignalSummary>,
-): { events: Event[]; weight: number } {
-  let best: { events: Event[]; weight: number } | undefined;
-  for (const hash of a.versionsByHash.keys()) {
-    const weight = summariesByHash.get(hash)!.weight;
-    if (!best || weight > best.weight) best = { events: a.eventsByHash.get(hash) ?? [], weight };
-  }
-  return best ?? { events: [], weight: 0 };
-}
-
-function buildRecentIndex(paths: string[], cwd: string): RecentIndex {
-  const repoRoot = findRepoRoot(cwd);
+function buildRecentIndex(paths: string[]): RecentIndex {
   const sessions: RecentIndex["sessions"] = [];
   const acc = new Map<string, SkillAccumulator>();
 
@@ -625,19 +503,16 @@ function buildRecentIndex(paths: string[], cwd: string): RecentIndex {
     const events = buildEvents(turns, skillInvocations);
     sessions.push({ session_id: sessionId, ...(sessionTitle ? { session_title: sessionTitle } : {}), turns: turns.length });
 
-    // 이 세션에서 호출된 skill 이름별 호출시점 본문 해시
-    const invokedHashesByName = new Map<string, Set<string>>();
+    // 이 세션에서 호출된 skill 이름들을 누적기에 등록 (버전·세션 합산)
+    const invokedNames = new Set<string>();
     for (const inv of skillInvocations) {
-      getOrCreate(invokedHashesByName, inv.name, () => new Set()).add(inv.hash);
+      invokedNames.add(inv.name);
       const a = getOrCreate(acc, inv.name, () => newAccumulator(inv.baseDir));
       a.seen.add(sessionId);
-      getOrCreate(a.versionsByHash, inv.hash, () => new Set()).add(inv.version);
-      getOrCreate(a.seenByHash, inv.hash, () => new Set()).add(sessionId);
-      getOrCreate(a.eventsByHash, inv.hash, () => []);
+      a.versions.add(inv.version);
     }
 
-    // events를 해당 세션에서 호출된 skill의 호출시점 본문 해시로 귀속.
-    // events의 session 식별을 위해 session 필드 마킹.
+    // events를 해당 세션에서 호출된 skill에 귀속. events에 출처 session 태그.
     // 비-skill 신호(error/interrupt/repeat/user/agent)는 시간상 그 직전에 호출된 스킬에만 귀속한다.
     // 이렇게 해야 한 세션에서 여러 스킬이 호출됐을 때 같은 error가 모든 스킬에 복사되어
     // per-skill signal·정렬 가중치를 오염시키는 일을 막는다. 첫 스킬 호출 이전 신호는 어디에도 안 붙는다.
@@ -653,81 +528,36 @@ function buildRecentIndex(paths: string[], cwd: string): RecentIndex {
       const tagged: Event = { ...ev, session: sessionId };
       if (ev.kind === "skill" && ev.name) {
         const fallback = ev.name.includes(":") ? ev.name.split(":").pop()! : ev.name;
-        const target = invokedHashesByName.has(ev.name) ? ev.name : fallback;
-        const hashes = invokedHashesByName.get(target);
-        if (!hashes) continue;
-        for (const hash of hashes) acc.get(target)!.eventsByHash.get(hash)!.push(tagged);
+        const target = invokedNames.has(ev.name) ? ev.name : invokedNames.has(fallback) ? fallback : undefined;
+        if (target === undefined) continue;
+        acc.get(target)!.events.push(tagged);
       } else {
         const owner = activeName;
         if (owner === undefined) continue;
-        for (const hash of invokedHashesByName.get(owner) ?? []) {
-          acc.get(owner)!.eventsByHash.get(hash)!.push(tagged);
-        }
+        acc.get(owner)!.events.push(tagged);
       }
     }
   }
 
   // skill + 정렬 키(weight)를 함께 모은다. 정렬 키는 출력 타입(RecentSkill)을 오염시키지 않게 분리한다.
-  const ranked: Array<{ skill: RecentSkill; weight: number; staleWeight: number }> = [];
+  const ranked: Array<{ skill: RecentSkill; weight: number }> = [];
   for (const [name, a] of acc) {
-    const cacheSkillMd = join(a.baseDir, "SKILL.md");
-    // cwd repo에 같은 skill 소스가 있으면 그게 편집 가능한 "현재 본문"의 진짜 출처다 (캐시는 구버전일 수 있음).
-    const repoPath = repoSkillPath(repoRoot, name);
-    const nowHashFull = currentBodyHash(repoPath ?? cacheSkillMd);
-    const hasCurrentBody = nowHashFull !== null && a.versionsByHash.has(nowHashFull);
-    const summariesByHash = new Map(
-      [...a.versionsByHash.keys()].map((hash) => [hash, summarizeSignal(a.eventsByHash.get(hash) ?? [])]),
-    );
-    const matchingEvents = hasCurrentBody ? a.eventsByHash.get(nowHashFull) ?? [] : [];
-    const dropReason = dropReasonFor(nowHashFull, hasCurrentBody);
-    // missing_current_body는 검증 불가라 완전 drop. stale(본문이 바뀜)은 신호가 여전히 유효할 수
-    // 있으므로 drop 대신 diagnostic으로 강등한다 — 관측 본문 중 weight가 가장 강한 것의 events를
-    // stale_events로 노출하고, LLM이 현재 본문에 아직 유효한지 확인한 뒤에만 제안 근거로 쓰게 한다.
-    const stale = dropReason !== undefined;
-    const dropped = dropReason === "missing_current_body";
-    const evs = stale ? [] : matchingEvents;
-    const advisory = dropReason === "stale" ? strongestObservedBody(a, summariesByHash) : { events: [], weight: 0 };
-    const staleEvents = advisory.events;
-    const staleWeight = advisory.weight;
-    const { signal, weight } = hasCurrentBody ? summariesByHash.get(nowHashFull)! : summarizeSignal([]);
-    const observed_bodies = [...a.versionsByHash.keys()].sort().map((hash) => ({
-      hash: shortHash(hash),
-      current: hash === nowHashFull,
-      versions: [...(a.versionsByHash.get(hash) ?? [])].sort(),
-      seen_in: [...(a.seenByHash.get(hash) ?? [])].sort(),
-      signal: summariesByHash.get(hash)!.signal,
-    }));
-    // stale은 강등 신호임을 signal 문자열로 알린다. 현재 본문 신호(있으면)보다 정렬 우선순위가 낮도록
-    // _weight는 현재 본문 weight를 그대로 쓰되, stale-only(현재 weight 0)일 때만 staleWeight를
-    // 음수 보조키로 반영해 missing_current_body(신호 0)보다는 위로 올린다.
-    const staleSignal = staleEvents.length > 0 ? summarizeSignal(staleEvents).signal : "no signals";
+    const { signal, weight } = summarizeSignal(a.events);
     ranked.push({
       skill: {
         name,
-        skill_path: cacheSkillMd,
-        ...(repoPath ? { repo_path: repoPath } : {}),
-        ...(nowHashFull ? { current_hash: shortHash(nowHashFull) } : {}),
-        ...(dropReason ? { drop_reason: dropReason } : {}),
-        observed_bodies,
-        stale,
-        dropped,
+        skill_path: join(a.baseDir, "SKILL.md"),
+        versions: [...a.versions].sort(),
         seen_in: [...a.seen].sort(),
-        signal: dropped ? `dropped (${dropReason})` : dropReason === "stale" ? `stale (${staleSignal})` : signal,
-        events: evs,
-        stale_events: staleEvents,
+        signal,
+        events: a.events,
       },
       weight,
-      staleWeight,
     });
   }
-  // 개선 신호(interrupt+error+repeat) 많은 순 → 동률이면 전체 event 수 순 → stale 강등 신호 순 → 이름순.
-  // 현재 본문 신호가 stale 강등 신호보다 항상 우선한다(weight 먼저).
+  // 개선 신호(interrupt+error+repeat) 많은 순 → 동률이면 전체 event 수 순 → 이름순.
   ranked.sort(
-    (x, y) =>
-      y.weight - x.weight ||
-      y.skill.events.length - x.skill.events.length ||
-      y.staleWeight - x.staleWeight ||
-      x.skill.name.localeCompare(y.skill.name),
+    (x, y) => y.weight - x.weight || y.skill.events.length - x.skill.events.length || x.skill.name.localeCompare(y.skill.name),
   );
   const skills = ranked.map((r) => r.skill);
 
@@ -1041,14 +871,14 @@ const targetCwd = opts.cwd ?? process.cwd();
 if (opts.skill !== undefined) {
   const n = opts.recent ?? 10;
   const { paths, skillNames } = resolveSkillSessionPaths(opts.skill, n);
-  const index = buildRecentIndex(paths, targetCwd);
+  const index = buildRecentIndex(paths);
   // --skill 은 대상 스킬 하나로 좁혀서 내보낸다 (같은 세션의 다른 스킬은 제외).
   index.skills = index.skills.filter((s) => skillNames.includes(s.name));
   index.summary.headline = formatRecentHeadline(index.session_count, index.skills);
   console.log(JSON.stringify(index, null, 2));
 } else if (opts.recent !== undefined) {
   const paths = recentSessionPaths(targetCwd, opts.recent);
-  console.log(JSON.stringify(buildRecentIndex(paths, targetCwd), null, 2));
+  console.log(JSON.stringify(buildRecentIndex(paths), null, 2));
 } else {
   const transcriptPath = resolveTranscriptPath({
     jsonlPath: opts.jsonlPath,
