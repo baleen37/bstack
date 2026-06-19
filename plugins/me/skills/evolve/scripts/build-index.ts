@@ -572,17 +572,36 @@ function dropReasonFor(currentHash: string | null, hasCurrentBody: boolean): Dro
   return currentHash === null ? "missing_current_body" : "stale";
 }
 
+// 한 skill 이름에 대한 multi-session 누적 상태. 모두 호출시점 본문 hash로 쪼개 보관한다.
+interface SkillAccumulator {
+  baseDir: string;                          // newest-first 입력에서 처음 본 호출 경로 (cache 본문 조회용)
+  versionsByHash: Map<string, Set<string>>; // hash -> 그 본문으로 관측된 버전들
+  seenByHash: Map<string, Set<string>>;     // hash -> 그 본문이 등장한 session_id들
+  seen: Set<string>;                        // 이 skill이 등장한 모든 session_id
+  eventsByHash: Map<string, Event[]>;       // hash -> 그 본문에 귀속된 신호들
+}
+
+function newAccumulator(baseDir: string): SkillAccumulator {
+  return { baseDir, versionsByHash: new Map(), seenByHash: new Map(), seen: new Set(), eventsByHash: new Map() };
+}
+
+// stale 강등 시 advisory로 노출할 본문을 고른다: 관측 본문 중 개선 신호(weight) 최대인 것.
+function strongestObservedBody(
+  a: SkillAccumulator,
+  summariesByHash: Map<string, SignalSummary>,
+): { events: Event[]; weight: number } {
+  let best: { events: Event[]; weight: number } | undefined;
+  for (const hash of a.versionsByHash.keys()) {
+    const weight = summariesByHash.get(hash)!.weight;
+    if (!best || weight > best.weight) best = { events: a.eventsByHash.get(hash) ?? [], weight };
+  }
+  return best ?? { events: [], weight: 0 };
+}
+
 function buildRecentIndex(paths: string[], cwd: string): RecentIndex {
   const repoRoot = findRepoRoot(cwd);
   const sessions: RecentIndex["sessions"] = [];
-  // name -> 누적 상태
-  const acc = new Map<string, {
-    baseDir: string;
-    versionsByHash: Map<string, Set<string>>;
-    seenByHash: Map<string, Set<string>>;
-    seen: Set<string>;
-    eventsByHash: Map<string, Event[]>;
-  }>();
+  const acc = new Map<string, SkillAccumulator>();
 
   for (const p of paths) {
     const sessionId = basename(p, ".jsonl");
@@ -596,14 +615,7 @@ function buildRecentIndex(paths: string[], cwd: string): RecentIndex {
     const invokedHashesByName = new Map<string, Set<string>>();
     for (const inv of skillInvocations) {
       getOrCreate(invokedHashesByName, inv.name, () => new Set()).add(inv.hash);
-      const a = getOrCreate(acc, inv.name, () => ({
-        baseDir: inv.baseDir,
-        versionsByHash: new Map(),
-        seenByHash: new Map(),
-        seen: new Set(),
-        eventsByHash: new Map(),
-      }));
-      // baseDir는 cache-only 현재 본문 조회를 위해 newest-first 입력에서 처음 관측한 호출 경로를 유지한다.
+      const a = getOrCreate(acc, inv.name, () => newAccumulator(inv.baseDir));
       a.seen.add(sessionId);
       getOrCreate(a.versionsByHash, inv.hash, () => new Set()).add(inv.version);
       getOrCreate(a.seenByHash, inv.hash, () => new Set()).add(sessionId);
@@ -659,18 +671,9 @@ function buildRecentIndex(paths: string[], cwd: string): RecentIndex {
     const stale = dropReason !== undefined;
     const dropped = dropReason === "missing_current_body";
     const evs = stale ? [] : matchingEvents;
-    let staleEvents: Event[] = [];
-    let staleWeight = 0;
-    if (dropReason === "stale") {
-      let best: { events: Event[]; weight: number } | undefined;
-      for (const hash of a.versionsByHash.keys()) {
-        const evList = a.eventsByHash.get(hash) ?? [];
-        const w = summariesByHash.get(hash)!.weight;
-        if (!best || w > best.weight) best = { events: evList, weight: w };
-      }
-      staleEvents = best?.events ?? [];
-      staleWeight = best?.weight ?? 0;
-    }
+    const advisory = dropReason === "stale" ? strongestObservedBody(a, summariesByHash) : { events: [], weight: 0 };
+    const staleEvents = advisory.events;
+    const staleWeight = advisory.weight;
     const { signal, weight } = hasCurrentBody ? summariesByHash.get(nowHashFull)! : summarizeSignal([]);
     const observed_bodies = [...a.versionsByHash.keys()].sort().map((hash) => ({
       hash: shortHash(hash),
