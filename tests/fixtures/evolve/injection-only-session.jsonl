@@ -1,0 +1,4 @@
+{"type": "ai-title", "aiTitle": "Injection-only skill (no slash qualifier)"}
+{"type": "user", "message": {"role": "user", "content": [{"type": "text", "text": "do the thing"}]}}
+{"type": "assistant", "message": {"role": "assistant", "content": [{"type": "tool_use", "id": "toolu_solo", "name": "Skill", "input": {"skill": "solo"}}]}}
+{"type": "user", "isMeta": true, "sourceToolUseID": "toolu_solo", "message": {"role": "user", "content": [{"type": "text", "text": "Base directory for this skill: /Users/x/.claude/plugins/cache/x-marketplace/x/1.0.0/skills/solo\n\n# solo skill body\n"}]}}

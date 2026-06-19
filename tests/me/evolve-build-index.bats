@@ -13,6 +13,9 @@ INTERRUPT_FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/interrupt-session.jsonl
 TAG_FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/slash-cmd-tag-session.jsonl"
 RICH_FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/rich-signals-session.jsonl"
 SKILL_INVOCATION_FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/skill-invocation-session.jsonl"
+QUALIFY_A_FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/qualify-plugin-a-session.jsonl"
+QUALIFY_B_FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/qualify-plugin-b-session.jsonl"
+INJECTION_ONLY_FIXTURE="${PROJECT_ROOT}/tests/fixtures/evolve/injection-only-session.jsonl"
 
 # 트랜스크립트 스캔을 라이브 ~/.claude/projects 가 아닌 격리된 임시 디렉터리로 돌린다.
 # 이게 없으면 --skill/--recent 가 실행 중인 현재 세션까지 끌어와 결과가 비결정적이 된다
@@ -240,7 +243,8 @@ EOF
     rm -rf "$pdir"
     [ "$status" -eq 0 ]
     echo "$output" | jq -e '.mode == "recent"'
-    echo "$output" | jq -e '[.skills[] | select(.name == "qa")] | length == 1'
+    # fixture가 /me:qa 슬래시 + me:qa Skill 도구로 호출하므로 qualified 키 me:qa 로 잡힌다.
+    echo "$output" | jq -e '[.skills[] | select(.name == "me:qa")] | length == 1'
 }
 
 @test "evolve build-index: --recent merges sessions across worktree sibling dirs" {
@@ -273,6 +277,57 @@ EOF
     echo "$output" | jq -e '.session_count == 2'
     echo "$output" | jq -e '[.skills[] | select(.name == "skillA")] | length == 1'
     echo "$output" | jq -e '[.skills[] | select(.name == "skillB")] | length == 1'
+}
+
+@test "evolve build-index: --recent qualifies skill name by slash plugin, splits same basename" {
+    # 서로 다른 플러그인의 같은 basename 스킬(a:dup, b:dup)은 슬래시 qualifier로 구분되어
+    # 별개 skills[] 엔트리가 되어야 한다 (basename 'dup' 하나로 신호가 병합되면 안 됨).
+    local proj="$BATS_TEST_TMPDIR/qualproj"
+    mkdir -p "$proj"; cd "$proj"
+    local real_proj; real_proj="$(pwd -P)"
+    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_proj" | sed 's/[/.]/-/g')"
+    mkdir -p "$pdir"
+    cp "$QUALIFY_A_FIXTURE" "$pdir/s1.jsonl"
+    cp "$QUALIFY_B_FIXTURE" "$pdir/s2.jsonl"
+
+    run bun "$INDEXER" --recent 10
+    rm -rf "$pdir"
+    [ "$status" -eq 0 ]
+    # a:dup 과 b:dup 이 각각 별개 엔트리. bare 'dup' 으로 병합된 엔트리는 없어야 한다.
+    echo "$output" | jq -e '[.skills[] | select(.name == "a:dup")] | length == 1'
+    echo "$output" | jq -e '[.skills[] | select(.name == "b:dup")] | length == 1'
+    echo "$output" | jq -e '[.skills[] | select(.name == "dup")] | length == 0'
+}
+
+@test "evolve build-index: --recent falls back to basename when no slash qualifier" {
+    # Skill 도구 주입만 있고 슬래시 텍스트가 없으면 qualifier를 알 수 없으므로 basename으로 키.
+    local proj="$BATS_TEST_TMPDIR/fbproj"
+    mkdir -p "$proj"; cd "$proj"
+    local real_proj; real_proj="$(pwd -P)"
+    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_proj" | sed 's/[/.]/-/g')"
+    mkdir -p "$pdir"
+    cp "$INJECTION_ONLY_FIXTURE" "$pdir/s.jsonl"
+
+    run bun "$INDEXER" --recent 5
+    rm -rf "$pdir"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '[.skills[] | select(.name == "solo")] | length == 1'
+}
+
+@test "evolve build-index: --skill qualified name targets one plugin only" {
+    # --skill a:dup 은 a 플러그인 dup 세션만 매칭 (b:dup 세션은 제외).
+    local proj="$BATS_TEST_TMPDIR/skqualproj"
+    mkdir -p "$proj"; cd "$proj"
+    local real_proj; real_proj="$(pwd -P)"
+    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_proj" | sed 's/[/.]/-/g')"
+    mkdir -p "$pdir"
+    cp "$QUALIFY_A_FIXTURE" "$pdir/s1.jsonl"
+    cp "$QUALIFY_B_FIXTURE" "$pdir/s2.jsonl"
+
+    run bun "$INDEXER" --skill "a:dup"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '[.skills[] | select(.name == "a:dup")] | length == 1'
+    echo "$output" | jq -e '[.skills[] | select(.name == "b:dup")] | length == 0'
 }
 
 @test "evolve build-index: --recent skill carries a signal summary with kind counts" {
@@ -404,34 +459,36 @@ EOF
     rm -rf "$p"
     [ "$status" -eq 0 ]
     echo "$output" | jq -e '.session_count == 1'
-    echo "$output" | jq -e '[.skills[].name] == ["evolve"]'
+    # Skill 도구 input.skill 이 me:evolve 이므로 qualified 키 me:evolve 로 잡힌다.
+    echo "$output" | jq -e '[.skills[].name] == ["me:evolve"]'
 }
 
-@test "evolve build-index: --skill exact colon name does not also match basename" {
-    # 실제 directory basename이 foo:bar인 skill은 별도 bar skill과 구분되어야 한다.
-    local colon_dir="$BATS_TEST_TMPDIR/skills/foo:bar"
-    local base_dir="$BATS_TEST_TMPDIR/skills/bar"
+@test "evolve build-index: --skill qualified name does not also match a bare basename session" {
+    # qualified --skill foo:bar 는 qualifier 'foo:bar' 로 호출된 세션만 잡고, 다른 플러그인의 bar
+    # (또는 qualifier 없는 bar)는 제외한다. colon은 이제 plugin:skill 구분자다.
+    local colon_dir="$BATS_TEST_TMPDIR/skills/bar"
+    local base_dir="$BATS_TEST_TMPDIR/skills/bar2"
     mkdir -p "$colon_dir" "$base_dir"
-    printf -- '# foo:bar body\n' > "$colon_dir/SKILL.md"
-    printf -- '# bar body\n' > "$base_dir/SKILL.md"
+    printf -- '# foo bar body\n' > "$colon_dir/SKILL.md"
+    printf -- '# other bar body\n' > "$base_dir/SKILL.md"
     local real_colon; real_colon="$(cd "$colon_dir" && pwd -P)"
     local real_base; real_base="$(cd "$base_dir" && pwd -P)"
-    local colon_text; colon_text="$(printf 'Base directory for this skill: %s\n\n# foo:bar body\n' "$real_colon")"
-    local base_text; base_text="$(printf 'Base directory for this skill: %s\n\n# bar body\n' "$real_base")"
+    local colon_text; colon_text="$(printf 'Base directory for this skill: %s\n\n# foo bar body\n' "$real_colon")"
+    local base_text; base_text="$(printf 'Base directory for this skill: %s\n\n# other bar body\n' "$real_base")"
     local p="$EVOLVE_PROJECTS_DIR/-tmp-evolve-skilltest-colon-exact-$$"
     mkdir -p "$p"
+    # 세션 A: foo:bar qualifier 로 bar 호출
     jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"c1","name":"Skill","input":{"skill":"foo:bar"}}]}}' -n > "$p/colon.jsonl"
     jq -c --arg t "$colon_text" '{"type":"user","isMeta":true,"sourceToolUseID":"c1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$p/colon.jsonl"
-    jq -c '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"<command-name>/foo:bar</command-name>"}]}}' -n >> "$p/colon.jsonl"
+    # 세션 B: qualifier 없이 bar 호출 (other:bar 가 아니라 bare bar)
     jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"b1","name":"Skill","input":{"skill":"bar"}}]}}' -n > "$p/base.jsonl"
     jq -c --arg t "$base_text" '{"type":"user","isMeta":true,"sourceToolUseID":"b1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$p/base.jsonl"
 
     run bun "$INDEXER" --skill foo:bar --recent 10
     rm -rf "$p"
     [ "$status" -eq 0 ]
-    echo "$output" | jq -e '.session_count == 1'
+    # qualified 요청이므로 foo:bar 한 엔트리만, bare bar 세션은 제외.
     echo "$output" | jq -e '[.skills[].name] == ["foo:bar"]'
-    echo "$output" | jq -e '[.skills[0].events[] | select(.kind == "skill" and .name == "foo:bar")] | length == 1'
 }
 
 @test "evolve build-index: --skill filters to the target skill only" {

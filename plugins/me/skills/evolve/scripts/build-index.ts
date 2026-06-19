@@ -95,10 +95,11 @@ interface Turn {
 }
 
 interface SkillInvocation {
-  name: string;          // skill 식별자 (Base directory의 마지막 디렉터리명)
+  name: string;          // skill basename (Base directory의 마지막 디렉터리명)
   baseDir: string;       // 주입 본문의 Base directory 절대경로
   version: string;
   turn: number;          // 주입 시점까지 누적된 turn 수 (= 직전 호출 turn). 이후 신호의 소유 스킬 결정용.
+  qualifier?: string;    // 이 호출을 띄운 Skill 도구 input.skill (`me:evolve`). 자격화 키의 1차 출처.
 }
 
 interface LoadedTranscript {
@@ -138,11 +139,21 @@ function loadTurns(jsonlPath: string): LoadedTranscript {
   const turns: Turn[] = [];
   const skillInvocations: SkillInvocation[] = [];
   let sessionTitle: string | undefined;
+  // Skill 도구 호출의 tool_use id → input.skill (`me:evolve`). 주입 본문은 sourceToolUseID로 이걸 가리킨다.
+  const skillToolQualifierById = new Map<string, string>();
   for (const line of lines) {
     const obj = JSON.parse(line);
     if (obj.type === FMT.aiTitleType && typeof obj[FMT.aiTitleField] === "string") {
       sessionTitle = obj[FMT.aiTitleField];
       continue;
+    }
+    // assistant turn의 Skill 도구 호출에서 자격화된 skill 이름을 id별로 기록 (주입과 sourceToolUseID로 연결).
+    if (obj.type === "assistant" && Array.isArray(obj.message?.content)) {
+      for (const c of obj.message.content) {
+        if (c?.type === "tool_use" && c.name === "Skill" && typeof c.input?.skill === "string" && c.id) {
+          skillToolQualifierById.set(c.id, c.input.skill);
+        }
+      }
     }
     // skill 호출시점 주입 본문 (isMeta user/text, 첫 줄 "Base directory for this skill:")
     if (obj.type === "user" && obj[FMT.metaFlag] === true) {
@@ -152,11 +163,13 @@ function loadTurns(jsonlPath: string): LoadedTranscript {
         const m = text.match(new RegExp(`^${escapeRegExp(FMT.skillInjectionMarker)}\\s*(.+?)\\s*(?:${LINE_BREAK}|$)`));
         if (m) {
           const baseDir = m[1];
+          const qualifier = typeof obj.sourceToolUseID === "string" ? skillToolQualifierById.get(obj.sourceToolUseID) : undefined;
           skillInvocations.push({
             name: basename(baseDir),
             baseDir,
             version: skillVersion(baseDir),
             turn: turns.length, // 주입은 turn으로 안 세므로 직전까지의 turn 수가 이 호출의 활성 시작점
+            ...(qualifier && qualifier.includes(":") ? { qualifier } : {}),
           });
         }
       }
@@ -510,11 +523,24 @@ function buildRecentIndex(paths: string[]): RecentIndex {
     const events = buildEvents(turns, skillInvocations);
     sessions.push({ session_id: sessionId, ...(sessionTitle ? { session_title: sessionTitle } : {}), turns: turns.length });
 
-    // 이 세션에서 호출된 skill 이름들을 누적기에 등록 (버전·세션 합산)
-    const invokedNames = new Set<string>();
+    // 각 invocation(basename)을 그 호출의 qualifier(`me:evolve`)로 자격화한다. 1차 출처는 Skill 도구
+    // input.skill(inv.qualifier), 2차는 인접(±1) 슬래시 이벤트. 둘 다 없으면 basename 유지.
+    // 이렇게 키를 qualified로 잡아야 다른 플러그인의 같은 basename 스킬이 한 키로 병합되지 않는다.
+    const slashEvents = events.filter((e) => e.kind === "skill" && e.name?.includes(":"));
+    const keyOf = (inv: SkillInvocation): string => {
+      if (inv.qualifier) return inv.qualifier;
+      const qualified = slashEvents.find(
+        (e) => Math.abs(e.t - inv.turn) <= 1 && skillBaseName(e.name!) === inv.name,
+      );
+      return qualified?.name ?? inv.name;
+    };
+
+    // 이 세션에서 호출된 skill을 누적기에 등록 (버전·세션 합산). invokedKeys: basename → 자격화된 키.
+    const invokedKeys = new Map<string, string>();
     for (const inv of skillInvocations) {
-      invokedNames.add(inv.name);
-      const a = getOrCreate(acc, inv.name, () => newAccumulator(inv.baseDir));
+      const key = keyOf(inv);
+      invokedKeys.set(inv.name, key);
+      const a = getOrCreate(acc, key, () => newAccumulator(inv.baseDir));
       a.seen.add(sessionId);
       a.versions.add(inv.version);
     }
@@ -526,22 +552,21 @@ function buildRecentIndex(paths: string[]): RecentIndex {
     // 활성 스킬은 호출 turn(invocation.turn) 시퀀스로 결정한다 — 슬래시 텍스트 유무와 무관.
     // skillInvocations와 events는 둘 다 turn 오름차순이므로 포인터 하나로 함께 훑는다.
     let invIdx = 0;
-    let activeName: string | undefined;
+    let activeKey: string | undefined;
     for (const ev of events) {
       while (invIdx < skillInvocations.length && skillInvocations[invIdx].turn <= ev.t) {
-        activeName = skillInvocations[invIdx].name;
+        activeKey = invokedKeys.get(skillInvocations[invIdx].name);
         invIdx++;
       }
       const tagged: Event = { ...ev, session: sessionId };
       if (ev.kind === "skill" && ev.name) {
-        const fallback = skillBaseName(ev.name);
-        const target = invokedNames.has(ev.name) ? ev.name : invokedNames.has(fallback) ? fallback : undefined;
-        if (target === undefined) continue;
-        acc.get(target)!.events.push(tagged);
+        // ev.name 은 슬래시 qualifier(`me:evolve`)거나 basename. 둘 다 invokedKeys의 basename으로 환원해 키를 찾는다.
+        const key = invokedKeys.get(skillBaseName(ev.name));
+        if (key === undefined) continue;
+        acc.get(key)!.events.push(tagged);
       } else {
-        const owner = activeName;
-        if (owner === undefined) continue;
-        acc.get(owner)!.events.push(tagged);
+        if (activeKey === undefined) continue;
+        acc.get(activeKey)!.events.push(tagged);
       }
     }
   }
@@ -687,16 +712,17 @@ function noSkillSessions(name: string): never {
 // ~/.claude/projects 전체에서 `<name>` skill이 호출된 세션을 mtime 순 최근 N개 수집.
 // Exact skill names win. If there is no exact match for a qualified name like `me:research`,
 // fall back to its basename (`research`) without scanning exact sessions twice.
-function resolveSkillSessionPaths(name: string, n: number): { paths: string[]; skillNames: string[] } {
+// (출력 name 자격화·요청 필터는 호출부가 opts.skill 로 처리하므로 여기선 paths만 반환한다.)
+function resolveSkillSessionPaths(name: string, n: number): { paths: string[] } {
   const exactPaths = findSkillSessionPaths([name], n);
-  if (exactPaths.length > 0) return { paths: exactPaths, skillNames: [name] };
+  if (exactPaths.length > 0) return { paths: exactPaths };
 
   const fallbackNames = skillNameCandidates(name).filter((candidate) => candidate !== name);
   if (fallbackNames.length === 0) noSkillSessions(name);
 
   const paths = findSkillSessionPaths(fallbackNames, n);
   if (paths.length === 0) noSkillSessions(name);
-  return { paths, skillNames: fallbackNames };
+  return { paths };
 }
 
 function expandHomePath(path: string): string {
@@ -876,10 +902,14 @@ const opts = parseArgs(process.argv);
 const targetCwd = opts.cwd ?? process.cwd();
 if (opts.skill !== undefined) {
   const n = opts.recent ?? 10;
-  const { paths, skillNames } = resolveSkillSessionPaths(opts.skill, n);
+  const { paths } = resolveSkillSessionPaths(opts.skill, n);
   const index = buildRecentIndex(paths);
-  // --skill 은 대상 스킬 하나로 좁혀서 내보낸다 (같은 세션의 다른 스킬은 제외).
-  index.skills = index.skills.filter((s) => skillNames.includes(s.name));
+  // --skill 은 요청한 스킬만 남긴다. 출력 name은 자격화됐을 수 있으므로(`a:dup`):
+  // 요청이 qualified(`a:dup`)면 그 이름만, bare basename(`dup`)이면 basename이 같은 모든 플러그인을 남긴다.
+  const wantedQualified = opts.skill.includes(":");
+  index.skills = index.skills.filter((s) =>
+    wantedQualified ? s.name === opts.skill : skillBaseName(s.name) === opts.skill,
+  );
   index.summary.headline = formatRecentHeadline(index.session_count, index.skills);
   console.log(JSON.stringify(index, null, 2));
 } else if (opts.recent !== undefined) {

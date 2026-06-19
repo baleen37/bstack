@@ -99,11 +99,17 @@ Recent and skill output has `mode:"recent"` and `skills[]`. The shape is flat an
 sums signals across every session that invoked a skill name and does not compare against the current disk body. Each
 skill includes:
 
+- `name`: plugin-qualified (`me:evolve`) when a qualifier is known (Skill-tool `input.skill` or an adjacent
+  slash command), else the bare basename (`evolve`). Qualification keeps same-named skills from different plugins
+  separate so their signals never merge.
 - `signal`: one-line event counts (e.g. `3 interrupt, 3 error, 6 repeat, 10 user`), or `no events`
 - `versions`: every skill version seen across sessions — context only, not used for matching
 - `seen_in`: the `session_id`s where this skill was invoked
 - `skill_path`: the cache SKILL.md path at invocation time (edit-target mapping is the proposal subagent's job)
 - `events[]`: all friction signals for this skill name, summed across sessions, each tagged with `session`
+
+`--skill <name>` matches by qualifier: a qualified request (`--skill me:evolve`) returns only that plugin's skill;
+a bare request (`--skill evolve`) returns every plugin's `evolve` (e.g. `me:evolve` and a bare `evolve`).
 
 Because the indexer no longer tracks current-body state, the proposal subagent reads the actual repo-owned
 SKILL.md to judge whether a surfaced signal is already fixed before proposing a patch.
