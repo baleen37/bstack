@@ -96,14 +96,14 @@ skill anchors. Evaluate these conditions in order:
 Single-session output has `summary` and `events[]`.
 
 Recent and skill output has `mode:"recent"` and `skills[]`. The shape is flat and version-agnostic — the indexer
-sums signals across every observed body of a skill name and does not compare against the current disk body. Each
+sums signals across every session that invoked a skill name and does not compare against the current disk body. Each
 skill includes:
 
 - `signal`: one-line event counts (e.g. `3 interrupt, 3 error, 6 repeat, 10 user`), or `no events`
 - `versions`: every skill version seen across sessions — context only, not used for matching
 - `seen_in`: the `session_id`s where this skill was invoked
 - `skill_path`: the cache SKILL.md path at invocation time (edit-target mapping is the proposal subagent's job)
-- `events[]`: all friction signals for this skill name, summed across bodies, each tagged with `session`
+- `events[]`: all friction signals for this skill name, summed across sessions, each tagged with `session`
 
 Because the indexer no longer tracks current-body state, the proposal subagent reads the actual repo-owned
 SKILL.md to judge whether a surfaced signal is already fixed before proposing a patch.

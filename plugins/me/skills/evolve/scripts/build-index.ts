@@ -11,8 +11,7 @@ import { homedir } from "node:os";
 // 이 인덱서는 Claude Code가 기록하는 트랜스크립트 .jsonl 의 내부 라인 포맷에 의존한다.
 // 이 포맷은 공개 스키마가 없고 하네스 버전업으로 조용히 바뀔 수 있다. 깨질 때 throw가 아니라
 // 빈 결과를 내므로(=신호 없음과 구분 불가) 의존 지점을 여기 한 곳에 모아 추적·점검을 쉽게 한다.
-// 라인 단위 객체를 하네스는 "event"라 부르지만(공식 용어), 이 코드의 Signal/Event 출력 타입과
-// 충돌하므로 여기서는 "라인(line)"으로 부른다. 새 의존이 생기면 반드시 이 블록에 추가할 것.
+// line/Event/signal 용어 구분은 아래 "타입" 블록 참고. 새 의존이 생기면 반드시 이 블록에 추가할 것.
 const FMT = {
   // 슬래시 스킬 호출 시 user 라인에 주입되는 본문의 첫 줄. 스킬 호출 검출의 유일한 앵커.
   skillInjectionMarker: "Base directory for this skill:",
@@ -27,6 +26,10 @@ const FMT = {
 } as const;
 
 // ── 타입 ───────────────────────────────────────────────
+// 용어 정리:
+//   line   — 하네스가 jsonl에 기록하는 한 줄(하네스 공식 용어로는 "event"). 이 코드의 입력 단위.
+//   Event  — 이 도구가 line들에서 추출한 friction 레코드. 이 코드의 출력 단위(아래 타입).
+//   signal — Event들을 kind별로 센 한 줄 요약 문자열(summarizeSignal). Event(단위)와 다른 층위.
 type EventKind = "user" | "skill" | "interrupt" | "error" | "agent" | "repeat";
 
 interface Event {
@@ -64,7 +67,7 @@ interface RecentSkill {
   versions: string[];     // 등장한 모든 버전 (정렬, 컨텍스트용). 신호 귀속에는 안 씀.
   seen_in: string[];      // 등장한 session_id 목록 (정렬)
   signal: string;         // kind별 카운트 한 줄 요약 (LLM이 어디부터 볼지 판단용)
-  events: Event[];        // 모든 본문 신호 합산. 각 event에 출처 session 태그.
+  events: Event[];        // 이 skill 이름에 귀속된 모든 Event(전 세션 합산). 각 Event에 출처 session 태그.
 }
 
 interface RecentIndex {
@@ -107,6 +110,11 @@ interface LoadedTranscript {
 interface SignalSummary {
   signal: string;
   weight: number;
+}
+
+// qualified skill 이름(`me:research`)에서 basename(`research`)을 뽑는다. 콜론이 없으면 그대로.
+function skillBaseName(name: string): string {
+  return name.includes(":") ? name.split(":").pop()! : name;
 }
 
 function getOrCreate<K, V>(map: Map<K, V>, key: K, init: () => V): V {
@@ -404,12 +412,11 @@ function buildEvents(turns: Turn[], skillInvocations: SkillInvocation[] = []): E
   // 주입(skillInvocations)을 skill 이벤트로 추가하되, 슬래시로 이미 잡은 같은 호출과는 중복 제거한다.
   // 같은 호출이면 슬래시 이벤트와 주입 turn이 인접(±1)하고 이름이 대응한다(슬래시는 qualified
   // `me:foo`, 주입 name은 basename `foo`일 수 있어 양쪽을 basename으로 맞춰 비교한다).
-  const baseName = (n: string) => (n.includes(":") ? n.split(":").pop()! : n);
   const slashSkills = events.filter((e) => e.kind === "skill");
   const injectionSkills: Event[] = [];
   for (const inv of skillInvocations) {
     const dup = slashSkills.some(
-      (e) => Math.abs(e.t - inv.turn) <= 1 && e.name !== undefined && baseName(e.name) === baseName(inv.name),
+      (e) => Math.abs(e.t - inv.turn) <= 1 && e.name !== undefined && skillBaseName(e.name) === skillBaseName(inv.name),
     );
     if (dup) continue;
     injectionSkills.push({ t: inv.turn, kind: "skill", name: inv.name });
@@ -484,7 +491,7 @@ interface SkillAccumulator {
   baseDir: string;       // 입력에서 처음 본 호출 경로 (cache SKILL.md 경로 노출용)
   versions: Set<string>; // 등장한 모든 버전 (컨텍스트용)
   seen: Set<string>;     // 이 skill이 등장한 모든 session_id
-  events: Event[];       // 이 skill에 귀속된 모든 신호 (전 본문 합산)
+  events: Event[];       // 이 skill에 귀속된 모든 Event (전 세션 합산)
 }
 
 function newAccumulator(baseDir: string): SkillAccumulator {
@@ -527,7 +534,7 @@ function buildRecentIndex(paths: string[]): RecentIndex {
       }
       const tagged: Event = { ...ev, session: sessionId };
       if (ev.kind === "skill" && ev.name) {
-        const fallback = ev.name.includes(":") ? ev.name.split(":").pop()! : ev.name;
+        const fallback = skillBaseName(ev.name);
         const target = invokedNames.has(ev.name) ? ev.name : invokedNames.has(fallback) ? fallback : undefined;
         if (target === undefined) continue;
         acc.get(target)!.events.push(tagged);
@@ -646,8 +653,7 @@ function transcriptInvokesSkill(jsonlPath: string, name: string): boolean {
 }
 
 function skillNameCandidates(name: string): string[] {
-  const short = name.includes(":") ? name.split(":").pop()! : name;
-  return [...new Set([name, short])];
+  return [...new Set([name, skillBaseName(name)])];
 }
 
 function findSkillSessionPaths(names: string[], n: number): string[] {
