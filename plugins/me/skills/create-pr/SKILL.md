@@ -25,4 +25,4 @@ If user requests auto merge: `gh pr merge --auto --squash` → invoke `"$S/wait-
 - `AWAITING_REVIEW:` → CI green, needs reviewer
 - `CI_FAILED: <url> run-id=<id>` → `gh run view <run-id> --log-failed` → `me:fix-pr` once → re-enable `gh pr merge --auto --squash` → re-invoke Monitor. Stop if unclear or still failing.
 - `CLOSED:` → stop.
-PR body: fill PR template if exists, else summary+changes+tests.
+PR body: fill PR template if exists, else summary+changes+tests. Write /tmp/pr_body.md in ONE Write call (compose the full body first); never Write/Edit it twice — re-Read before any second write.
