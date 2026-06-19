@@ -368,7 +368,7 @@ function isPseudoUser(userText: string): boolean {
 }
 
 // ── events 빌드 ────────────────────────────────────────
-function buildEvents(turns: Turn[]): Event[] {
+function buildEvents(turns: Turn[], skillInvocations: SkillInvocation[] = []): Event[] {
   const events: Event[] = [];
   const interruptClaimed = new Set<number>();
 
@@ -457,8 +457,18 @@ function buildEvents(turns: Turn[]): Event[] {
     if (list.length < 3) continue;
     repeats.push({ t: list[list.length - 1], kind: "repeat", pattern: path, n: list.length });
   }
+  // Skill 도구로 호출된 스킬은 슬래시 텍스트 없이 isMeta 본문 주입으로만 들어와 위 루프가 못 잡는다.
+  // 주입(skillInvocations)을 skill 이벤트로 추가하되, 슬래시로 이미 잡은 호출과는 중복 제거한다.
+  // 슬래시 user turn(s) 직후 assistant turn에서 Skill 도구가 실행되어 주입되므로, 주입 turn이
+  // 슬래시 skill turn의 s 또는 s+1이면 같은 호출로 보고 스킵한다.
+  const slashSkillTurns = new Set(events.filter((e) => e.kind === "skill").map((e) => e.t));
+  const injectionSkills: Event[] = [];
+  for (const inv of skillInvocations) {
+    if (slashSkillTurns.has(inv.turn) || slashSkillTurns.has(inv.turn - 1)) continue;
+    injectionSkills.push({ t: inv.turn, kind: "skill", name: inv.name });
+  }
   // 정렬: 모든 events를 turn 기준 안정 정렬 (같은 turn 안에서는 emit 순서 유지)
-  const combined = [...events, ...repeats];
+  const combined = [...events, ...repeats, ...injectionSkills];
   combined.sort((a, b) => a.t - b.t);
   return combined;
 }
@@ -491,8 +501,8 @@ function summarizeSignal(events: Event[]): SignalSummary {
 function buildIndex(jsonlPath: string): SessionIndex {
   const loaded = loadTurns(jsonlPath);
   warnIfFormatLooksBroken(jsonlPath, loaded);
-  const { turns, sessionTitle } = loaded;
-  const events = buildEvents(turns);
+  const { turns, sessionTitle, skillInvocations } = loaded;
+  const events = buildEvents(turns, skillInvocations);
   return {
     session_id: basename(jsonlPath, ".jsonl"),
     ...(sessionTitle ? { session_title: sessionTitle } : {}),

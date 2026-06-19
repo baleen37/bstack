@@ -87,6 +87,34 @@ setup() {
     echo "$output" | jq -e '[.events[] | select(.kind == "skill")][0].name == "me:verify"'
 }
 
+@test "evolve build-index: single-session detects Skill-tool invocation without slash text" {
+    # Skill 도구로 호출된 스킬은 슬래시 텍스트 없이 isMeta 본문 주입으로만 들어온다.
+    # single-session 모드도 이걸 skill 이벤트로 잡아야 한다 (skill은 신호 귀속의 핵심 앵커).
+    local f="$BATS_TEST_TMPDIR/skilltool.jsonl"
+    jq -c '{"type":"user","message":{"role":"user","content":"do the thing"}}' -n > "$f"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"s1","name":"Skill","input":{"skill":"subagent-driven-development"}}]}}' -n >> "$f"
+    jq -c '{"type":"user","isMeta":true,"sourceToolUseID":"s1","message":{"role":"user","content":[{"type":"text","text":"Base directory for this skill: /Users/x/.claude/plugins/cache/sp/sp/6.0.3/skills/subagent-driven-development\n\n# body\n"}]}}' -n >> "$f"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"b1","name":"Bash","input":{"command":"echo hi"}}]}}' -n >> "$f"
+
+    run bun "$INDEXER" "$f"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '[.events[] | select(.kind == "skill")] | length == 1'
+    echo "$output" | jq -e '[.events[] | select(.kind == "skill")][0].name == "subagent-driven-development"'
+}
+
+@test "evolve build-index: single-session does not double-count slash + injection of same skill" {
+    # /me:verify 슬래시 텍스트 + 같은 turn 부근의 isMeta 주입이 둘 다 있을 때 skill 이벤트가 2개로
+    # 중복되면 안 된다 (슬래시로 이미 잡힌 스킬은 주입으로 재emit 금지).
+    local f="$BATS_TEST_TMPDIR/dup.jsonl"
+    jq -c '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"/me:verify check it"}]}}' -n > "$f"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"s1","name":"Skill","input":{"skill":"me:verify"}}]}}' -n >> "$f"
+    jq -c '{"type":"user","isMeta":true,"sourceToolUseID":"s1","message":{"role":"user","content":[{"type":"text","text":"Base directory for this skill: /Users/x/.claude/plugins/cache/me/me/1.0.0/skills/verify\n\n# body\n"}]}}' -n >> "$f"
+
+    run bun "$INDEXER" "$f"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e '[.events[] | select(.kind == "skill")] | length == 1'
+}
+
 @test "evolve build-index: detects interrupt events" {
     run bun "$INDEXER" "$INTERRUPT_FIXTURE"
     [ "$status" -eq 0 ]
