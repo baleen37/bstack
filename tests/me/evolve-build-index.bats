@@ -273,7 +273,7 @@ EOF
     echo "$output" | jq -e '[.skills[] | select(.name == "crskill")][0].stale == false'
 }
 
-@test "evolve build-index: changed body → stale:true (dropped, no events)" {
+@test "evolve build-index: changed body → stale:true, demoted to advisory (not dropped)" {
     local skilldir="$BATS_TEST_TMPDIR/skills/demo2"
     mkdir -p "$skilldir"
     printf -- '---\nname: demo2\n---\n# demo body\n\nCHANGED ON DISK.\n' > "$skilldir/SKILL.md"
@@ -286,17 +286,22 @@ EOF
     local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_proj" | sed 's/[/.]/-/g')"
     mkdir -p "$pdir"
     local text; text="$(printf 'Base directory for this skill: %s\n\n# demo body\n\nOLD VERSION AT INVOCATION.\n' "$real_skilldir")"
+    # interrupt 신호를 한 줄 넣어 stale_events에 보존되는지 검증
     jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Skill","input":{"skill":"demo2"}}]}}' -n > "$pdir/s.jsonl"
     jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"t1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/s.jsonl"
+    jq -c '{"type":"user","interruptedMessageId":"x","message":{"role":"user","content":[{"type":"text","text":"stop that"}]}}' -n >> "$pdir/s.jsonl"
 
     run bun "$INDEXER" --recent 3
     rm -rf "$pdir"
     [ "$status" -eq 0 ]
+    # stale은 여전히 true지만 더는 drop되지 않는다 (advisory 강등)
     echo "$output" | jq -e '[.skills[] | select(.name == "demo2")][0].stale == true'
     echo "$output" | jq -e '[.skills[] | select(.name == "demo2")][0].drop_reason == "stale"'
-    echo "$output" | jq -e '[.skills[] | select(.name == "demo2")][0].signal == "dropped (stale)"'
-    echo "$output" | jq -e '[.skills[] | select(.name == "demo2")][0].dropped == true'
+    echo "$output" | jq -e '[.skills[] | select(.name == "demo2")][0].dropped == false'
+    # 현재 본문 매칭 신호는 없지만(events 빈 배열) 이전 본문 신호는 stale_events로 보존된다
     echo "$output" | jq -e '[.skills[] | select(.name == "demo2")][0].events | length == 0'
+    echo "$output" | jq -e '[.skills[] | select(.name == "demo2")][0].stale_events | length >= 1'
+    echo "$output" | jq -e '[.skills[] | select(.name == "demo2")][0].signal | startswith("stale (")'
 }
 
 @test "evolve build-index: missing disk SKILL.md → stale:true" {
@@ -318,6 +323,32 @@ EOF
     echo "$output" | jq -e '[.skills[] | select(.name == "ghost")][0].drop_reason == "missing_current_body"'
     echo "$output" | jq -e '[.skills[] | select(.name == "ghost")][0].dropped == true'
     echo "$output" | jq -e '[.skills[] | select(.name == "ghost")][0].events | length == 0'
+    # 검증 불가(missing)는 stale_events도 비운다 — diagnostic 강등 대상이 아니다
+    echo "$output" | jq -e '[.skills[] | select(.name == "ghost")][0].stale_events | length == 0'
+}
+
+@test "evolve build-index: stale skill counts as advisory in headline, not dropped" {
+    local skilldir="$BATS_TEST_TMPDIR/skills/advskill"
+    mkdir -p "$skilldir"
+    printf -- '---\nname: advskill\n---\n# adv body\n\nCHANGED ON DISK.\n' > "$skilldir/SKILL.md"
+
+    local proj="$BATS_TEST_TMPDIR/projadv"
+    mkdir -p "$proj"
+    cd "$proj"
+    local real_proj; real_proj="$(pwd -P)"
+    local real_skilldir; real_skilldir="$(cd "$skilldir" && pwd -P)"
+    local pdir="$EVOLVE_PROJECTS_DIR/$(echo "$real_proj" | sed 's/[/.]/-/g')"
+    mkdir -p "$pdir"
+    local text; text="$(printf 'Base directory for this skill: %s\n\n# adv body\n\nOLD VERSION.\n' "$real_skilldir")"
+    jq -c '{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Skill","input":{"skill":"advskill"}}]}}' -n > "$pdir/s.jsonl"
+    jq -c --arg t "$text" '{"type":"user","isMeta":true,"sourceToolUseID":"t1","message":{"role":"user","content":[{"type":"text","text":$t}]}}' -n >> "$pdir/s.jsonl"
+
+    run bun "$INDEXER" --recent 3
+    rm -rf "$pdir"
+    [ "$status" -eq 0 ]
+    # 헤드라인에 "0 dropped"와 "1 stale (advisory)"가 분리 표기된다
+    echo "$output" | jq -e '.summary.headline | contains("0 dropped")'
+    echo "$output" | jq -e '.summary.headline | contains("stale (advisory)")'
 }
 
 @test "evolve build-index: --recent merges sessions across worktree sibling dirs" {
@@ -746,7 +777,8 @@ EOF
     rm -rf "$p"
     [ "$status" -eq 0 ]
     echo "$output" | jq -e '[.skills[].name] == ["sumdrop"]'
-    echo "$output" | jq -e '.summary.headline | test("1 skills · 1 dropped: 1 stale")'
+    # stale은 더는 dropped가 아니라 advisory로 분리 표기된다
+    echo "$output" | jq -e '.summary.headline | test("1 skills · 0 dropped · 1 stale .advisory.")'
 }
 
 @test "evolve build-index: duplicate singleton flags exit 2" {

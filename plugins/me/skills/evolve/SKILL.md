@@ -86,11 +86,14 @@ Stop early when the index has no current evidence. Evaluate these conditions in 
 
 - Single session with empty `events[]`: print `no improvement signals found in this session`.
 - Recent mode with empty `skills[]`: print `no invoked skills found in recent sessions`.
-- All candidate skills dropped: report `drop_reason`, `skill_path`, and `observed_bodies[].versions`; do not run proposal
-  subagents.
-  Example: `11 sessions · 1 skills · 1 dropped: 1 stale` means report diagnostics only, with no proposal.
-- No current skill has events: print `no improvement signals found in current skill bodies`.
-- Some current skills have events: probe only those skills; mention dropped or empty skills as diagnostics.
+- All candidate skills dropped (`missing_current_body` only): report `drop_reason`, `skill_path`, and
+  `observed_bodies[].versions`; do not run proposal subagents.
+  Example: `11 sessions · 1 skills · 1 dropped: 1 missing_current_body` means report diagnostics only.
+- No current skill has events but some are `stale` (advisory): do not stop. Stale skills carry `stale_events[]`
+  from a prior body — run the stale-signal revalidation probe to see if any signal is still unaddressed by the
+  current body. Headline shows these as `N stale (advisory)`, separate from `dropped`.
+- No current skill has events and none are stale: print `no improvement signals found in current skill bodies`.
+- Some current skills have events: probe those first; treat `stale` skills as a secondary, advisory source.
 
 ## Index Notes
 
@@ -98,13 +101,18 @@ Single-session output has `summary` and `events[]`.
 
 Recent and skill output has `mode:"recent"` and `skills[]`. Each skill includes:
 
-- `signal`: one-line event counts, or `dropped (<drop_reason>)`
-- `drop_reason`: `stale` or `missing_current_body`
+- `signal`: one-line event counts, `stale (<counts>)` for advisory bodies, or `dropped (<drop_reason>)`
+- `drop_reason`: `stale` (body changed — advisory, kept) or `missing_current_body` (no disk file — dropped)
 - `observed_bodies`: diagnostic body hashes and versions
 - `repo_path`: editable repo-owned source when available
-- `events[]`: only events matching the current skill body
+- `events[]`: only events matching the current skill body — the sole direct proposal evidence
+- `stale_events[]`: events from a prior body when the skill is `stale`. These are advisory: a signal here may
+  already be fixed by the current body. Use as proposal evidence **only after** confirming, against the current
+  `repo_path`/`skill_path` body, that the signal is still unaddressed. Empty when `dropped`.
 
 Use `summary.headline` as the freshness check. Treat `observed_bodies` as diagnostics, not proposal evidence.
+`stale` skills are not dropped — a fast-evolving skill (body hash changes every release) still surfaces its
+accumulated friction via `stale_events` instead of being silently discarded.
 
 In `--recent` and `--skill`, each non-skill event (error/interrupt/repeat/user/agent) is attributed to the skill that
 was active at its turn — the most recently invoked skill before that turn — not copied to every skill in the session.
@@ -127,11 +135,15 @@ Useful lenses:
 - correction chain
 - cross-skill ownership
 - stale/drop diagnostics
+- stale-signal revalidation: for a `stale` skill, compare each `stale_events[]` item against the current body
+  (`repo_path`/`skill_path`). Promote to `proposal-worthy` only the signals the current body still fails to
+  address; mark the rest `no-signal` (already fixed by a later edit). This is advisory, not a gate.
 - noisy directives
 - repeated exploration
 - shared-session signals in `--recent`
 
-Each probe may inspect only relevant `events[]` items and narrow transcript turn ranges. It returns:
+Each probe may inspect only relevant `events[]` (or `stale_events[]` for the revalidation lens) items and narrow
+transcript turn ranges. It returns:
 
 ```json
 {

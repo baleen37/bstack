@@ -46,7 +46,7 @@ load ../helpers/bats_helper
     local f="${PROJECT_ROOT}/plugins/me/skills/evolve/SKILL.md"
     grep -q "All candidate skills dropped" "$f"
     grep -q "do not run proposal" "$f"
-    grep -q "1 dropped: 1 stale" "$f"
+    grep -q "1 dropped: 1 missing_current_body" "$f"
 }
 
 @test "evolve: SKILL.md approval prompt includes commit scope" {

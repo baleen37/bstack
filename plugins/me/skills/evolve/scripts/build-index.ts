@@ -83,11 +83,13 @@ interface RecentSkill {
   current_hash?: string;
   drop_reason?: DropReason;
   observed_bodies: ObservedBody[];
-  stale: boolean;         // current body가 관측된 본문과 매칭되지 않음
-  dropped: boolean;       // drop_reason이 있으면 events 제외됨
+  stale: boolean;         // current body가 관측된 본문과 매칭되지 않음 (본문이 바뀌었거나 디스크에 없음)
+  dropped: boolean;       // true면 events·stale_events 모두 제외 (missing_current_body 한정)
   seen_in: string[];      // 등장한 session_id 목록
   signal: string;         // kind별 카운트 한 줄 요약 (LLM이 어디부터 볼지 판단용)
-  events: Event[];        // dropped면 빈 배열
+  events: Event[];        // 현재 본문과 매칭된 신호. stale/dropped면 빈 배열
+  stale_events: Event[];  // 이전 본문에서 관측된 신호(diagnostic 강등). 현재 본문에 여전히 유효한지
+                          // LLM이 확인한 뒤에만 제안 근거로 쓴다. dropped면 빈 배열
 }
 
 interface RecentIndex {
@@ -593,7 +595,10 @@ function formatRecentHeadline(sessionCount: number, skills: RecentSkill[]): stri
     const reasons = [...counts.entries()].map(([reason, n]) => `${n} ${reason}`);
     if (reasons.length > 0) droppedPart += `: ${reasons.join(", ")}`;
   }
-  return `${sessionCount} sessions · ${skills.length} skills · ${droppedPart}`;
+  // stale은 drop이 아니라 advisory 강등이므로 dropped와 분리 집계한다.
+  const staleCount = skills.filter((s) => s.stale && !s.dropped).length;
+  const stalePart = staleCount > 0 ? ` · ${staleCount} stale (advisory)` : "";
+  return `${sessionCount} sessions · ${skills.length} skills · ${droppedPart}${stalePart}`;
 }
 
 function dropReasonFor(currentHash: string | null, hasCurrentBody: boolean): DropReason | undefined {
@@ -670,7 +675,7 @@ function buildRecentIndex(paths: string[], cwd: string): RecentIndex {
     }
   }
 
-  const skills: Array<RecentSkill & { _weight: number }> = [];
+  const skills: Array<RecentSkill & { _weight: number; _staleWeight: number }> = [];
   for (const [name, a] of acc) {
     const cacheSkillMd = join(a.baseDir, "SKILL.md");
     // cwd repo에 같은 skill 소스가 있으면 그게 편집 가능한 "현재 본문"의 진짜 출처다 (캐시는 구버전일 수 있음).
@@ -682,9 +687,24 @@ function buildRecentIndex(paths: string[], cwd: string): RecentIndex {
     );
     const matchingEvents = hasCurrentBody ? a.eventsByHash.get(nowHashFull) ?? [] : [];
     const dropReason = dropReasonFor(nowHashFull, hasCurrentBody);
-    const dropped = dropReason !== undefined;
-    const stale = dropped;
-    const evs = dropped ? [] : matchingEvents;
+    // missing_current_body는 검증 불가라 완전 drop. stale(본문이 바뀜)은 신호가 여전히 유효할 수
+    // 있으므로 drop 대신 diagnostic으로 강등한다 — 관측 본문 중 weight가 가장 강한 것의 events를
+    // stale_events로 노출하고, LLM이 현재 본문에 아직 유효한지 확인한 뒤에만 제안 근거로 쓰게 한다.
+    const stale = dropReason !== undefined;
+    const dropped = dropReason === "missing_current_body";
+    const evs = stale ? [] : matchingEvents;
+    let staleEvents: Event[] = [];
+    let staleWeight = 0;
+    if (dropReason === "stale") {
+      let best: { events: Event[]; weight: number } | undefined;
+      for (const hash of a.versionsByHash.keys()) {
+        const evList = a.eventsByHash.get(hash) ?? [];
+        const w = summariesByHash.get(hash)!.weight;
+        if (!best || w > best.weight) best = { events: evList, weight: w };
+      }
+      staleEvents = best?.events ?? [];
+      staleWeight = best?.weight ?? 0;
+    }
     const { signal, weight } = hasCurrentBody ? summariesByHash.get(nowHashFull)! : summarizeSignal([]);
     const observed_bodies = [...a.versionsByHash.keys()].sort().map((hash) => ({
       hash: shortHash(hash),
@@ -693,6 +713,10 @@ function buildRecentIndex(paths: string[], cwd: string): RecentIndex {
       seen_in: [...(a.seenByHash.get(hash) ?? [])].sort(),
       signal: summariesByHash.get(hash)!.signal,
     }));
+    // stale은 강등 신호임을 signal 문자열로 알린다. 현재 본문 신호(있으면)보다 정렬 우선순위가 낮도록
+    // _weight는 현재 본문 weight를 그대로 쓰되, stale-only(현재 weight 0)일 때만 staleWeight를
+    // 음수 보조키로 반영해 missing_current_body(신호 0)보다는 위로 올린다.
+    const staleSignal = staleEvents.length > 0 ? summarizeSignal(staleEvents).signal : "no signals";
     skills.push({
       name,
       skill_path: cacheSkillMd,
@@ -703,14 +727,26 @@ function buildRecentIndex(paths: string[], cwd: string): RecentIndex {
       stale,
       dropped,
       seen_in: [...a.seen].sort(),
-      signal: dropped ? `dropped (${dropReason})` : signal,
+      signal: dropped ? `dropped (${dropReason})` : dropReason === "stale" ? `stale (${staleSignal})` : signal,
       events: evs,
+      stale_events: staleEvents,
       _weight: weight,
+      _staleWeight: staleWeight,
     });
   }
-  // 개선 신호(interrupt+error+repeat) 많은 순 → 동률이면 전체 event 수 순 → 이름순
-  skills.sort((x, y) => y._weight - x._weight || y.events.length - x.events.length || x.name.localeCompare(y.name));
-  for (const s of skills) delete (s as { _weight?: number })._weight;
+  // 개선 신호(interrupt+error+repeat) 많은 순 → 동률이면 전체 event 수 순 → stale 강등 신호 순 → 이름순.
+  // 현재 본문 신호가 stale 강등 신호보다 항상 우선한다(_weight 먼저).
+  skills.sort(
+    (x, y) =>
+      y._weight - x._weight ||
+      y.events.length - x.events.length ||
+      y._staleWeight - x._staleWeight ||
+      x.name.localeCompare(y.name),
+  );
+  for (const s of skills) {
+    delete (s as { _weight?: number })._weight;
+    delete (s as { _staleWeight?: number })._staleWeight;
+  }
 
   return {
     mode: "recent",
