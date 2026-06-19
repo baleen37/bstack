@@ -82,9 +82,11 @@ If the indexer prints a `[evolve] warning: …` line to stderr (e.g. `0 tool_use
 results. Do not treat an empty index as "no signals" in that case — surface the warning to the user and stop, since the
 `FMT.*` format constants in `build-index.ts` likely need updating against the current transcript format.
 
-Stop early when the index has no current evidence. Evaluate these conditions in order:
+Stop early when the index has no current evidence. A `kind:"skill"` event is an anchor (which skill was
+active), not a friction signal — "has signals" means having interrupt/error/repeat/user events, not just
+skill anchors. Evaluate these conditions in order:
 
-- Single session with empty `events[]`: print `no improvement signals found in this session`.
+- Single session with no non-skill events: print `no improvement signals found in this session`.
 - Recent mode with empty `skills[]`: print `no invoked skills found in recent sessions`.
 - All candidate skills dropped (`missing_current_body` only): report `drop_reason`, `skill_path`, and
   `observed_bodies[].versions`; do not run proposal subagents.
@@ -92,8 +94,8 @@ Stop early when the index has no current evidence. Evaluate these conditions in 
 - No current skill has events but some are `stale` (advisory): do not stop. Stale skills carry `stale_events[]`
   from a prior body — run the stale-signal revalidation probe to see if any signal is still unaddressed by the
   current body. Headline shows these as `N stale (advisory)`, separate from `dropped`.
-- No current skill has events and none are stale: print `no improvement signals found in current skill bodies`.
-- Some current skills have events: probe those first; treat `stale` skills as a secondary, advisory source.
+- No current skill has non-skill events and none are stale: print `no improvement signals found in current skill bodies`.
+- Some current skills have non-skill events: probe those first; treat `stale` skills as a secondary, advisory source.
 
 ## Index Notes
 

@@ -564,7 +564,8 @@ EOF
     rm -rf "$pdir"
     [ "$status" -eq 0 ]
     echo "$output" | jq -e '[.skills[] | select(.name == "noevents")][0].stale == false'
-    echo "$output" | jq -e '[.skills[] | select(.name == "noevents")][0].events | length == 0'
+    # skill anchor 외에 개선 신호(비-skill 이벤트)는 없다 — 호출 자체는 마찰 신호가 아니다.
+    echo "$output" | jq -e '[.skills[] | select(.name == "noevents")][0].events | map(select(.kind != "skill")) | length == 0'
 }
 
 @test "evolve build-index: --recent maps cache skill to editable repo_path and uses it for stale" {
@@ -1119,6 +1120,9 @@ EOF
     echo "$output" | jq -e '[.skills[] | select(.name=="skillb")][0].events | any(.kind=="error" and (.text | test("error in B")))'
     # --recent 이벤트는 출처 session_id를 담는다 (cross-session 반복 판정용). 파일명 s.jsonl → "s".
     echo "$output" | jq -e '[.skills[] | select(.name=="skilla")][0].events[0].session == "s"'
+    # Skill 도구로 호출된 skilla/skillb(슬래시 텍스트 없음)도 skill anchor 이벤트를 가져야 한다.
+    echo "$output" | jq -e '[.skills[] | select(.name=="skilla")][0].events | any(.kind=="skill" and .name=="skilla")'
+    echo "$output" | jq -e '[.skills[] | select(.name=="skillb")][0].events | any(.kind=="skill" and .name=="skillb")'
 }
 
 # ── 하네스 포맷 의존성 골든 테스트 ──

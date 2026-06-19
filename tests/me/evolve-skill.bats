@@ -22,7 +22,7 @@ load ../helpers/bats_helper
 @test "evolve: SKILL.md defines ordered no-signal handling" {
     local f="${PROJECT_ROOT}/plugins/me/skills/evolve/SKILL.md"
     grep -q "Evaluate these conditions in order" "$f"
-    grep -q "Some current skills have events" "$f"
+    grep -q "Some current skills have non-skill events" "$f"
 }
 
 @test "evolve: SKILL.md documents real multi-skill shorthand" {
