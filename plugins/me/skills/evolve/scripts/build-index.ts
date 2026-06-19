@@ -48,16 +48,8 @@ interface Event {
   session?: string; // --recent/--skill에서만. 신호의 출처 session_id (cross-session 반복 판정용).
 }
 
-interface Cluster {
-  kind: EventKind;
-  t_range: [number, number];
-  n: number;
-  example_t: number;
-}
-
 interface Summary {
   headline: string;
-  clusters: Cluster[];
 }
 
 interface SessionIndex {
@@ -472,52 +464,15 @@ function buildEvents(turns: Turn[]): Event[] {
 }
 
 // ── summary: 얕은 탐색용 ───────────────────────────────
-const SUMMARY_KINDS: EventKind[] = ["interrupt", "error", "repeat", "user"];
-const CLUSTER_GAP = 30;
-const CLUSTER_MIN = 3;
-
-function buildClusters(events: Event[]): Cluster[] {
-  const clusters: Cluster[] = [];
-  for (const kind of SUMMARY_KINDS) {
-    const turns = events.filter((e) => e.kind === kind).map((e) => e.t);
-    if (turns.length < CLUSTER_MIN) continue;
-    let start = turns[0];
-    let prev = turns[0];
-    let count = 1;
-    for (let i = 1; i <= turns.length; i++) {
-      const t = turns[i];
-      if (t !== undefined && t - prev <= CLUSTER_GAP) {
-        count++;
-        prev = t;
-        continue;
-      }
-      if (count >= CLUSTER_MIN) clusters.push({ kind, t_range: [start, prev], n: count, example_t: start });
-      if (t === undefined) break;
-      start = t;
-      prev = t;
-      count = 1;
-    }
-  }
-  return clusters.sort((a, b) => a.t_range[0] - b.t_range[0]);
-}
-
-function buildHeadline(turns: number, events: Event[], clusters: Cluster[]): string {
+// single-session headline. SKILL.md는 이걸 freshness check로만 쓴다(턴 수 + 개선 신호 카운트).
+function buildSummary(turns: number, events: Event[]): Summary {
   const counts: Record<string, number> = {};
   for (const e of events) counts[e.kind] = (counts[e.kind] ?? 0) + 1;
   const parts: string[] = [`${turns} turns`];
   for (const kind of ["user", "interrupt", "error", "repeat"] as const) {
     if (counts[kind]) parts.push(`${counts[kind]} ${kind}${counts[kind] > 1 ? "s" : ""}`);
   }
-  if (clusters.length > 0) parts.push(`${clusters.length} cluster${clusters.length > 1 ? "s" : ""}`);
-  return parts.join(" · ");
-}
-
-function buildSummary(turns: number, events: Event[]): Summary {
-  const clusters = buildClusters(events);
-  return {
-    headline: buildHeadline(turns, events, clusters),
-    clusters,
-  };
+  return { headline: parts.join(" · ") };
 }
 
 // kind별 카운트 → 한 줄 요약. interrupt/error/repeat은 개선 신호가 농축된 종류라 앞세운다.

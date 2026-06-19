@@ -71,13 +71,13 @@ setup() {
     echo "$output" | jq -e '(keys - ["session_id","session_title","turns","summary","events"]) == []'
 }
 
-@test "evolve build-index: summary has headline and clusters" {
+@test "evolve build-index: summary has headline only" {
     run bun "$INDEXER" "$FIXTURE"
     [ "$status" -eq 0 ]
     echo "$output" | jq -e '.summary.headline | type == "string"'
-    echo "$output" | jq -e '.summary.clusters | type == "array"'
-    # signal_positions intentionally removed — clusters + events[] cover its role
-    echo "$output" | jq -e '.summary | has("signal_positions") | not'
+    # clusters/signal_positions intentionally removed — events[] covers their role and
+    # SKILL.md only reads summary.headline. summary carries headline alone.
+    echo "$output" | jq -e '(.summary | keys) == ["headline"]'
 }
 
 @test "evolve build-index: detects slash-command in <command-name> tag form" {
