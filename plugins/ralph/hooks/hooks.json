@@ -1,5 +1,4 @@
 {
-  "description": "Ralph Loop hooks",
   "hooks": {
     "Stop": [
       {
@@ -7,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run \"${CLAUDE_PLUGIN_ROOT}/hooks/ralph-persist.ts\"",
+            "command": "bun run \"${PLUGIN_ROOT:-$CLAUDE_PLUGIN_ROOT}/hooks/ralph-persist.ts\"",
             "timeout": 10
           }
         ]

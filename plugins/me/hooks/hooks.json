@@ -1,5 +1,4 @@
 {
-  "description": "Everything Agent - unified hooks for all features",
   "hooks": {
     "WorktreeCreate": [
       {
@@ -7,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/skills/setup/setup-worktree.sh",
+            "command": "bash \"${PLUGIN_ROOT:-$CLAUDE_PLUGIN_ROOT}/skills/setup/setup-worktree.sh\"",
             "timeout": 30
           }
         ]
@@ -19,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/commit-guard.sh"
+            "command": "\"${PLUGIN_ROOT:-$CLAUDE_PLUGIN_ROOT}/hooks/commit-guard.sh\""
           }
         ]
       }
