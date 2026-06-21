@@ -21,9 +21,17 @@ setup() {
     [ -n "$has_stop" ]
 }
 
-@test "ralph hooks.json Stop hook uses CLAUDE_PLUGIN_ROOT" {
+@test "ralph hooks.json only has Codex-supported top-level fields" {
+    [ -f "$HOOKS_JSON" ] || skip "hooks.json not found"
+
+    local unsupported_fields
+    unsupported_fields=$($JQ_BIN -r 'keys - ["hooks"] | .[]' "$HOOKS_JSON")
+    [ -z "$unsupported_fields" ]
+}
+
+@test "ralph hooks.json Stop hook uses plugin-root fallback" {
     [ -f "$HOOKS_JSON" ] || skip "hooks.json not found"
     local command
     command=$($JQ_BIN -r '.hooks.Stop[0].hooks[0].command' "$HOOKS_JSON")
-    [[ "$command" == *'${CLAUDE_PLUGIN_ROOT}'* ]]
+    [[ "$command" == *'${PLUGIN_ROOT:-$CLAUDE_PLUGIN_ROOT}'* ]]
 }

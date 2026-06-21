@@ -9,6 +9,10 @@ setup() {
     ensure_jq
 }
 
+all_plugin_hooks_files() {
+    find "${PROJECT_ROOT}/plugins" -path '*/hooks/hooks.json' -type f | sort
+}
+
 @test "hooks.json is valid JSON" {
     [ -f "$HOOKS_JSON" ] || skip "hooks.json not found"
     validate_json "$HOOKS_JSON"
@@ -23,6 +27,27 @@ setup() {
     local hooks_type
     hooks_type=$($JQ_BIN -r '.hooks | type' "$HOOKS_JSON")
     [ "$hooks_type" = "object" ]
+}
+
+@test "hooks.json only has Codex-supported top-level fields" {
+    [ -f "$HOOKS_JSON" ] || skip "hooks.json not found"
+
+    local unsupported_fields
+    unsupported_fields=$($JQ_BIN -r 'keys - ["hooks"] | .[]' "$HOOKS_JSON")
+    [ -z "$unsupported_fields" ]
+}
+
+@test "all plugin hooks.json files only have Codex-supported top-level fields" {
+    local hooks_file
+    while IFS= read -r hooks_file; do
+        local unsupported_fields
+        unsupported_fields=$($JQ_BIN -r 'keys - ["hooks"] | .[]' "$hooks_file")
+        if [ -n "$unsupported_fields" ]; then
+            echo "Unsupported top-level fields in $hooks_file:"
+            echo "$unsupported_fields"
+            return 1
+        fi
+    done < <(all_plugin_hooks_files)
 }
 
 @test "hooks.json events have valid structure" {
@@ -104,7 +129,7 @@ setup() {
     done <<< "$events"
 }
 
-@test "hooks.json uses portable CLAUDE_PLUGIN_ROOT paths" {
+@test "hooks.json uses portable plugin-root paths" {
     [ -f "$HOOKS_JSON" ] || skip "hooks.json not found"
 
     # Check for hardcoded absolute paths in command fields
@@ -113,7 +138,36 @@ setup() {
 
     if [ -n "$has_hardcoded_path" ]; then
         echo "Error: Found hardcoded absolute path in $HOOKS_JSON"
-        echo "Use \${CLAUDE_PLUGIN_ROOT} instead"
+        echo "Use \${PLUGIN_ROOT:-\$CLAUDE_PLUGIN_ROOT} instead"
         return 1
     fi
+
+    local commands_missing_plugin_root
+    commands_missing_plugin_root=$(
+        $JQ_BIN -r '.. | .command? // empty' "$HOOKS_JSON" |
+            grep -v '\${PLUGIN_ROOT:-\$CLAUDE_PLUGIN_ROOT}' || true
+    )
+
+    if [ -n "$commands_missing_plugin_root" ]; then
+        echo "Error: Found command without Codex/Claude plugin-root fallback in $HOOKS_JSON"
+        echo "$commands_missing_plugin_root"
+        return 1
+    fi
+}
+
+@test "all plugin hook commands use plugin-root fallback" {
+    local hooks_file
+    while IFS= read -r hooks_file; do
+        local commands_missing_plugin_root
+        commands_missing_plugin_root=$(
+            $JQ_BIN -r '.. | .command? // empty' "$hooks_file" |
+                grep -v '\${PLUGIN_ROOT:-\$CLAUDE_PLUGIN_ROOT}' || true
+        )
+
+        if [ -n "$commands_missing_plugin_root" ]; then
+            echo "Error: Found command without Codex/Claude plugin-root fallback in $hooks_file"
+            echo "$commands_missing_plugin_root"
+            return 1
+        fi
+    done < <(all_plugin_hooks_files)
 }
