@@ -16,11 +16,13 @@ load ../helpers/bats_helper
 # create-pr skill tests
 @test "me: create-pr skill exists with required components" {
     [ -f "${PROJECT_ROOT}/plugins/me/skills/create-pr/SKILL.md" ]
+    [ -f "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/create-pr.sh" ]
     [ -f "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/preflight-check.sh" ]
     [ -f "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/wait-for-merge.sh" ]
 }
 
 @test "me: create-pr scripts are executable" {
+    [ -x "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/create-pr.sh" ]
     [ -x "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/preflight-check.sh" ]
     [ -x "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/wait-for-merge.sh" ]
 }

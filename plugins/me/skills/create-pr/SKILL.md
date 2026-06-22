@@ -3,26 +3,26 @@ name: create-pr
 description: Create PR — commit, push, PR, wait for merge.
 ---
 
-Execute each line literally (scripts MUST be run, not reimplemented):
+Run the wrapper. Do not reimplement its git/gh checks.
 
 ```bash
 S="${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts"
 # If on main/master: checkout -b <type>/<short> first
-"$S/preflight-check.sh"          # syncs if behind base
-git add <files> && git commit -m "type(scope): msg"
-git push -u origin HEAD
-gh pr create --title "$(git log -1 --pretty=%s)" --body-file /tmp/pr_body.md
-# Auto merge: only if user explicitly requests it
-# gh pr merge --auto --squash
-# REQUIRED: invoke via Monitor tool — streams per-check events + terminal event.
-# Monitor({command: "\"$S/wait-for-merge.sh\"", description: "PR checks", timeout_ms: 1800000, persistent: false})
+printf '%s\n' "<full PR body>" | "$S/create-pr.sh" "type(scope): msg" -- <files>
+# If auto merge was requested:
+printf '%s\n' "<full PR body>" | "$S/create-pr.sh" --auto-merge "type(scope): msg" -- <files>
 ```
 
-Write the PR body to a file and pass it with `--body-file`. Do not put setup commands or PR body text inside --title.
+The wrapper handles preflight, safe `/tmp/pr_body.md` creation, commit, push, PR creation, optional auto-merge, and
+merge waiting.
 
-If user requests auto merge: `gh pr merge --auto --squash` → invoke `"$S/wait-for-merge.sh"` via the Monitor tool. Each `check: <name>: <bucket>` line streams as a notification; the terminal event has one of these prefixes — branch on it:
+Branch only on terminal prefixes:
+
+- `NOOP:` → nothing to PR
 - `MERGED:` → done
 - `AWAITING_REVIEW:` → CI green, needs reviewer
-- `CI_FAILED: <url> run-id=<id>` → `gh run view <run-id> --log-failed` → `me:fix-pr` once → re-enable `gh pr merge --auto --squash` → re-invoke Monitor. Stop if unclear or still failing.
+- `CI_FAILED: <url> run-id=<id>` → inspect failed log, use `me:fix-pr` once, then retry auto-merge
 - `CLOSED:` → stop.
-PR body: fill PR template if exists, else summary+changes+tests. Write /tmp/pr_body.md in ONE Write call (compose the full body first); never Write/Edit it twice — re-Read before any second write.
+
+PR body: fill PR template if exists, else summary+changes+tests. Pipe it once to the wrapper; never Write/Edit
+`/tmp/pr_body.md`.
