@@ -13,7 +13,15 @@ git fetch origin "$BASE" >/dev/null 2>&1 || { echo "ERROR: fetch failed" >&2; ex
 
 if [[ $(git rev-list HEAD..origin/"$BASE" --count 2>/dev/null || echo 0) -gt 0 ]]; then
   echo "Behind base — syncing..."
-  git merge "origin/$BASE" --no-edit || { git diff --name-only --diff-filter=U >&2; exit 1; }
+  if ! git merge "origin/$BASE" --no-edit; then
+    conflicts=$(git diff --name-only --diff-filter=U)
+    if [[ -n "$conflicts" ]]; then
+      echo "$conflicts" >&2
+    else
+      echo "ERROR: merge blocked; check git status --short" >&2
+    fi
+    exit 1
+  fi
   git push -u origin HEAD || { echo "Push failed" >&2; exit 1; }
 fi
 

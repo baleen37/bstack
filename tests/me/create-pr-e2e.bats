@@ -13,9 +13,10 @@ setup() {
 #!/usr/bin/env bash
 set -euo pipefail
 echo "git $*" >> "$STUB_LOG"
-case "$*" in
-  "rev-parse --git-dir") echo ".git" ;;
-  "symbolic-ref --short HEAD") echo "feature/create-pr-wrapper" ;;
+  case "$*" in
+    "rev-parse --git-dir") echo ".git" ;;
+    "rev-parse --git-path create-pr-body.XXXXXX") echo "${TEST_TEMP_DIR}/git/create-pr-body.XXXXXX" ;;
+    "symbolic-ref --short HEAD") echo "feature/create-pr-wrapper" ;;
   "fetch origin main") ;;
   "rev-list HEAD..origin/main --count") echo "${GIT_BEHIND:-0}" ;;
   "rev-list origin/main..HEAD --count") echo "${GIT_AHEAD:-1}" ;;
@@ -99,6 +100,27 @@ assert_log_excludes() {
   grep -q "gh pr create --title feat(test): wrapper --body-file $body" "$STUB_LOG"
   grep -q "gh pr merge --auto --squash" "$STUB_LOG"
   grep -q "gh pr merge --squash" "$STUB_LOG"
+}
+
+@test "create-pr: wrapper uses unique repo-local body file by default" {
+  local script="${BATS_TEST_DIRNAME}/../../plugins/me/skills/create-pr/scripts/create-pr.sh"
+
+  run bash -c \
+    "printf '## Summary\n- wrapper\n' | '$script' 'feat(test): wrapper' -- plugins/me/skills/create-pr/SKILL.md"
+
+  [ "$status" -eq 0 ]
+  grep -Eq "gh pr create --title feat\\(test\\): wrapper --body-file ${TEST_TEMP_DIR}/git/create-pr-body\\.[[:alnum:]]+" "$STUB_LOG"
+}
+
+@test "create-pr: wrapper creates PR for existing committed branch diff without staged changes" {
+  local script="${BATS_TEST_DIRNAME}/../../plugins/me/skills/create-pr/scripts/create-pr.sh"
+
+  run env GIT_AHEAD=1 bash -c \
+    "printf '## Summary\n- committed\n' | '$script' 'feat(test): wrapper' -- plugins/me/skills/create-pr/SKILL.md"
+
+  [ "$status" -eq 0 ]
+  grep -q "git push -u origin HEAD" "$STUB_LOG"
+  grep -q "gh pr create --title feat(test): wrapper" "$STUB_LOG"
 }
 
 @test "create-pr: wrapper stops before PR creation when preflight reports no diff" {
