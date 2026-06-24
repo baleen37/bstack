@@ -15,6 +15,7 @@ set -euo pipefail
 echo "git $*" >> "$STUB_LOG"
   case "$*" in
     "rev-parse --git-dir") echo ".git" ;;
+    "rev-parse HEAD") echo "${GIT_HEAD_OID:-headoid000}" ;;
     "rev-parse --git-path create-pr-body.XXXXXX") echo "${TEST_TEMP_DIR}/git/create-pr-body.XXXXXX" ;;
     "symbolic-ref --short HEAD") echo "feature/create-pr-wrapper" ;;
   "fetch origin main") ;;
@@ -54,6 +55,7 @@ case "$*" in
       exit 1
     fi
     ;;
+  "pr view --json headRefOid --jq .headRefOid") echo "${GH_MERGED_HEAD_OID:-headoid000}" ;;
   "pr view --json url") [[ "${GH_EXISTING_PR:-none}" != "none" || -f "${TEST_TEMP_DIR}/pr_created" ]] || exit 1 ;;
   "pr checks --json name,bucket,link") echo '[{"name":"CI","bucket":"pass","link":"https://example.test/runs/1234567890"}]' ;;
   pr\ create*) touch "${TEST_TEMP_DIR}/pr_created"; echo "https://example.test/pr/1" ;;
@@ -133,6 +135,28 @@ assert_log_excludes() {
   [[ "$output" == "NOOP:"* ]]
   assert_log_excludes "git push -u origin HEAD"
   assert_log_excludes "gh pr create"
+}
+
+@test "create-pr: terminal MERGED only when HEAD matches the merged PR tip" {
+  local script="${BATS_TEST_DIRNAME}/../../plugins/me/skills/create-pr/scripts/create-pr.sh"
+
+  run env GH_EXISTING_PR=merged GIT_HEAD_OID=headoid000 GH_MERGED_HEAD_OID=headoid000 bash -c \
+    "printf '## Summary\n- noop\n' | '$script' 'feat(test): wrapper' -- plugins/me/skills/create-pr/SKILL.md"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"MERGED: https://example.test/pr/1"* ]]
+  assert_log_excludes "gh pr create"
+}
+
+@test "create-pr: creates a new PR when commits exist after the branch was merged" {
+  local script="${BATS_TEST_DIRNAME}/../../plugins/me/skills/create-pr/scripts/create-pr.sh"
+
+  run env GH_EXISTING_PR=merged GIT_HEAD_OID=newoid111 GH_MERGED_HEAD_OID=headoid000 GIT_AHEAD=1 bash -c \
+    "printf '## Summary\n- post-merge work\n' | '$script' 'feat(test): wrapper' -- plugins/me/skills/create-pr/SKILL.md"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"MERGED:"* ]]
+  grep -q "git push -u origin HEAD" "$STUB_LOG"
 }
 
 @test "fix-pr: skill exists under the new name" {

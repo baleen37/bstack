@@ -28,8 +28,14 @@ fi
 PR_STATE=$(gh pr view --json state --jq .state 2>/dev/null || true)
 PR_URL=$(gh pr view --json url --jq .url 2>/dev/null || true)
 if [[ "$PR_STATE" == "MERGED" && -n "$PR_URL" ]]; then
-  echo "MERGED: $PR_URL"
-  exit 0
+  # Only terminal if HEAD is still the merged tip. New commits after the merge
+  # mean fresh work, so fall through and let the wrapper open a new PR.
+  MERGED_OID=$(gh pr view --json headRefOid --jq .headRefOid 2>/dev/null || true)
+  HEAD_OID=$(git rev-parse HEAD 2>/dev/null || true)
+  if [[ -z "$MERGED_OID" || "$MERGED_OID" == "$HEAD_OID" ]]; then
+    echo "MERGED: $PR_URL"
+    exit 0
+  fi
 fi
 
 AHEAD=$(git rev-list "origin/$BASE"..HEAD --count 2>/dev/null || echo 0)
