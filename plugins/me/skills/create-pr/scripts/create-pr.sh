@@ -72,13 +72,20 @@ fi
 
 git push -u origin HEAD
 
-if gh pr view --json url >/dev/null 2>&1; then
+PR_STATE=$(gh pr view --json state --jq .state 2>/dev/null || true)
+if [[ "$PR_STATE" == "OPEN" ]]; then
   PR_URL=$(gh pr view --json url --jq .url)
   echo "PR_EXISTS: $PR_URL"
 else
   TITLE="$(git log -1 --pretty=%s)"
   if ! gh pr create --title "$TITLE" --body-file "$BODY_PATH"; then
-    gh pr view --json url --jq .url || { echo "PR create failed; no existing PR found."; exit 1; }
+    PR_STATE=$(gh pr view --json state --jq .state 2>/dev/null || true)
+    if [[ "$PR_STATE" == "OPEN" ]]; then
+      gh pr view --json url --jq .url
+    else
+      echo "PR create failed; no existing PR found."
+      exit 1
+    fi
   fi
 fi
 
