@@ -32,6 +32,19 @@ load ../helpers/bats_helper
     grep -q "git rev-parse.*git-dir" "$script"
 }
 
+@test "me: create-pr skill description is trigger-focused" {
+    local skill="${PROJECT_ROOT}/plugins/me/skills/create-pr/SKILL.md"
+    grep -q '^description: Use when ' "$skill"
+}
+
+@test "me: create-pr skill stays compact for frequent loading" {
+    local skill="${PROJECT_ROOT}/plugins/me/skills/create-pr/SKILL.md"
+    local words
+
+    words=$(wc -w < "$skill")
+    [ "$words" -le 220 ]
+}
+
 @test "me: lifecycle skills include test, review, and ship" {
     for skill in test review ship; do
         [ -f "${PROJECT_ROOT}/plugins/me/skills/${skill}/SKILL.md" ]
