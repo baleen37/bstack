@@ -20,11 +20,16 @@ and surface only the answer. Two separate decisions:
 | Situation | Do |
 | --- | --- |
 | 1–2 simple reads, or one `pup … \| jq` line | Run directly in the main thread — the pipe already isolates raw data |
+| A "list all / how many / every" answer that spans more than one page (you follow a `nextPageToken`/`--page`/cursor) | Delegate the whole pagination loop **from the first call** — don't absorb a page or two yourself first |
 | Heavy aggregation, many calls, exploratory back-and-forth | Delegate to a subagent |
 | Either way | Process with code/`jq`; never dump raw JSON into context |
 
 A "list all / how many / find every" question is where partial responses bite (below) — that
 risk applies *wherever* you run it, delegated or not.
+
+> When results come back as **MCP tool output** (not stdout) you can't pipe them through `jq`,
+> and a `fields`/projection argument is a *request the server may ignore* — so trimming the
+> request is not a reliable substitute for isolating the loop in a subagent.
 
 ## The one failure that matters: partial responses answered as if complete
 
@@ -48,7 +53,7 @@ Pick by how the target is exposed (`claude mcp list`, `command -v`):
 | Exposed as | Call it by | Notes |
 | --- | --- | --- |
 | **CLI** (`pup`, `ks`, `gh`) | Bash + `--output json \| jq` | Keep raw in the pipe; surface only the filtered result |
-| **MCP stdio** (local, e.g. `npx ...`) | raw JSON-RPC script, zero deps | see `reference/mcp-stdio-client.mjs` |
+| **MCP stdio** (local, e.g. `npx ...`) | **copy** `reference/mcp-stdio-client.mjs`, don't re-derive | zero-dep, verified handshake + `protocolVersion` — re-deriving wastes a round-trip and guesses the version |
 | **MCP remote OAuth** (`https://…/mcp`) | the MCP tool directly | shell can't borrow its auth |
 | **REST** (token in hand) | `curl \| jq` | — |
 
