@@ -44,13 +44,23 @@ set +e
 PREFLIGHT_OUTPUT=$("$SCRIPT_DIR/preflight-check.sh" "$BASE")
 PREFLIGHT_STATUS=$?
 set -e
-printf '%s\n' "$PREFLIGHT_OUTPUT"
-[[ "$PREFLIGHT_STATUS" -eq 0 ]] || exit "$PREFLIGHT_STATUS"
 PREFLIGHT_LAST=$(printf '%s\n' "$PREFLIGHT_OUTPUT" | tail -n 1)
 
 case "$PREFLIGHT_LAST" in
+  # Terminal already: pass it straight through as the single stdout line.
   NOOP:*|MERGED:*)
-    exit 0
+    printf '%s\n' "$PREFLIGHT_LAST"
+    exit "$PREFLIGHT_STATUS"
+    ;;
+  READY:*)
+    # Announcement only — echo to stderr so the agent knows the planned outcome,
+    # while stdout stays reserved for the one final terminal prefix below.
+    printf '%s\n' "$PREFLIGHT_LAST" >&2
+    ;;
+  *)
+    # Non-terminal failure (exit 1/2): surface preflight output and stop.
+    printf '%s\n' "$PREFLIGHT_OUTPUT" >&2
+    exit "$PREFLIGHT_STATUS"
     ;;
 esac
 
@@ -67,29 +77,27 @@ if git diff --cached --quiet; then
     exit 0
   fi
 else
-  git commit -m "$MESSAGE"
+  git commit -m "$MESSAGE" >&2
 fi
 
-git push -u origin HEAD
+git push -u origin HEAD >&2
 
 PR_STATE=$(gh pr view --json state --jq .state 2>/dev/null || true)
-if [[ "$PR_STATE" == "OPEN" ]]; then
-  PR_URL=$(gh pr view --json url --jq .url)
-  echo "PR_EXISTS: $PR_URL"
-else
+if [[ "$PR_STATE" != "OPEN" ]]; then
   TITLE="$(git log -1 --pretty=%s)"
-  if ! gh pr create --title "$TITLE" --body-file "$BODY_PATH"; then
+  if ! gh pr create --title "$TITLE" --body-file "$BODY_PATH" >/dev/null; then
     PR_STATE=$(gh pr view --json state --jq .state 2>/dev/null || true)
-    if [[ "$PR_STATE" == "OPEN" ]]; then
-      gh pr view --json url --jq .url
-    else
-      echo "PR create failed; no existing PR found."
+    if [[ "$PR_STATE" != "OPEN" ]]; then
+      echo "PR create failed; no existing PR found." >&2
       exit 1
     fi
   fi
 fi
-
 if [[ "$AUTO_MERGE" -eq 1 ]]; then
-  gh pr merge --auto --squash
+  # wait-for-merge.sh emits the single terminal prefix (MERGED/AWAITING_REVIEW/CI_FAILED).
+  gh pr merge --auto --squash >/dev/null
   "$SCRIPT_DIR/wait-for-merge.sh"
+else
+  # Single terminal prefix for "PR is open and ready", whether reused or just created.
+  echo "PR_EXISTS: $(gh pr view --json url --jq .url)"
 fi

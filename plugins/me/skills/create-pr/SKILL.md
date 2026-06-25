@@ -3,7 +3,7 @@ name: create-pr
 description: Use when committing changes, creating or reusing a PR, enabling auto-merge, or confirming merge status
 ---
 
-Run the wrapper; never reimplement git/gh checks or body temp files.
+Run the wrapper; never reimplement git/gh checks or body files.
 
 ```bash
 S="${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts"
@@ -12,27 +12,28 @@ printf '%s\n' "<full PR body>" | "$S/create-pr.sh" "type(scope): msg" -- <files>
 printf '%s\n' "<full PR body>" | "$S/create-pr.sh" --auto-merge "type(scope): msg" -- <files>
 ```
 
-Body: template if present, else Summary/Changes/Tests. Pipe once. Stage only requested files.
-Keep setup/body text out of the commit title.
+Body: template if present, else Summary/Changes/Tests. Pipe once. Stage only requested
+files. Keep setup/body text out of the commit title.
 
-The wrapper owns preflight, sync, staging, commit, push, PR create/reuse, auto-merge, wait.
+The wrapper owns preflight, sync, staging, commit, push, PR create/reuse, auto-merge.
 
-Act only on terminal prefixes:
+**stdout is the contract.** It prints exactly ONE terminal line to stdout; act on it and
+ignore stderr (git logs, a `READY:` preview). It is authoritative — don't re-run
+`gh pr view`/`git status`.
 
-| Output | Action |
-| ------ | ------ |
+| stdout line | Action |
+| ----------- | ------ |
 | `NOOP:` | Stop; nothing to PR. |
-| `PR_EXISTS:` or a bare PR URL | PR open (reused, or new one after a prior merge); auto-merge/wait only if asked. |
+| `PR_EXISTS: <url>` | PR open (created or reused); auto-merge only if asked. |
 | `MERGED:` | Done. |
-| `AWAITING_REVIEW:` | CI green, reviewer needed; stop. |
-| `CI_FAILED: <url> run-id=<id>` | Inspect logs, then use `me:fix-pr` once. |
+| `AWAITING_REVIEW:` | CI green, needs a reviewer; stop. |
+| `CI_FAILED: <url> run-id=<id>` | Inspect logs, then `me:fix-pr` once. |
 | `CLOSED:` | Stop. |
 
-Other outcomes:
+Failures (nonzero exit, empty stdout — read stderr):
 
-- `Behind base — syncing...`: wait for the wrapper's final prefix.
-- exit `1`, dirty/`UU`: `git status --short`; resolve `UU`, abort merge, or commit/stash dirt.
-- exit `1`, `Push failed` or `PR create failed; no existing PR found.`: publish failed (commit kept).
+- `CONFLICT:` then filenames: resolve them, re-run.
+- `Push failed` / `PR create failed; no existing PR found.`: publish failed (commit kept).
   Don't re-run/hand-roll; check `gh auth status`, report, resume once fixed.
-- exit `2`: fix repo/origin/base discovery; do not create a PR.
-- `ERROR: No PR` after auto-merge can be a fast-merge race. Verify with `gh pr view` and fetch main.
+- exit `2`: fix repo/origin/base discovery; don't create a PR.
+- `ERROR: No PR` after auto-merge may be a fast-merge race; verify with `gh pr view`.

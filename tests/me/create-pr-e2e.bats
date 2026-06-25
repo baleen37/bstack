@@ -1,6 +1,8 @@
 #!/usr/bin/env bats
 # create-pr e2e test - intentionally failing to test CI recovery flow
 
+bats_require_minimum_version 1.5.0
+
 setup() {
   TEST_TEMP_DIR="$(mktemp -d -t create-pr-test.XXXXXX)"
   export TEST_TEMP_DIR
@@ -232,7 +234,7 @@ assert_log_excludes() {
     "printf '## Summary\n- existing\n' | '$script' --auto-merge 'feat(test): wrapper' -- plugins/me/skills/create-pr/SKILL.md"
 
   [ "$status" -eq 0 ]
-  [[ "$output" == *"PR_EXISTS: https://example.test/pr/1"* ]]
+  # Auto-merge emits a single terminal prefix (MERGED), not a PR_EXISTS line too.
   [[ "$output" == *"MERGED: https://example.test/pr/1"* ]]
   assert_log_excludes "gh pr create"
   grep -q "gh pr merge --auto --squash" "$STUB_LOG"
@@ -338,6 +340,20 @@ assert_log_excludes() {
   [ "$status" -eq 0 ]
   [[ "$output" == "MERGED: https://example.test/pr/1" ]]
   assert_log_excludes "sleep 30"
+}
+
+@test "create-pr: success stdout is exactly one terminal prefix, git noise on stderr" {
+  local script="${BATS_TEST_DIRNAME}/../../plugins/me/skills/create-pr/scripts/create-pr.sh"
+
+  run --separate-stderr env GIT_BEHIND=1 bash -c \
+    "printf '## Summary\n- sync\n' | '$script' 'feat(test): wrapper' -- plugins/me/skills/create-pr/SKILL.md"
+
+  [ "$status" -eq 0 ]
+  # stdout: the single line the agent acts on — no commit/push/sync noise.
+  [ "$output" = "PR_EXISTS: https://example.test/pr/1" ]
+  # The READY announcement and sync progress are diagnostics on stderr.
+  [[ "$stderr" == *"READY:"* ]]
+  [[ "$stderr" == *"Behind base"* ]]
 }
 
 @test "fix-pr: skill exists under the new name" {
