@@ -77,6 +77,8 @@ case "$*" in
       echo "CLOSED"
     elif [[ "${GH_EXISTING_PR:-none}" == "open" || -f "${TEST_TEMP_DIR}/pr_created" ]]; then
       echo "OPEN"
+    elif [[ "${GH_PR_VIEW_AFTER_CREATE_FAIL:-0}" == "1" && -f "${TEST_TEMP_DIR}/create_failed" ]]; then
+      echo "OPEN"
     else
       exit 1
     fi
@@ -220,6 +222,7 @@ assert_log_excludes() {
   [ "$status" -eq 0 ]
   [[ "$output" != *"MERGED:"* ]]
   grep -q "git push -u origin HEAD" "$STUB_LOG"
+  grep -q "gh pr create --title feat(test): wrapper" "$STUB_LOG"
 }
 
 @test "create-pr: reuses existing open PR and auto-merges when requested" {
