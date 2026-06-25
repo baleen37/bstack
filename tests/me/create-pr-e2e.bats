@@ -37,9 +37,18 @@ echo "git $*" >> "$STUB_LOG"
   *) ;;
 esac
 STUB
-  chmod +x "${TEST_TEMP_DIR}/bin/git"
+	  chmod +x "${TEST_TEMP_DIR}/bin/git"
 
-  cat > "${TEST_TEMP_DIR}/bin/gh" <<'STUB'
+  cat > "${TEST_TEMP_DIR}/bin/sleep" <<'STUB'
+#!/usr/bin/env bash
+set -euo pipefail
+echo "sleep $*" >> "$STUB_LOG"
+touch "${TEST_TEMP_DIR}/slept"
+exit 0
+STUB
+  chmod +x "${TEST_TEMP_DIR}/bin/sleep"
+
+	  cat > "${TEST_TEMP_DIR}/bin/gh" <<'STUB'
 #!/usr/bin/env bash
 set -euo pipefail
 echo "gh $*" >> "$STUB_LOG"
@@ -53,6 +62,15 @@ pr_visible() {
 case "$*" in
   "repo view --json defaultBranchRef -q .defaultBranchRef.name") echo "main" ;;
   "pr view --json state --jq .state")
+    if [[ "${GH_MERGE_AFTER_FIRST_STATE:-0}" == "1" ]]; then
+      if [[ -f "${TEST_TEMP_DIR}/state_seen" ]]; then
+        echo "MERGED"
+      else
+        touch "${TEST_TEMP_DIR}/state_seen"
+        echo "OPEN"
+      fi
+      exit 0
+    fi
     if [[ "${GH_EXISTING_PR:-none}" == "merged" || -f "${TEST_TEMP_DIR}/merged" ]]; then
       echo "MERGED"
     elif [[ "${GH_EXISTING_PR:-none}" == "closed" ]]; then
@@ -75,6 +93,14 @@ case "$*" in
   "pr checks --json name,bucket,link")
     if [[ "${GH_CHECKS:-pass}" == "fail" ]]; then
       echo '[{"name":"CI","bucket":"fail","link":"https://example.test/actions/runs/9876543210/job/1"}]'
+    elif [[ "${GH_CHECKS:-pass}" == "pending" ]]; then
+      echo '[{"name":"CI","bucket":"pending","link":"https://example.test/actions/runs/1234567890"}]'
+    elif [[ "${GH_CHECKS:-pass}" == "pending-then-fail" ]]; then
+      if [[ -f "${TEST_TEMP_DIR}/slept" ]]; then
+        echo '[{"name":"CI","bucket":"fail","link":"https://example.test/actions/runs/9876543210/job/1"}]'
+      else
+        echo '[{"name":"CI","bucket":"pending","link":"https://example.test/actions/runs/1234567890"}]'
+      fi
     else
       echo '[{"name":"CI","bucket":"pass","link":"https://example.test/runs/1234567890"}]'
     fi
@@ -299,6 +325,16 @@ assert_log_excludes() {
   [ "$status" -eq 1 ]
   [[ "$output" == "CLOSED: https://example.test/pr/1" ]]
   assert_log_excludes "gh pr checks"
+}
+
+@test "create-pr: wait-for-merge reports merged even when a status remains pending" {
+  local script="${BATS_TEST_DIRNAME}/../../plugins/me/skills/create-pr/scripts/wait-for-merge.sh"
+
+  run env GH_EXISTING_PR=open GH_CHECKS=pending-then-fail GH_MERGE_AFTER_FIRST_STATE=1 "$script"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == "MERGED: https://example.test/pr/1" ]]
+  assert_log_excludes "sleep 30"
 }
 
 @test "fix-pr: skill exists under the new name" {
