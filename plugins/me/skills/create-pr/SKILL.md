@@ -22,7 +22,7 @@ Act only on terminal prefixes:
 | Output | Action |
 | ------ | ------ |
 | `NOOP:` | Stop; nothing to PR. |
-| `PR_EXISTS:` | Reuse it; auto-merge/wait only if requested. |
+| `PR_EXISTS:` or a bare PR URL | PR open (reused, or new one after a prior merge); auto-merge/wait only if asked. |
 | `MERGED:` | Done. |
 | `AWAITING_REVIEW:` | CI green, reviewer needed; stop. |
 | `CI_FAILED: <url> run-id=<id>` | Inspect logs, then use `me:fix-pr` once. |
@@ -30,7 +30,9 @@ Act only on terminal prefixes:
 
 Other outcomes:
 
-- `Behind base - syncing...`: wait for the wrapper's final prefix.
-- exit `1`: run `git status --short`; resolve `UU`, abort merge, or commit/stash dirt.
+- `Behind base — syncing...`: wait for the wrapper's final prefix.
+- exit `1`, dirty/`UU`: `git status --short`; resolve `UU`, abort merge, or commit/stash dirt.
+- exit `1`, `Push failed` or `PR create failed; no existing PR found.`: publish failed (commit kept).
+  Don't re-run/hand-roll; check `gh auth status`, report, resume once fixed.
 - exit `2`: fix repo/origin/base discovery; do not create a PR.
 - `ERROR: No PR` after auto-merge can be a fast-merge race. Verify with `gh pr view` and fetch main.

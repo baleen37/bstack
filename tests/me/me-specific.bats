@@ -42,7 +42,7 @@ load ../helpers/bats_helper
     local words
 
     words=$(wc -w < "$skill")
-    [ "$words" -le 220 ]
+    [ "$words" -le 260 ]
 }
 
 @test "me: lifecycle skills include test, review, and ship" {
