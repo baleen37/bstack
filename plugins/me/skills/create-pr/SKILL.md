@@ -1,41 +1,36 @@
 ---
 name: create-pr
-description: Create PR — commit, push, PR, wait for merge.
+description: Use when committing changes, creating or reusing a PR, enabling auto-merge, or confirming merge status
 ---
 
-Run the wrapper. Do not reimplement its git/gh checks.
+Run the wrapper; never reimplement git/gh checks or body temp files.
 
 ```bash
 S="${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts"
-# If on main/master: checkout -b <type>/<short> first
+# If on main/master, create a topic branch first.
 printf '%s\n' "<full PR body>" | "$S/create-pr.sh" "type(scope): msg" -- <files>
-# If auto merge was requested:
 printf '%s\n' "<full PR body>" | "$S/create-pr.sh" --auto-merge "type(scope): msg" -- <files>
 ```
 
-The wrapper handles preflight, base-branch sync, selected-file staging, commit, push, existing PR detection,
-PR creation, optional auto-merge, and merge waiting. It passes the PR body with `--body-file` using a
-per-run file; do not create shared temporary PR body files.
+Body: template if present, else Summary/Changes/Tests. Pipe once. Stage only requested files.
+Keep setup/body text out of the commit title.
 
-Preflight outcomes:
+The wrapper owns preflight, sync, staging, commit, push, PR create/reuse, auto-merge, wait.
 
-- `OK`: continue.
-- `NOOP:` or `MERGED:`: terminal; stop.
-- `Behind base — syncing...`: base was merged into this branch and pushed; continue only after the wrapper
-  finishes successfully.
-- exit `1`: blocking. Run `git status --short`. Resolve `UU` conflicts or abort the merge; if no `UU`
-  files, commit/stash local changes and rerun.
-- exit `2`: environment error. Fix repo/origin/base branch discovery; do not create a PR.
+Act only on terminal prefixes:
 
-Branch only on terminal prefixes:
+| Output | Action |
+| ------ | ------ |
+| `NOOP:` | Stop; nothing to PR. |
+| `PR_EXISTS:` | Reuse it; auto-merge/wait only if requested. |
+| `MERGED:` | Done. |
+| `AWAITING_REVIEW:` | CI green, reviewer needed; stop. |
+| `CI_FAILED: <url> run-id=<id>` | Inspect logs, then use `me:fix-pr` once. |
+| `CLOSED:` | Stop. |
 
-- `NOOP:` → nothing to PR
-- `PR_EXISTS:` → PR already exists; continue to auto-merge/wait only if requested
-- `MERGED:` → done
-- `AWAITING_REVIEW:` → CI green, needs reviewer
-- `CI_FAILED: <url> run-id=<id>` → `gh run view <id> --log-failed`, then use `me:fix-pr` once.
-  If id is `unknown`, inspect `gh pr checks --json name,bucket,link` first. Stop if unclear or still failing.
-- `CLOSED:` → stop.
+Other outcomes:
 
-PR body: fill PR template if exists, else summary+changes+tests. Pipe it once to the wrapper; do not put
-setup commands or PR body text inside the commit title.
+- `Behind base - syncing...`: wait for the wrapper's final prefix.
+- exit `1`: run `git status --short`; resolve `UU`, abort merge, or commit/stash dirt.
+- exit `2`: fix repo/origin/base discovery; do not create a PR.
+- `ERROR: No PR` after auto-merge can be a fast-merge race. Verify with `gh pr view` and fetch main.

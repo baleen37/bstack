@@ -40,8 +40,12 @@ write_body() {
 }
 
 BASE="${BASE:-$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name 2>/dev/null || echo main)}"
+set +e
 PREFLIGHT_OUTPUT=$("$SCRIPT_DIR/preflight-check.sh" "$BASE")
+PREFLIGHT_STATUS=$?
+set -e
 printf '%s\n' "$PREFLIGHT_OUTPUT"
+[[ "$PREFLIGHT_STATUS" -eq 0 ]] || exit "$PREFLIGHT_STATUS"
 PREFLIGHT_LAST=$(printf '%s\n' "$PREFLIGHT_OUTPUT" | tail -n 1)
 
 case "$PREFLIGHT_LAST" in
