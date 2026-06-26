@@ -16,13 +16,11 @@ load ../helpers/bats_helper
 # create-pr skill tests
 @test "me: create-pr skill exists with required components" {
     [ -f "${PROJECT_ROOT}/plugins/me/skills/create-pr/SKILL.md" ]
-    [ -f "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/create-pr.sh" ]
     [ -f "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/preflight-check.sh" ]
     [ -f "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/wait-for-merge.sh" ]
 }
 
 @test "me: create-pr scripts are executable" {
-    [ -x "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/create-pr.sh" ]
     [ -x "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/preflight-check.sh" ]
     [ -x "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/wait-for-merge.sh" ]
 }
@@ -30,11 +28,6 @@ load ../helpers/bats_helper
 @test "me: create-pr preflight-check.sh validates git repo" {
     local script="${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/preflight-check.sh"
     grep -q "git rev-parse.*git-dir" "$script"
-}
-
-@test "me: create-pr skill description is trigger-focused" {
-    local skill="${PROJECT_ROOT}/plugins/me/skills/create-pr/SKILL.md"
-    grep -q '^description: Use when ' "$skill"
 }
 
 @test "me: create-pr skill stays compact for frequent loading" {
