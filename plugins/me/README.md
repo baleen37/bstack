@@ -4,10 +4,6 @@ Personal Claude Code workflow toolkit for git safety, session continuity, verifi
 
 ## Lifecycle
 
-### Define
-
-- `to-prd` — Convert conversation context into a PRD and GitHub issue, optionally breaking it into independently grabbable implementation issues.
-
 ### Plan
 
 - `research` — Explore evidence before acting.
@@ -21,33 +17,31 @@ Personal Claude Code workflow toolkit for git safety, session continuity, verifi
 
 - `test` — Design, run, and improve tests using local conventions and `test-engineer`.
 - `qa` — Verify implementation scope and report `PASS`, `PARTIAL`, or `FAIL` with evidence.
-- `verify` — Compose debugging and browser/runtime verification.
 - `e2e` — Verify flows across multiple components, services, or layers.
-- `browse` — Use browser automation for runtime and UI verification.
-- `debugging-and-error-recovery` — Diagnose failing tests, builds, and unexpected behavior from first principles.
 
 ### Review
 
 - `review` — Review code with specialist subagents for correctness, tests, security, and architecture.
-- `fix-pr` — Repair broken PRs, CI failures, conflicts, and test failures.
 
 ### Ship
 
 - `ship` — Prepare staged rollout, monitoring, rollback, and production launch checks.
-- `ci-cd-and-automation` — Design CI/CD pipelines, quality gates, and deployment automation.
 - `create-pr` — Commit, push, create a PR, and optionally wait for checks or merge.
+
+### Evolve
+
+- `evolve` — Aggregate skill-usage signals and propose skill improvements.
 
 ### Session
 
 - `handoff` — Write structured session handoff files.
-- `pickup` — Resume from a handoff and warn on branch or worktree mismatch.
 
 ## Agents
 
 - `code-reviewer` — Review completed work against the original plan and coding standards.
 - `security-auditor` — Audit production-bound changes for security launch risk.
 - `test-engineer` — Review test coverage and verification evidence before shipping.
-- `web-researcher` — Gather current web documentation, best practices, and version-specific evidence.
+- `researcher` — Gather current web documentation, best practices, and version-specific evidence.
 
 ## Hooks
 
@@ -56,4 +50,4 @@ Personal Claude Code workflow toolkit for git safety, session continuity, verifi
 
 ## References
 
-Most detailed references live next to the skill that uses them, such as `skills/browse/references/` and `skills/qa/references/`.
+Most detailed references live next to the skill that uses them, such as `skills/qa/references/`.
