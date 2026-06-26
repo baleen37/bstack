@@ -46,12 +46,12 @@ bstack/
 ├── plugins/
 │   ├── me/                    # Core personal workflow plugin
 │   │   ├── hooks/             # Session hooks (git guard, handoff, LSP checks)
-│   │   └── skills/            # Personal skills (16 total)
+│   │   └── skills/            # Personal skills
 │   ├── ralph/                 # Ralph Loop plugin
 │   │   ├── hooks/             # Ralph persistence hooks
 │   │   └── skills/            # ralph, ralph-cancel
 │   ├── jira/                  # Jira integration plugin
-│   │   └── skills/            # 5 Jira workflow skills
+│   │   └── skills/            # Jira workflow skills
 │   ├── core/                  # Shared agent definitions
 │   ├── lsp-*/                 # Individual LSP plugins (bash, go, lua, etc.)
 ├── scripts/                   # Utility scripts (handoff, dispatch, version sync)
@@ -98,6 +98,7 @@ bstack/
 | Skill | Description |
 |-------|-------------|
 | `capture-tasks-from-meeting-notes` | 회의록에서 Jira 태스크 자동 생성 |
+| `daily-standup` | Jira 이슈 기반 데일리 스탠드업 리포트 생성 |
 | `generate-status-report` | Jira 이슈 기반 프로젝트 상태 리포트 생성 |
 | `search-company-knowledge` | Jira에서 내부 개념/프로세스 검색 |
 | `triage-issue` | 버그 리포트 트리아지 및 중복 검색 |
