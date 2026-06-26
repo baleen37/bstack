@@ -19,6 +19,7 @@ echo "git $*" >> "$STUB_LOG"
     "rev-parse --git-dir") echo ".git" ;;
     "rev-parse HEAD") echo "${GIT_HEAD_OID:-headoid000}" ;;
     "rev-parse --git-path create-pr-body.XXXXXX") echo "${TEST_TEMP_DIR}/git/create-pr-body.XXXXXX" ;;
+    "rev-parse --show-toplevel") echo "${GIT_TOPLEVEL:-$TEST_TEMP_DIR}" ;;
     "symbolic-ref --short HEAD") echo "feature/create-pr-wrapper" ;;
     "fetch origin main") ;;
     "rev-list HEAD..origin/main --count") echo "${GIT_BEHIND:-0}" ;;
@@ -179,6 +180,61 @@ assert_log_excludes() {
   [ "$status" -eq 0 ]
   mapfile -t body_files < <(grep -Eo "${TEST_TEMP_DIR}/git/create-pr-body\\.[[:alnum:]]+" "$STUB_LOG" | sort -u)
   [ "${#body_files[@]}" -eq 2 ]
+}
+
+@test "create-pr: empty stdin body falls back to .github PR template" {
+  local script="${BATS_TEST_DIRNAME}/../../plugins/me/skills/create-pr/scripts/create-pr.sh"
+  local body="${TEST_TEMP_DIR}/pr_body.md"
+  mkdir -p "${TEST_TEMP_DIR}/repo/.github"
+  printf '## What\n\n## Why\n' > "${TEST_TEMP_DIR}/repo/.github/PULL_REQUEST_TEMPLATE.md"
+
+  run env CREATE_PR_BODY_PATH="$body" GIT_TOPLEVEL="${TEST_TEMP_DIR}/repo" bash -c \
+    "printf '' | '$script' 'feat(test): wrapper' -- plugins/me/skills/create-pr/SKILL.md"
+
+  [ "$status" -eq 0 ]
+  [ "$(cat "$body")" = $'## What\n\n## Why' ]
+}
+
+@test "create-pr: empty stdin body finds root-level PR template (case-insensitive)" {
+  local script="${BATS_TEST_DIRNAME}/../../plugins/me/skills/create-pr/scripts/create-pr.sh"
+  local body="${TEST_TEMP_DIR}/pr_body.md"
+  mkdir -p "${TEST_TEMP_DIR}/repo"
+  printf '## Summary\n' > "${TEST_TEMP_DIR}/repo/pull_request_template.md"
+
+  run env CREATE_PR_BODY_PATH="$body" GIT_TOPLEVEL="${TEST_TEMP_DIR}/repo" bash -c \
+    "printf '' | '$script' 'feat(test): wrapper' -- plugins/me/skills/create-pr/SKILL.md"
+
+  [ "$status" -eq 0 ]
+  [ "$(cat "$body")" = "## Summary" ]
+}
+
+@test "create-pr: unreadable PR template does not abort the wrapper" {
+  local script="${BATS_TEST_DIRNAME}/../../plugins/me/skills/create-pr/scripts/create-pr.sh"
+  local body="${TEST_TEMP_DIR}/pr_body.md"
+  mkdir -p "${TEST_TEMP_DIR}/repo/.github"
+  printf '## Template\n' > "${TEST_TEMP_DIR}/repo/.github/PULL_REQUEST_TEMPLATE.md"
+  chmod 000 "${TEST_TEMP_DIR}/repo/.github/PULL_REQUEST_TEMPLATE.md"
+
+  run env CREATE_PR_BODY_PATH="$body" GIT_TOPLEVEL="${TEST_TEMP_DIR}/repo" bash -c \
+    "printf '' | '$script' 'feat(test): wrapper' -- plugins/me/skills/create-pr/SKILL.md"
+
+  chmod 644 "${TEST_TEMP_DIR}/repo/.github/PULL_REQUEST_TEMPLATE.md"
+  [ "$status" -eq 0 ]
+  [ -f "$body" ]
+  [ ! -s "$body" ]
+}
+
+@test "create-pr: non-empty stdin body is used verbatim, ignoring any template" {
+  local script="${BATS_TEST_DIRNAME}/../../plugins/me/skills/create-pr/scripts/create-pr.sh"
+  local body="${TEST_TEMP_DIR}/pr_body.md"
+  mkdir -p "${TEST_TEMP_DIR}/repo/.github"
+  printf '## Template\n' > "${TEST_TEMP_DIR}/repo/.github/PULL_REQUEST_TEMPLATE.md"
+
+  run env CREATE_PR_BODY_PATH="$body" GIT_TOPLEVEL="${TEST_TEMP_DIR}/repo" bash -c \
+    "printf '## Summary\n- real\n' | '$script' 'feat(test): wrapper' -- plugins/me/skills/create-pr/SKILL.md"
+
+  [ "$status" -eq 0 ]
+  [ "$(cat "$body")" = $'## Summary\n- real' ]
 }
 
 @test "create-pr: wrapper creates PR for existing committed branch diff without staged changes" {
