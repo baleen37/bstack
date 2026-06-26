@@ -19,11 +19,6 @@ esac
 
 prev=""
 while true; do
-  case $(gh pr view --json state --jq .state 2>/dev/null || echo "") in
-    MERGED) echo "MERGED: $URL"; exit 0;;
-    CLOSED) echo "CLOSED: $URL"; exit 1;;
-  esac
-
   snap=$(gh pr checks --json name,bucket,link 2>/dev/null || echo "[]")
   cur=$(jq -r '.[] | select(.bucket!="pending") | "check: \(.name): \(.bucket)"' <<<"$snap" | sort)
   comm -13 <(echo "$prev") <(echo "$cur")

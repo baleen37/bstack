@@ -1,39 +1,31 @@
 ---
 name: create-pr
-description: Use when committing changes, creating or reusing a PR, enabling auto-merge, or confirming merge status
+description: Create PR — commit, push, PR, wait for merge.
 ---
 
-Run the wrapper; never reimplement git/gh checks or body files.
+Execute each line literally (scripts MUST be run, not reimplemented):
 
 ```bash
 S="${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts"
-# If on main/master, create a topic branch first.
-printf '%s\n' "<full PR body>" | "$S/create-pr.sh" "type(scope): msg" -- <files>
-printf '%s\n' "<full PR body>" | "$S/create-pr.sh" --auto-merge "type(scope): msg" -- <files>
+# If on main/master: checkout -b <type>/<short> first
+"$S/preflight-check.sh"          # syncs if behind base
+git add <files> && git commit -m "type(scope): msg"
+git push -u origin HEAD
+gh pr create --title "$(git log -1 --pretty=%s)" --body "<body>"
+# Auto merge: only if user explicitly requests it
+# gh pr merge --auto --squash
+# REQUIRED: invoke via Monitor tool — streams per-check events + terminal event.
+# Monitor({command: "\"$S/wait-for-merge.sh\"", description: "PR checks", timeout_ms: 1800000, persistent: false})
 ```
 
-Body: template if present, else Summary/Changes/Tests. Pipe once. Stage only requested
-files. Keep setup/body text out of the commit title.
+If user requests auto merge: `gh pr merge --auto --squash` → invoke `"$S/wait-for-merge.sh"`
+via the Monitor tool. Each `check: <name>: <bucket>` line streams as a notification; the
+terminal event has one of these prefixes — branch on it:
 
-The wrapper owns preflight, sync, staging, commit, push, PR create/reuse, auto-merge.
+- `MERGED:` → done
+- `AWAITING_REVIEW:` → CI green, needs reviewer
+- `CI_FAILED: <url> run-id=<id>` → `gh run view <run-id> --log-failed` → fix the failure once →
+  re-enable `gh pr merge --auto --squash` → re-invoke Monitor. Stop if unclear or still failing.
+- `CLOSED:` → stop.
 
-**stdout is the contract.** It prints exactly ONE terminal line to stdout; act on it and
-ignore stderr (git logs, a `READY:` preview). It is authoritative — don't re-run
-`gh pr view`/`git status`.
-
-| stdout line | Action |
-| ----------- | ------ |
-| `NOOP:` | Stop; nothing to PR. |
-| `PR_EXISTS: <url>` | PR open (created or reused); auto-merge only if asked. |
-| `MERGED:` | Done. |
-| `AWAITING_REVIEW:` | CI green, needs a reviewer; stop. |
-| `CI_FAILED: <url> run-id=<id>` | Inspect logs, then `me:fix-pr` once. |
-| `CLOSED:` | Stop. |
-
-Failures (nonzero exit, empty stdout — read stderr):
-
-- `CONFLICT:` then filenames: resolve them, re-run.
-- `Push failed` / `PR create failed; no existing PR found.`: publish failed (commit kept).
-  Don't re-run/hand-roll; check `gh auth status`, report, resume once fixed.
-- exit `2`: fix repo/origin/base discovery; don't create a PR.
-- `ERROR: No PR` after auto-merge may be a fast-merge race; verify with `gh pr view`.
+PR body: fill PR template if exists, else summary+changes+tests.

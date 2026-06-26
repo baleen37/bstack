@@ -1,12 +1,6 @@
----
-name: karpathy-guidelines
-description: Behavioral guidelines to reduce common LLM coding mistakes. Use when writing, reviewing, or refactoring code to avoid overcomplication, make surgical changes, surface assumptions, and define verifiable success criteria.
-license: MIT
----
+# CLAUDE.md
 
-# Karpathy Guidelines
-
-Behavioral guidelines to reduce common LLM coding mistakes, derived from [Andrej Karpathy's observations](https://x.com/karpathy/status/2015883857489522876) on LLM coding pitfalls.
+Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
@@ -68,17 +62,14 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ## Learning and memory management
 
-- Use MEMORY.md to capture technical insights, failed approaches, and user preferences
+- Use MEMORY to capture technical insights, failed approaches, and user preferences
 - Before starting complex tasks, read relevant memory files to build on previous experience
 - Update or remove memories that turn out to be wrong or outdated
-
-## Recalling past context
-
-- When you don't understand the context of the current task, use the `memmem:search-conversation` skill to search past conversation history
-- Use it when the user references prior work, when intent is hard to infer from code alone, or when you're stuck
 
 ## Language
 
 Always communicate in Korean.
+
+**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
 
 @local.md
