@@ -47,9 +47,6 @@ bstack/
 │   ├── me/                    # Core personal workflow plugin
 │   │   ├── hooks/             # Session hooks (git guard, handoff, LSP checks)
 │   │   └── skills/            # Personal skills
-│   ├── ralph/                 # Ralph Loop plugin
-│   │   ├── hooks/             # Ralph persistence hooks
-│   │   └── skills/            # ralph, ralph-cancel
 │   ├── jira/                  # Jira integration plugin
 │   │   └── skills/            # Jira workflow skills
 │   ├── core/                  # Shared agent definitions
@@ -85,13 +82,6 @@ bstack/
 | Skill | Description |
 |-------|-------------|
 | `autoresearch` | git 추적 실험으로 metric을 반복 최적화하는 자율 실험 루프 |
-
-#### `ralph` plugin
-
-| Skill | Description |
-|-------|-------------|
-| `ralph` | PRD 기반 자동 반복 개발 루프 실행 |
-| `ralph-cancel` | 실행 중인 Ralph 루프 취소 |
 
 #### `jira` plugin
 

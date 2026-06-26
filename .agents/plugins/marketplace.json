@@ -29,18 +29,6 @@
       "category": "Productivity"
     },
     {
-      "name": "ralph",
-      "source": {
-        "source": "local",
-        "path": "./plugins/ralph"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Productivity"
-    },
-    {
       "name": "datadog",
       "source": {
         "source": "local",
