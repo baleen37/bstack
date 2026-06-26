@@ -177,3 +177,4 @@ assert_log_excludes() {
   [[ "$output" == "CLOSED: https://example.test/pr/1" ]]
   assert_log_excludes "gh pr checks"
 }
+

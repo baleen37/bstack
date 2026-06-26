@@ -18,13 +18,13 @@ gh pr create --title "$(git log -1 --pretty=%s)" --body "<body>"
 # Monitor({command: "\"$S/wait-for-merge.sh\"", description: "PR checks", timeout_ms: 1800000, persistent: false})
 ```
 
-If user requests auto merge: `gh pr merge --auto --squash` → invoke `"$S/wait-for-merge.sh"` via the Monitor tool.
-Each `check: <name>: <bucket>` line streams as a notification; the terminal event has one of these prefixes —
-branch on it:
+If user requests auto merge: `gh pr merge --auto --squash` → invoke `"$S/wait-for-merge.sh"`
+via the Monitor tool. Each `check: <name>: <bucket>` line streams as a notification; the
+terminal event has one of these prefixes — branch on it:
 
 - `MERGED:` → done
 - `AWAITING_REVIEW:` → CI green, needs reviewer
-- `CI_FAILED: <url> run-id=<id>` → `gh run view <run-id> --log-failed` → diagnose, fix, commit, push once →
+- `CI_FAILED: <url> run-id=<id>` → `gh run view <run-id> --log-failed` → fix the failure once →
   re-enable `gh pr merge --auto --squash` → re-invoke Monitor. Stop if unclear or still failing.
 - `CLOSED:` → stop.
 
