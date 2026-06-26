@@ -38,20 +38,6 @@
       "version": "17.27.3"
     },
     {
-      "name": "ralph",
-      "description": "PRD-driven persistence loop — keeps Claude working until all user stories pass",
-      "source": "./plugins/ralph",
-      "category": "development",
-      "tags": [
-        "ralph",
-        "loop",
-        "persistence",
-        "prd",
-        "automation"
-      ],
-      "version": "17.27.3"
-    },
-    {
       "name": "datadog",
       "description": "Datadog observability skills for Claude Code via the pup CLI",
       "source": "./plugins/datadog",
