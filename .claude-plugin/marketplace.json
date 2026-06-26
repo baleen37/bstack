@@ -22,7 +22,7 @@
         "memory",
         "context"
       ],
-      "version": "17.27.4"
+      "version": "17.27.5"
     },
     {
       "name": "jira",
@@ -35,7 +35,7 @@
         "confluence",
         "project-management"
       ],
-      "version": "17.27.4"
+      "version": "17.27.5"
     },
     {
       "name": "datadog",
@@ -50,7 +50,7 @@
         "apm",
         "pup"
       ],
-      "version": "17.27.4"
+      "version": "17.27.5"
     },
     {
       "name": "autoresearch",
@@ -63,7 +63,7 @@
         "autonomous",
         "research"
       ],
-      "version": "17.27.4"
+      "version": "17.27.5"
     }
   ]
 }
