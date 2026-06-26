@@ -24,6 +24,22 @@ shift
 shift
 [[ "$#" -gt 0 ]] || { usage; exit 2; }
 
+# Echo the repo's PR template if one exists, else nothing. GitHub recognizes
+# PULL_REQUEST_TEMPLATE.md (case-insensitive) in the repo root or .github/.
+find_pr_template() {
+  local root dir name
+  root="$(git rev-parse --show-toplevel 2>/dev/null)" || return 0
+  for dir in "$root" "$root/.github"; do
+    for name in PULL_REQUEST_TEMPLATE.md pull_request_template.md; do
+      # -r so an unreadable template is skipped, not fatal under set -e.
+      if [[ -f "$dir/$name" && -r "$dir/$name" ]]; then
+        cat "$dir/$name"
+        return 0
+      fi
+    done
+  done
+}
+
 write_body() {
   local tmp
   if [[ -z "$BODY_PATH" ]]; then
@@ -36,6 +52,10 @@ write_body() {
   mkdir -p "$(dirname "$BODY_PATH")"
   tmp="$(mktemp "${BODY_PATH}.XXXXXX")"
   cat > "$tmp"
+  # Empty piped body: fall back to the repo's PR template so the PR isn't blank.
+  if [[ ! -s "$tmp" ]]; then
+    find_pr_template > "$tmp"
+  fi
   mv "$tmp" "$BODY_PATH"
 }
 
