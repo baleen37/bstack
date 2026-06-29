@@ -26,7 +26,7 @@
     },
     {
       "name": "jira",
-      "description": "Atlassian Jira integration skills for Claude Code",
+      "description": "Jira workflow guidance backed by the official Atlassian MCP server",
       "source": "./plugins/jira",
       "category": "development",
       "tags": [
@@ -38,8 +38,34 @@
       "version": "17.27.7"
     },
     {
+      "name": "slack",
+      "description": "Slack workflow guidance backed by the official Slack MCP server",
+      "source": "./plugins/slack",
+      "category": "development",
+      "tags": [
+        "slack",
+        "collaboration",
+        "messaging",
+        "mcp"
+      ],
+      "version": "17.27.7"
+    },
+    {
+      "name": "notion",
+      "description": "Notion workspace guidance backed by the official Notion MCP server",
+      "source": "./plugins/notion",
+      "category": "development",
+      "tags": [
+        "notion",
+        "knowledge-management",
+        "documentation",
+        "mcp"
+      ],
+      "version": "17.27.7"
+    },
+    {
       "name": "datadog",
-      "description": "Datadog observability skills for Claude Code via the pup CLI",
+      "description": "Datadog observability guidance via the pup CLI",
       "source": "./plugins/datadog",
       "category": "development",
       "tags": [
