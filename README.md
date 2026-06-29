@@ -47,7 +47,10 @@ bstack/
 │   ├── me/                    # Core personal workflow plugin
 │   │   ├── hooks/             # Session hooks (git guard, handoff, LSP checks)
 │   │   └── skills/            # Personal skills
-│   ├── jira/                  # Jira integration plugin
+│   ├── jira/                  # Jira plugin backed by Atlassian MCP
+│   ├── slack/                 # Slack plugin backed by Slack MCP
+│   ├── notion/                # Notion plugin backed by Notion MCP
+│   ├── datadog/               # Datadog plugin backed by pup CLI
 │   │   └── skills/            # Jira workflow skills
 │   ├── core/                  # Shared agent definitions
 │   ├── lsp-*/                 # Individual LSP plugins (bash, go, lua, etc.)
@@ -85,12 +88,27 @@ bstack/
 
 | Skill | Description |
 |-------|-------------|
-| `capture-tasks-from-meeting-notes` | 회의록에서 Jira 태스크 자동 생성 |
-| `daily-standup` | Jira 이슈 기반 데일리 스탠드업 리포트 생성 |
-| `generate-status-report` | Jira 이슈 기반 프로젝트 상태 리포트 생성 |
-| `search-company-knowledge` | Jira에서 내부 개념/프로세스 검색 |
-| `triage-issue` | 버그 리포트 트리아지 및 중복 검색 |
-| `spec-to-backlog` | Confluence 스펙 문서를 Jira 백로그로 변환 |
+| `jira` | 공식 Atlassian MCP로 Jira 검색, 생성, 코멘트, 트리아지 |
+
+#### `slack` plugin
+
+| Skill | Description |
+|-------|-------------|
+| `slack-search` | 공식 Slack MCP로 메시지, 파일, 채널, 사용자, 스레드 검색 |
+| `slack-messaging` | 공식 Slack MCP로 메시지 초안, 답글, 게시 |
+
+#### `notion` plugin
+
+| Skill | Description |
+|-------|-------------|
+| `notion-search` | 공식 Notion MCP로 페이지와 데이터베이스 검색 |
+| `notion-document-writing` | 공식 Notion MCP로 문서 생성과 업데이트 |
+
+#### `datadog` plugin
+
+| Skill | Description |
+|-------|-------------|
+| `datadog` | `pup` CLI로 로그, 모니터, APM, 메트릭 조사 |
 
 ## Development
 
