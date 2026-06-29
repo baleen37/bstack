@@ -13,10 +13,9 @@ AI 보조 개발을 위한 도구들을 제공하며, 반복적 자기 참조 AI
 | File | Description |
 | ---- | ----------- |
 | `package.json` | Project dependencies and scripts (commitizen, husky, semantic-release) |
-| `.releaserc.js` | Semantic-release configuration for root plugin version management |
+| `.releaserc.js` | Semantic-release configuration synchronizing marketplace.json and all plugin versions |
 | `CLAUDE.md` | Project guidance for AI coding agents (architecture, commands, guidelines) |
 | `README.md` | Project overview and documentation |
-| `flake.nix` | Nix flake for reproducible development environment |
 | `.pre-commit-config.yaml` | Pre-commit hooks configuration (YAML, JSON, ShellCheck, markdownlint, commitlint) |
 | `.commitlintrc.js` | Commitlint configuration for Conventional Commits |
 | `.gitignore` | Git ignore patterns |
@@ -25,18 +24,13 @@ AI 보조 개발을 위한 도구들을 제공하며, 반복적 자기 참조 AI
 
 | Directory | Purpose |
 | --------- | ------- |
-| `hooks/` | Hook scripts and unified hooks.json |
+| `plugins/` | Plugin sources, one subdirectory per plugin (`me`, `jira`, `slack`, `notion`, `datadog`, `autoresearch`); each holds its own `agents/`, `hooks/`, `skills/`, and `.claude-plugin/plugin.json` |
 | `scripts/` | Utility scripts (handoff, conflict checks, PR verification) |
-| `skills/` | Standalone skills (see `skills/AGENTS.md`) |
-| `dist/` | Compiled JavaScript files |
-| `.claude-plugin/` | Marketplace configuration and root plugin.json |
+| `.claude-plugin/` | Marketplace configuration (`marketplace.json`) listing all plugins |
 | `.github/` | GitHub Actions workflows and custom actions (see `.github/AGENTS.md`) |
 | `tests/` | BATS test suites (see `tests/AGENTS.md`) |
 | `schemas/` | JSON schemas for validation (see `schemas/AGENTS.md`) |
 | `docs/` | Development and testing documentation (see `docs/AGENTS.md`) |
-| `.husky/` | Git hooks managed by husky |
-| `.worktrees/` | Git worktrees for parallel development |
-| `.reports/` | Analysis reports (e.g., dead code analysis) |
 | `.claude/` | Claude Code session data |
 
 ## For AI Agents
@@ -71,8 +65,11 @@ AI 보조 개발을 위한 도구들을 제공하며, 반복적 자기 참조 AI
 
 ### Common Patterns
 
-- Single plugin: `.claude-plugin/plugin.json` at root level — no subdirectory scanning
-- Version synchronization: `.releaserc.js` updates root plugin.json and marketplace.json
+- Multi-plugin marketplace: each plugin lives under `plugins/<name>/` with its own
+  `.claude-plugin/plugin.json` (and `.codex-plugin/` for Codex). The root
+  `.claude-plugin/marketplace.json` lists every plugin via its `source` path.
+- Version synchronization: `.releaserc.js` updates `marketplace.json` and each
+  `plugins/*/.claude-plugin/plugin.json` (all plugins share one version)
 - Portable paths: Use `${CLAUDE_PLUGIN_ROOT}` in hook scripts
 - Hook script requirements: `set -euo pipefail`, jq for JSON parsing, stderr for errors
 - Skill scripts (under `plugins/*/skills/*/scripts/`) are written in **TypeScript** and run with
