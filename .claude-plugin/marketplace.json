@@ -22,7 +22,7 @@
         "memory",
         "context"
       ],
-      "version": "17.27.7"
+      "version": "17.28.0"
     },
     {
       "name": "jira",
@@ -35,7 +35,33 @@
         "confluence",
         "project-management"
       ],
-      "version": "17.27.7"
+      "version": "17.28.0"
+    },
+    {
+      "name": "slack",
+      "description": "Slack workflow guidance backed by the official Slack MCP server",
+      "source": "./plugins/slack",
+      "category": "development",
+      "tags": [
+        "slack",
+        "collaboration",
+        "messaging",
+        "mcp"
+      ],
+      "version": "17.28.0"
+    },
+    {
+      "name": "notion",
+      "description": "Notion workspace guidance backed by the official Notion MCP server",
+      "source": "./plugins/notion",
+      "category": "development",
+      "tags": [
+        "notion",
+        "knowledge-management",
+        "documentation",
+        "mcp"
+      ],
+      "version": "17.28.0"
     },
     {
       "name": "slack",
@@ -76,7 +102,7 @@
         "apm",
         "pup"
       ],
-      "version": "17.27.7"
+      "version": "17.28.0"
     },
     {
       "name": "autoresearch",
@@ -89,7 +115,7 @@
         "autonomous",
         "research"
       ],
-      "version": "17.27.7"
+      "version": "17.28.0"
     }
   ]
 }
