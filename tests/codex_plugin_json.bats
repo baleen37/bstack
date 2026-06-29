@@ -110,17 +110,19 @@ eligible_codex_plugins() {
     ! grep -q "plugins/ralph/.codex-plugin/plugin.json" "$workflow"
 }
 
-@test "marketplace notification uses reusable update_versions dispatch action" {
+@test "marketplace notification uses notify@v1 dispatch action" {
     local workflow="${PROJECT_ROOT}/.github/workflows/notify-marketplace.yml"
 
-    grep -q "baleen37/baleen-marketplace/.github/actions/repository-dispatch@main" "$workflow"
-    ! grep -q "dispatch-marketplace-update" "$workflow"
+    grep -q "baleen37/baleen-marketplace/.github/actions/notify@v1" "$workflow"
+    grep -q "source: bstack" "$workflow"
+    grep -q "github.event.release.tag_name" "$workflow"
+    grep -qF 'token: ${{ steps.app-token.outputs.token }}' "$workflow"
     grep -q "uses: actions/create-github-app-token@v1" "$workflow"
-    grep -q "app-id: \${{ secrets.BALEEN_RELEASE_APP_ID }}" "$workflow"
-    grep -q "private-key: \${{ secrets.BALEEN_RELEASE_APP_PRIVATE_KEY }}" "$workflow"
-    grep -q "token: \${{ steps.app-token.outputs.token }}" "$workflow"
-    grep -q "event-type: update_versions" "$workflow"
-    grep -q "client-payload:" "$workflow"
-    grep -q '"plugin": "bstack"' "$workflow"
-    ! grep -q "github-token:" "$workflow"
+    grep -qF 'app-id: ${{ secrets.BALEEN_RELEASE_APP_ID }}' "$workflow"
+    grep -qF 'private-key: ${{ secrets.BALEEN_RELEASE_APP_PRIVATE_KEY }}' "$workflow"
+    ! grep -q "repository-dispatch@main" "$workflow"
+    ! grep -q "dispatch-marketplace-update" "$workflow"
+    ! grep -q "event-type: update_versions" "$workflow"
+    ! grep -q "client-payload:" "$workflow"
+    ! grep -q '"plugin":' "$workflow"
 }
