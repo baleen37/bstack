@@ -1,17 +1,17 @@
 # bstack
 
-AI 코딩 어시스턴트 툴킷 — Claude Code, OpenCode, 그 외.
+An AI coding assistant toolkit — Claude Code, OpenCode, and more.
 
 ## Features
 
-bstack은 플러그인 형태로 묶인 단일 통합 패키지입니다:
+bstack is a unified package bundled as plugins:
 
-- **Git Guard**: `--no-verify` 등 위험한 git 명령어 자동 차단
-- **Session Handoff**: Claude 세션 간 컨텍스트 인계/인수
-- **LSP Servers**: Bash, TypeScript, Python, Go, Kotlin, Lua, Nix, Terraform 언어 서버 자동 설치
-- **Ralph Loop**: PRD 기반 자동 반복 개발 루프
-- **Skills**: 개인 개발 워크플로우 스킬 모음
-- **Jira Integration**: Jira 이슈 트리아지, 백로그 생성, 상태 리포트 등
+- **Git Guard**: Automatically blocks dangerous git commands such as `--no-verify`
+- **Session Handoff**: Hands off and resumes context across Claude sessions
+- **LSP Servers**: Auto-installs language servers for Bash, TypeScript, Python, Go, Kotlin, Lua, Nix, and Terraform
+- **Ralph Loop**: PRD-driven automated iterative development loop
+- **Skills**: A collection of personal development workflow skills
+- **Jira Integration**: Jira issue triage, backlog generation, status reports, and more
 
 ## Quick Start
 
@@ -67,48 +67,48 @@ bstack/
 
 | Skill | Description |
 |-------|-------------|
-| `handoff` | 세션 종료 시 다음 세션을 위한 인계 문서 생성 |
-| `create-pr` | 커밋, 푸시, PR 생성 통합 워크플로우 |
-| `commit` | Conventional Commits 형식으로 커밋 |
-| `research` | 코드베이스 탐색 및 버그 조사 |
-| `e2e` | 다수 컴포넌트에 걸친 E2E 검증 |
-| `iterate` | 반복 단일 변경 사이클로 점진적 개선 |
-| `competitive-agents` | 병렬 경쟁 에이전트로 설계 탐색 |
-| `remembering-conversations` | 이전 대화 컨텍스트 검색 및 적용 |
-| `review-claudemd` | CLAUDE.md 개선사항 발굴 |
-| `reddit-fetch` | WebFetch 차단 시 Reddit 콘텐츠 가져오기 |
+| `handoff` | Generate a handoff document for the next session at session end |
+| `create-pr` | Unified workflow to commit, push, and create a PR |
+| `commit` | Commit using Conventional Commits format |
+| `research` | Explore the codebase and investigate bugs |
+| `e2e` | End-to-end verification across multiple components |
+| `iterate` | Incremental improvement via repeated single-change cycles |
+| `competitive-agents` | Explore designs with parallel competing agents |
+| `remembering-conversations` | Search and apply prior conversation context |
+| `review-claudemd` | Surface improvements for CLAUDE.md |
+| `reddit-fetch` | Fetch Reddit content when WebFetch is blocked |
 
 #### `autoresearch` plugin
 
 | Skill | Description |
 |-------|-------------|
-| `autoresearch` | git 추적 실험으로 metric을 반복 최적화하는 자율 실험 루프 |
+| `autoresearch` | Autonomous experiment loop that iteratively optimizes a metric with git-tracked experiments |
 
 #### `jira` plugin
 
 | Skill | Description |
 |-------|-------------|
-| `jira` | 공식 Atlassian MCP로 Jira 검색, 생성, 코멘트, 트리아지 |
+| `jira` | Search, create, comment, and triage Jira via the official Atlassian MCP |
 
 #### `slack` plugin
 
 | Skill | Description |
 |-------|-------------|
-| `slack-search` | 공식 Slack MCP로 메시지, 파일, 채널, 사용자, 스레드 검색 |
-| `slack-messaging` | 공식 Slack MCP로 메시지 초안, 답글, 게시 |
+| `slack-search` | Search messages, files, channels, users, and threads via the official Slack MCP |
+| `slack-messaging` | Draft, reply to, and post messages via the official Slack MCP |
 
 #### `notion` plugin
 
 | Skill | Description |
 |-------|-------------|
-| `notion-search` | 공식 Notion MCP로 페이지와 데이터베이스 검색 |
-| `notion-document-writing` | 공식 Notion MCP로 문서 생성과 업데이트 |
+| `notion-search` | Search pages and databases via the official Notion MCP |
+| `notion-document-writing` | Create and update documents via the official Notion MCP |
 
 #### `datadog` plugin
 
 | Skill | Description |
 |-------|-------------|
-| `datadog` | `pup` CLI로 로그, 모니터, APM, 메트릭 조사 |
+| `datadog` | Investigate logs, monitors, APM, and metrics via the `pup` CLI |
 
 ## Development
 
@@ -124,7 +124,7 @@ pre-commit run --all-files
 
 ### Version Management & Release
 
-이 프로젝트는 **semantic-release**와 **Conventional Commits**를 사용하여 자동으로 버전을 관리합니다.
+This project manages versions automatically using **semantic-release** and **Conventional Commits**.
 
 ```bash
 # Interactive commit (recommended)
@@ -145,7 +145,7 @@ git commit -m "type(scope): description"
 1. Push commits to main branch
 2. GitHub Actions runs tests then semantic-release
 3. Version is determined (feat → minor, fix → patch)
-4. Root `plugin.json` and `marketplace.json` are updated
+4. `marketplace.json` and each `plugins/*/.claude-plugin/plugin.json` are updated
 5. Git tag is created and GitHub release is published
 
 ## Pre-commit Hooks
