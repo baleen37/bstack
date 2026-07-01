@@ -7,6 +7,8 @@ Personal Claude Code workflow toolkit for git safety, session continuity, verifi
 ### Plan
 
 - `research` — Explore evidence before acting.
+- `writing-prds` — Write product requirements documents for feature planning.
+- `writing-rfcs` — Write technical RFCs for engineering decisions.
 - `competitive-agents` — Compare parallel approaches for architecture, API, or system decisions.
 
 ### Build
