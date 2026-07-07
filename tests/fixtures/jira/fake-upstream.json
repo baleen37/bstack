@@ -1,9 +1,38 @@
 {
   "tools": [
+    { "name": "getAccessibleAtlassianResources" },
+    { "name": "getVisibleJiraProjects" },
     { "name": "searchJiraIssuesUsingJql" },
-    { "name": "getJiraIssue" }
+    { "name": "getJiraIssue" },
+    { "name": "createJiraIssue" },
+    { "name": "editJiraIssue" },
+    { "name": "addCommentToJiraIssue" },
+    { "name": "getTransitionsForJiraIssue" },
+    { "name": "transitionJiraIssue" }
   ],
   "toolResults": {
+    "getAccessibleAtlassianResources": [
+      {
+        "id": "site",
+        "name": "Example",
+        "url": "https://example.atlassian.net",
+        "scopes": ["read:jira-work", "write:jira-work"]
+      }
+    ],
+    "getVisibleJiraProjects": {
+      "values": [
+        {
+          "id": "10000",
+          "key": "AD",
+          "name": "Ads",
+          "projectTypeKey": "software",
+          "issueTypes": [
+            { "name": "Task" },
+            { "name": "Story" }
+          ]
+        }
+      ]
+    },
     "searchJiraIssuesUsingJql": {
       "issues": [
         {
@@ -17,6 +46,82 @@
           }
         }
       ]
-    }
+    },
+    "getJiraIssue": {
+      "key": "AD-1",
+      "fields": {
+        "issuetype": { "name": "Task" },
+        "summary": "Fix login",
+        "status": { "name": "In Progress" },
+        "assignee": { "displayName": "Jane" },
+        "priority": { "name": "High" },
+        "description": "Existing description\nwith two lines"
+      }
+    },
+    "getEmptyDescriptionJiraIssue": {
+      "key": "AD-EMPTY",
+      "fields": {
+        "issuetype": { "name": "Task" },
+        "summary": "Empty description",
+        "status": { "name": "Backlog" },
+        "description": "{\"type\":\"doc\",\"version\":1,\"content\":[]}"
+      }
+    },
+    "nullDescriptionIgnoredIssue": {
+      "key": "AD-EMPTY",
+      "fields": {
+        "issuetype": { "name": "Task" },
+        "summary": "Empty description",
+        "status": { "name": "Backlog" },
+        "description": "description was not cleared"
+      }
+    },
+    "createJiraIssue": {
+      "key": "AD-2"
+    },
+    "getCreatedJiraIssue": {
+      "key": "AD-2",
+      "fields": {
+        "issuetype": { "name": "Task" },
+        "summary": "Created from smoke",
+        "status": { "name": "To Do" },
+        "description": "Created description\nwith two lines"
+      }
+    },
+    "addCommentToJiraIssue": {
+      "id": "10000",
+      "body": "Smoke comment",
+      "created": "2026-07-07T10:00:00.000+0900",
+      "updated": "2026-07-07T10:00:00.000+0900",
+      "author": { "displayName": "Jane" }
+    },
+    "updateCommentToJiraIssue": {
+      "id": "10001",
+      "body": "Updated comment",
+      "created": "2026-07-07T10:00:00.000+0900",
+      "updated": "2026-07-07T10:05:00.000+0900",
+      "author": { "displayName": "Jane" }
+    },
+    "editJiraIssue": {
+      "key": "AD-1",
+      "fields": {
+        "issuetype": { "name": "Task" },
+        "summary": "Fix login safely",
+        "status": { "name": "In Progress" },
+        "assignee": { "displayName": "Jane" },
+        "priority": { "name": "High" },
+        "description": "Updated description\nwith two lines"
+      }
+    },
+    "getTransitionsForJiraIssue": {
+      "transitions": [
+        {
+          "id": "31",
+          "name": "Done",
+          "to": { "name": "Done" }
+        }
+      ]
+    },
+    "transitionJiraIssue": "Transitioned AD-1 to Done"
   }
 }
