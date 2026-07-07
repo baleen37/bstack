@@ -1,0 +1,22 @@
+{
+  "tools": [
+    { "name": "searchJiraIssuesUsingJql" },
+    { "name": "getJiraIssue" }
+  ],
+  "toolResults": {
+    "searchJiraIssuesUsingJql": {
+      "issues": [
+        {
+          "key": "AD-1",
+          "fields": {
+            "issuetype": { "name": "Task" },
+            "summary": "Fix login",
+            "status": { "name": "In Progress" },
+            "assignee": { "displayName": "Jane" },
+            "priority": { "name": "High" }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,42 +1,52 @@
 ---
 name: jira
-description: Use Jira through the official Atlassian MCP server for issue lookup, triage, creation, comments, and lightweight status reporting.
+description: Use Jira through a slim Atlassian MCP facade for issue lookup, triage, creation, comments, and lightweight status reporting.
 ---
 
 # Jira
 
-Use the official Atlassian MCP server configured by this plugin.
+Use the slim Jira MCP facade configured by this plugin. It connects to Atlassian MCP underneath and exposes compact tools instead of the full Jira API surface.
 
 ## Workflow
 
-1. Identify the Jira site/resource before querying or writing.
-2. Search existing issues with focused JQL before creating a new issue.
-3. For bug triage, search by error signature, component, and user-visible symptom.
-4. For writes, show the intended summary, description, labels, and target project before calling a create or update tool.
-5. Prefer adding comments to existing matching issues over creating duplicates.
+1. Identify the Jira site, project key, and target issue type before querying or writing.
+2. Search with focused JQL before creating or updating issues.
+3. Summarize matching issues before deciding whether a new issue is needed.
+4. For writes, show the exact intended change and wait for user confirmation before setting `confirmed: true`.
+5. Prefer comments or updates on an existing issue over creating duplicates.
 
-## Essential Patterns
+## Tools
 
-### Triage
+- `jira_auth_status`: check the active Atlassian MCP authentication.
+- `jira_list_sites`: list accessible Atlassian sites and Cloud IDs.
+- `jira_list_projects`: list visible Jira projects with compact metadata.
+- `jira_search_issues`: search JQL and return compact issue cards.
+- `jira_get_issue`: fetch one issue with a narrow field list.
+- `jira_create_issue`: create one issue after confirmation.
+- `jira_comment_issue`: add one comment after confirmation.
 
-- Search recent open and resolved issues before creating a bug.
-- Compare summary, stack trace or error signature, affected component, environment, and regression window.
-- If a likely duplicate exists, add a comment with the new evidence instead of creating another issue.
+## Query Patterns
 
-### Backlog
+- Project scope: `project = KEY ORDER BY updated DESC`
+- Active work: `project = KEY AND statusCategory != Done ORDER BY priority DESC, updated DESC`
+- Duplicate check: combine project, component, label, summary terms, and exact error text.
+- Status report: group counts by status category, then cite only representative issues.
 
-- Break specs into Epic, Story, and Task candidates before writing anything.
-- Keep each ticket independently actionable with acceptance criteria and validation steps.
-- Confirm project, issue type, parent, labels, and assignee before creating tickets.
+## Write Patterns
 
-### Status
+- Create: confirm project, issue type, summary, description, labels, parent, and assignee first.
+- Comment: include only the new evidence or decision; avoid restating the whole thread.
+- Update: read the current issue first, then propose the smallest field change.
+- Transition: inspect available transitions before moving an issue.
 
-- Use narrow JQL by project, owner, label, sprint, or status category.
-- Report counts and representative issues, not long raw issue dumps.
-- Separate blocked, in-progress, done, and needs-triage work.
+## Backlog
+
+- Break specs into independently actionable Epic, Story, Bug, or Task candidates.
+- Keep acceptance criteria and validation steps concrete.
+- Create parent issues before children only after the user confirms the hierarchy.
 
 ## Safety
 
-- Do not expose private issue content outside the user's requested context.
-- Keep JQL narrow enough to avoid pulling unrelated project data.
-- State when a result is from Jira data versus an inference.
+- Do not expose private issue content outside the requested context.
+- Avoid broad JQL that pulls unrelated project data.
+- State when a conclusion is inferred rather than directly shown by Jira data.
