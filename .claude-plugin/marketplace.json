@@ -22,7 +22,7 @@
         "memory",
         "context"
       ],
-      "version": "17.31.0"
+      "version": "17.32.0"
     },
     {
       "name": "jira",
@@ -35,7 +35,7 @@
         "mcp",
         "project-management"
       ],
-      "version": "17.31.0"
+      "version": "17.32.0"
     },
     {
       "name": "slack",
@@ -48,7 +48,7 @@
         "messaging",
         "mcp"
       ],
-      "version": "17.31.0"
+      "version": "17.32.0"
     },
     {
       "name": "notion",
@@ -61,7 +61,7 @@
         "documentation",
         "mcp"
       ],
-      "version": "17.31.0"
+      "version": "17.32.0"
     },
     {
       "name": "datadog",
@@ -76,7 +76,7 @@
         "apm",
         "pup"
       ],
-      "version": "17.31.0"
+      "version": "17.32.0"
     },
     {
       "name": "autoresearch",
@@ -89,7 +89,7 @@
         "autonomous",
         "research"
       ],
-      "version": "17.31.0"
+      "version": "17.32.0"
     }
   ]
 }
