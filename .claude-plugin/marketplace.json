@@ -26,13 +26,13 @@
     },
     {
       "name": "jira",
-      "description": "Jira workflow guidance backed by the official Atlassian MCP server",
+      "description": "Jira workflow guidance backed by a slim Atlassian MCP facade",
       "source": "./plugins/jira",
       "category": "development",
       "tags": [
         "jira",
         "atlassian",
-        "confluence",
+        "mcp",
         "project-management"
       ],
       "version": "17.30.0"

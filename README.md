@@ -47,7 +47,7 @@ bstack/
 │   ├── me/                    # Core personal workflow plugin
 │   │   ├── hooks/             # Session hooks (git guard, handoff, LSP checks)
 │   │   └── skills/            # Personal skills
-│   ├── jira/                  # Jira plugin backed by Atlassian MCP
+│   ├── jira/                  # Jira plugin backed by a slim Atlassian MCP facade
 │   ├── slack/                 # Slack plugin backed by Slack MCP
 │   ├── notion/                # Notion plugin backed by Notion MCP
 │   ├── datadog/               # Datadog plugin backed by pup CLI
@@ -88,7 +88,7 @@ bstack/
 
 | Skill | Description |
 |-------|-------------|
-| `jira` | Search, create, comment, and triage Jira via the official Atlassian MCP |
+| `jira` | Search, create, comment, and triage Jira via a slim Atlassian MCP facade |
 
 #### `slack` plugin
 

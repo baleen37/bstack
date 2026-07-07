@@ -21,7 +21,8 @@ setup() {
 @test "official mcp plugins use expected server endpoints" {
     [ "$(jq -r '.mcpServers.slack.url' "${PROJECT_ROOT}/plugins/slack/.mcp.json")" = "https://mcp.slack.com/mcp" ]
     [ "$(jq -r '.mcpServers.notion.url' "${PROJECT_ROOT}/plugins/notion/.mcp.json")" = "https://mcp.notion.com/mcp" ]
-    [ "$(jq -r '.mcpServers.atlassian.url' "${PROJECT_ROOT}/plugins/jira/.mcp.json")" = "https://mcp.atlassian.com/v1/mcp/authv2" ]
+    [ "$(jq -r '.mcpServers.jira.command' "${PROJECT_ROOT}/plugins/jira/.mcp.json")" = "sh" ]
+    [ "$(jq -r '.mcpServers.atlassian // empty' "${PROJECT_ROOT}/plugins/jira/.mcp.json")" = "" ]
 }
 
 @test "datadog stays cli based without an mcp server" {
