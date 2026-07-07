@@ -8,72 +8,97 @@ const DEFAULT_REMOTE_PACKAGE = "mcp-remote@0.1.38";
 
 const tools = [
   {
-    name: "jira_auth_status",
-    description: "Check whether the upstream Atlassian MCP connection is authenticated.",
+    name: "auth",
+    description: "Auth.",
+    inputSchema: objectSchema({})
+  },
+  {
+    name: "sites",
+    description: "Sites.",
     inputSchema: objectSchema({
-      format: formatProperty()
+      scopes: booleanProperty()
     })
   },
   {
-    name: "jira_list_sites",
-    description: "List accessible Atlassian sites with Cloud IDs.",
+    name: "projects",
+    description: "Projects.",
     inputSchema: objectSchema({
-      format: formatProperty()
+      site: siteProperty(),
+      types: booleanProperty(),
+      limit: limitProperty(20)
     })
   },
   {
-    name: "jira_list_projects",
-    description: "List visible Jira projects in compact form.",
+    name: "search",
+    description: "Search JQL.",
     inputSchema: objectSchema({
-      cloudId: cloudIdProperty(),
-      format: formatProperty(),
-      limit: { type: "integer", minimum: 1, maximum: 50, default: 20, description: "Maximum projects to return." }
-    })
-  },
-  {
-    name: "jira_search_issues",
-    description: "Search Jira issues with JQL and return a compact issue list.",
-    inputSchema: objectSchema({
-      cloudId: cloudIdProperty(),
-      format: formatProperty(),
-      jql: { type: "string", description: "Focused JQL query." },
-      limit: { type: "integer", minimum: 1, maximum: 50, default: 10, description: "Maximum issues to return." }
+      site: siteProperty(),
+      jql: stringProperty(),
+      limit: limitProperty(10)
     }, ["jql"])
   },
   {
-    name: "jira_get_issue",
-    description: "Fetch one Jira issue by key or ID.",
+    name: "issue",
+    description: "Issue.",
     inputSchema: objectSchema({
-      cloudId: cloudIdProperty(),
-      format: formatProperty(),
-      issueIdOrKey: { type: "string", description: "Jira issue key or numeric ID." }
-    }, ["issueIdOrKey"])
+      site: siteProperty(),
+      desc: booleanProperty(),
+      meta: booleanProperty(),
+      key: stringProperty()
+    }, ["key"])
   },
   {
-    name: "jira_create_issue",
-    description: "Create one Jira issue after the user confirms the exact payload.",
+    name: "create",
+    description: "Create.",
     inputSchema: objectSchema({
-      cloudId: cloudIdProperty(),
-      projectKey: { type: "string", description: "Jira project key." },
-      issueTypeName: { type: "string", description: "Issue type, for example Task, Story, Bug, or Epic." },
-      summary: { type: "string", description: "Issue summary." },
-      description: { type: "string", description: "Optional issue description in markdown." },
-      format: formatProperty(),
-      additional_fields: { type: "object", description: "Optional Jira fields to set on creation." },
-      parent: { type: "string", description: "Optional parent issue key." },
-      confirmed: { type: "boolean", description: "Must be true after showing the exact intended change to the user." }
-    }, ["projectKey", "issueTypeName", "summary", "confirmed"])
+      site: siteProperty(),
+      project: stringProperty(),
+      type: stringProperty(),
+      summary: stringProperty(),
+      description: stringProperty(),
+      fields: objectProperty(),
+      confirm: booleanProperty()
+    }, ["project", "type", "summary", "confirm"])
   },
   {
-    name: "jira_comment_issue",
-    description: "Add one comment to a Jira issue after user confirmation.",
+    name: "comment",
+    description: "Comment.",
     inputSchema: objectSchema({
-      cloudId: cloudIdProperty(),
-      issueIdOrKey: { type: "string", description: "Jira issue key or numeric ID." },
-      commentBody: { type: "string", description: "Comment body in markdown." },
-      format: formatProperty(),
-      confirmed: { type: "boolean", description: "Must be true after showing the exact comment to the user." }
-    }, ["issueIdOrKey", "commentBody", "confirmed"])
+      site: siteProperty(),
+      key: stringProperty(),
+      id: stringProperty(),
+      body: stringProperty(),
+      confirm: booleanProperty()
+    }, ["key", "body", "confirm"])
+  },
+  {
+    name: "update",
+    description: "Update.",
+    inputSchema: objectSchema({
+      site: siteProperty(),
+      key: stringProperty(),
+      fields: objectProperty(),
+      confirm: booleanProperty()
+    }, ["key", "fields", "confirm"])
+  },
+  {
+    name: "transitions",
+    description: "Transitions.",
+    inputSchema: objectSchema({
+      site: siteProperty(),
+      key: stringProperty(),
+      to: booleanProperty()
+    }, ["key"])
+  },
+  {
+    name: "transition",
+    description: "Transition.",
+    inputSchema: objectSchema({
+      site: siteProperty(),
+      key: stringProperty(),
+      id: stringProperty(),
+      confirm: booleanProperty()
+    }, ["key", "id", "confirm"])
   }
 ];
 
@@ -89,23 +114,30 @@ process.stdin.on("data", (chunk) => {
 });
 
 function objectSchema(properties, required = []) {
-  return { type: "object", properties, required, additionalProperties: false };
+  const schema = { type: "object" };
+  if (Object.keys(properties).length > 0) schema.properties = properties;
+  if (required.length > 0) schema.required = required;
+  return schema;
 }
 
-function cloudIdProperty() {
-  return {
-    type: "string",
-    description: "Atlassian Cloud ID or site URL. Defaults to JIRA_CLOUD_ID or ATLASSIAN_CLOUD_ID when omitted."
-  };
+function stringProperty() {
+  return { type: "string" };
 }
 
-function formatProperty() {
-  return {
-    type: "string",
-    enum: ["text", "json"],
-    default: "text",
-    description: "Output format. Defaults to text for LLM-readable responses; use json for structured output."
-  };
+function objectProperty() {
+  return { type: "object" };
+}
+
+function booleanProperty() {
+  return { type: "boolean" };
+}
+
+function limitProperty() {
+  return { type: "integer" };
+}
+
+function siteProperty() {
+  return stringProperty();
 }
 
 function readFrame() {
@@ -162,48 +194,72 @@ async function handleMessage(message) {
 
 async function callTool(name, args) {
   switch (name) {
-    case "jira_auth_status":
+    case "auth":
       return authStatus(args);
-    case "jira_list_sites":
-      return callUpstreamCompact("getAccessibleAtlassianResources", {}, compactSitesResult, args, renderSitesText);
-    case "jira_list_projects":
+    case "sites":
+      return callUpstreamCompact("getAccessibleAtlassianResources", {}, (result) => compactSitesResult(result, {
+        scopes: args.scopes === true
+      }), args, renderSitesText);
+    case "projects":
       return callUpstreamCompact("getVisibleJiraProjects", {
-        cloudId: resolveCloudId(args),
+        cloudId: resolveSite(args),
         maxResults: clampLimit(args.limit, 20)
-      }, (result) => compactProjectsResult(result, clampLimit(args.limit, 20)), args, renderProjectsText);
-    case "jira_search_issues":
+      }, (result) => compactProjectsResult(result, clampLimit(args.limit, 20), {
+        types: args.types === true
+      }), args, renderProjectsText);
+    case "search":
       return callUpstreamCompact("searchJiraIssuesUsingJql", {
-        cloudId: resolveCloudId(args),
+        cloudId: resolveSite(args),
         jql: requireString(args.jql, "jql"),
         maxResults: clampLimit(args.limit, 10)
       }, compactIssuesResult, args, renderIssuesText);
-    case "jira_get_issue":
+    case "issue":
       return callUpstreamCompact("getJiraIssue", {
-        cloudId: resolveCloudId(args),
-        issueIdOrKey: requireString(args.issueIdOrKey, "issueIdOrKey"),
+        cloudId: resolveSite(args),
+        issueIdOrKey: requireString(args.key, "key"),
         responseContentFormat: "markdown"
-      }, compactIssueResult, args, renderIssueText);
-    case "jira_create_issue":
-      requireConfirmed(args);
-      return callUpstreamCompact("createJiraIssue", {
-        cloudId: resolveCloudId(args),
-        projectKey: requireString(args.projectKey, "projectKey"),
-        issueTypeName: requireString(args.issueTypeName, "issueTypeName"),
-        summary: requireString(args.summary, "summary"),
-        description: optionalString(args.description),
-        additional_fields: args.additional_fields,
-        parent: optionalString(args.parent),
-        contentFormat: "markdown",
-        responseContentFormat: "markdown"
-      }, compactTextResult, args, renderResultText);
-    case "jira_comment_issue":
+      }, (result) => compactIssueResult(result, {
+        description: args.desc === true,
+        metadata: args.meta === true
+      }), args, renderIssueText);
+    case "create":
+      return createIssue(args);
+    case "comment":
+      if (!isConfirmed(args)) return renderConfirmationRequired();
       requireConfirmed(args);
       return callUpstreamCompact("addCommentToJiraIssue", {
-        cloudId: resolveCloudId(args),
-        issueIdOrKey: requireString(args.issueIdOrKey, "issueIdOrKey"),
-        commentBody: requireString(args.commentBody, "commentBody"),
+        cloudId: resolveSite(args),
+        issueIdOrKey: requireString(args.key, "key"),
+        commentId: optionalString(args.id),
+        commentBody: requireString(args.body, "body"),
         contentFormat: "markdown",
         responseContentFormat: "markdown"
+      }, compactCommentResult, args, renderCommentOrResultText);
+    case "update":
+      if (!isConfirmed(args)) return renderConfirmationRequired();
+      requireConfirmed(args);
+      const fields = requireObject(args.fields, "fields");
+      return callUpstreamCompact("editJiraIssue", {
+        cloudId: resolveSite(args),
+        issueIdOrKey: requireString(args.key, "key"),
+        fields: normalizeIssueFields(fields),
+        contentFormat: "markdown",
+        responseContentFormat: "markdown"
+      }, (result) => compactIssueResult(result, { description: hasOwn(fields, "description") }), args, renderIssueText);
+    case "transitions":
+      return callUpstreamCompact("getTransitionsForJiraIssue", {
+        cloudId: resolveSite(args),
+        issueIdOrKey: requireString(args.key, "key")
+      }, (result) => compactTransitionsResult(result, {
+        toStatus: args.to === true
+      }), args, renderTransitionsText);
+    case "transition":
+      if (!isConfirmed(args)) return renderConfirmationRequired();
+      requireConfirmed(args);
+      return callUpstreamCompact("transitionJiraIssue", {
+        cloudId: resolveSite(args),
+        issueIdOrKey: requireString(args.key, "key"),
+        transition: { id: requireString(args.id, "id") }
       }, compactTextResult, args, renderResultText);
     default:
       throw new Error(`Unknown tool: ${name}`);
@@ -224,17 +280,52 @@ async function authStatus(args) {
   }
 }
 
+async function createIssue(args) {
+  if (!isConfirmed(args)) return renderConfirmationRequired();
+  requireConfirmed(args);
+  const cloudId = resolveSite(args);
+  const createArgs = {
+    cloudId,
+    projectKey: requireString(args.project, "project"),
+    issueTypeName: requireString(args.type, "type"),
+    summary: requireString(args.summary, "summary"),
+    description: optionalString(args.description),
+    additional_fields: optionalObject(args.fields),
+    contentFormat: "markdown",
+    responseContentFormat: "markdown"
+  };
+
+  const compacted = await withUpstream(async (client) => {
+    const created = await client.request("tools/call", { name: "createJiraIssue", arguments: pruneUndefined(createArgs) });
+    const createdIssue = compactIssueOrTextResult(created);
+    const issueKey = createdIssue.issue?.key;
+    if (!issueKey || hasIssueDetails(createdIssue.issue)) return createdIssue;
+
+    const fetched = await client.request("tools/call", {
+      name: "getJiraIssue",
+      arguments: {
+        cloudId,
+        issueIdOrKey: issueKey,
+        responseContentFormat: "markdown"
+      }
+    });
+    return compactIssueResult(fetched, { description: true });
+  });
+
+  return renderOutput(compacted, args, renderIssueOrResultText);
+}
+
 async function callUpstreamCompact(name, args, compact, toolArgs, renderText) {
   const result = await withUpstream((client) => client.request("tools/call", { name, arguments: pruneUndefined(args) }));
   return renderOutput(compact(result), toolArgs, renderText);
 }
 
-function resolveCloudId(args) {
-  return optionalString(args.cloudId) || process.env.JIRA_CLOUD_ID || process.env.ATLASSIAN_CLOUD_ID || missingCloudId();
+function resolveSite(args) {
+  return optionalString(args.site) || process.env.JIRA_CLOUD_ID || process.env.ATLASSIAN_CLOUD_ID || missingSite();
 }
 
-function missingCloudId() {
-  throw new Error("Missing cloudId. Pass cloudId or set JIRA_CLOUD_ID/ATLASSIAN_CLOUD_ID.");
+function missingSite() {
+  throw new Error("Missing site. Pass site or set JIRA_CLOUD_ID/ATLASSIAN_CLOUD_ID.");
 }
 
 function requireString(value, field) {
@@ -246,6 +337,32 @@ function optionalString(value) {
   return typeof value === "string" && value.trim() !== "" ? value : undefined;
 }
 
+function requireObject(value, field) {
+  if (!isPlainObject(value)) throw new Error(`Missing required object: ${field}`);
+  return value;
+}
+
+function optionalObject(value) {
+  return isPlainObject(value) ? value : undefined;
+}
+
+function isPlainObject(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function hasIssueDetails(issue) {
+  return Boolean(issue?.summary || issue?.description || issue?.status || issue?.type);
+}
+
+function normalizeIssueFields(fields) {
+  if (fields.description !== null) return fields;
+  return { ...fields, description: "" };
+}
+
+function hasOwn(value, field) {
+  return Object.prototype.hasOwnProperty.call(value ?? {}, field);
+}
+
 function clampLimit(value, fallback) {
   const number = Number(value ?? fallback);
   if (!Number.isFinite(number)) return fallback;
@@ -253,9 +370,21 @@ function clampLimit(value, fallback) {
 }
 
 function requireConfirmed(args) {
-  if (args.confirmed !== true) {
-    throw new Error("Write refused: show the exact intended Jira change to the user first, then retry with confirmed: true.");
+  if (args.confirm !== true) {
+    throw new Error("Write refused: show change; retry confirm=true.");
   }
+}
+
+function isConfirmed(args) {
+  return args.confirm === true;
+}
+
+function renderConfirmationRequired() {
+  return [
+    "status: refused",
+    "reason: confirm_required",
+    "next: show change; retry confirm=true"
+  ].join("\n");
 }
 
 function pruneUndefined(value) {
@@ -264,93 +393,152 @@ function pruneUndefined(value) {
 
 function compactIssuesResult(result) {
   return {
-    issues: extractItems(result).map(compactIssue).filter((issue) => Object.keys(issue).length > 0)
+    issues: extractItems(result)
+      .map((issue) => compactIssue(issue, { description: false }))
+      .map(issueListItem)
+      .filter((issue) => Object.keys(issue).length > 0)
   };
 }
 
-function compactSitesResult(result) {
+function compactSitesResult(result, options) {
   return {
-    sites: extractItems(result).map(compactSite).filter((site) => Object.keys(site).length > 0)
+    sites: extractItems(result)
+      .map((site) => compactSite(site, options))
+      .filter((site) => Object.keys(site).length > 0)
   };
 }
 
-function compactProjectsResult(result, limit) {
+function compactProjectsResult(result, limit, options) {
   return {
     projects: extractItems(result)
       .slice(0, limit)
-      .map(compactProject)
+      .map((project) => compactProject(project, options))
       .filter((project) => Object.keys(project).length > 0)
   };
 }
 
-function compactIssueResult(result) {
+function compactIssueResult(result, options) {
   const items = extractItems(result);
-  return { issue: compactIssue(items[0] ?? result) };
+  return { issue: compactIssue(items[0] ?? result, options) };
+}
+
+function compactIssueOrTextResult(result) {
+  const issue = compactIssue(extractItems(result)[0] ?? result);
+  if (Object.keys(issue).length > 0) return { issue };
+  return compactTextResult(result);
 }
 
 function compactTextResult(result) {
-  return { result: extractText(result) || result };
+  const text = extractText(result);
+  if (text) {
+    try {
+      return { result: JSON.parse(text) };
+    } catch {
+      return { result: text };
+    }
+  }
+  return { result };
+}
+
+function compactCommentResult(result) {
+  const value = compactTextResult(result).result;
+  const comment = compactComment(value);
+  if (Object.keys(comment).length > 0) return { comment };
+  return { result: value };
+}
+
+function compactTransitionsResult(result, options) {
+  return {
+    transitions: extractItems(result)
+      .map((transition) => compactTransition(transition, options))
+      .filter((transition) => Object.keys(transition).length > 0)
+  };
 }
 
 function renderOutput(value, args, renderText) {
-  if (args?.format === "json") return JSON.stringify(value, null, 2);
   return renderText(value);
 }
 
 function renderAuthText(value) {
-  if (value.status === "connected") return `Jira MCP: connected (${value.upstreamToolCount} upstream tools)`;
-  return `Jira MCP: not connected. ${value.message}\n${value.hint}`;
+  if (value.status === "connected") return "auth: connected";
+  return renderRecord("auth", value);
 }
 
 function renderSitesText(value) {
-  if (!value.sites?.length) return "No accessible Atlassian sites found.";
-  return ["Accessible Atlassian sites:", ...value.sites.map((site) => {
-    const details = [`cloudId: ${site.id}`];
-    if (site.scopes) details.push(`scopes: ${site.scopes}`);
-    return `- ${site.name || site.url}: ${site.url}${details.length ? ` (${details.join("; ")})` : ""}`;
-  })].join("\n");
+  return renderList("sites", value.sites);
 }
 
 function renderProjectsText(value) {
-  if (!value.projects?.length) return "No Jira projects found.";
-  return ["Jira projects:", ...value.projects.map((project) => {
-    const suffix = [project.type, project.issueTypes ? `issue types: ${project.issueTypes}` : ""].filter(Boolean).join("; ");
-    return `- ${project.key} - ${project.name}${suffix ? ` (${suffix})` : ""}`;
-  })].join("\n");
+  return renderList("projects", value.projects);
 }
 
 function renderIssuesText(value) {
-  if (!value.issues?.length) return "No Jira issues found.";
-  return ["Jira issues:", ...value.issues.map((issue) => `- ${formatIssueLine(issue)}`)].join("\n");
+  return renderList("issues", value.issues?.map(issueListItem));
 }
 
 function renderIssueText(value) {
-  if (!value.issue || Object.keys(value.issue).length === 0) return "No Jira issue found.";
-  return `Jira issue:\n- ${formatIssueLine(value.issue)}`;
+  if (!value.issue || Object.keys(value.issue).length === 0) return "issue: null";
+  return renderRecord("issue", value.issue);
+}
+
+function renderIssueOrResultText(value) {
+  if (value.issue) return renderIssueText(value);
+  return renderResultText(value);
+}
+
+function renderCommentOrResultText(value) {
+  if (value.comment) return renderRecord("comment", value.comment);
+  return renderResultText(value);
 }
 
 function renderResultText(value) {
-  return textOf(value.result) || "Jira operation completed.";
+  return renderField("result", textOf(value.result) || "Jira operation completed.", "").join("\n");
 }
 
-function formatIssueLine(issue) {
-  const head = [
-    issue.key,
-    issue.type ? `[${issue.type}]` : "",
-    issue.summary,
-    issue.status ? `— ${issue.status}` : ""
-  ].filter(Boolean).join(" ");
-  const details = [
-    issue.assignee ? `assignee: ${issue.assignee}` : "",
-    issue.priority ? `priority: ${issue.priority}` : "",
-    issue.url ? `url: ${issue.url}` : ""
-  ].filter(Boolean);
-  return details.length ? `${head}; ${details.join("; ")}` : head;
+function renderTransitionsText(value) {
+  return renderList("transitions", value.transitions);
+}
+
+function issueListItem(issue) {
+  return pruneEmpty({
+    key: issue.key,
+    type: issue.type,
+    status: issue.status,
+    summary: issue.summary
+  });
+}
+
+function renderRecord(label, record) {
+  return [`${label}:`, ...renderFields(record, "  ")].join("\n");
+}
+
+function renderList(label, items) {
+  if (!items?.length) return `${label}: []`;
+  return [`${label}:`, ...items.flatMap((item) => {
+    const fields = renderFields(item, "  ");
+    if (fields.length === 0) return ["- {}"];
+    return [`- ${fields[0].trimStart()}`, ...fields.slice(1)];
+  })].join("\n");
+}
+
+function renderFields(record, indent) {
+  return Object.entries(record ?? {}).flatMap(([key, value]) => renderField(key, value, indent));
+}
+
+function renderField(key, value, indent) {
+  const text = textOf(value);
+  if (text === "") return [];
+  if (!text.includes("\n")) return [`${indent}${key}: ${text}`];
+  return [
+    `${indent}${key}: |-`,
+    ...text.split(/\r?\n/).map((line) => `${indent}  ${line}`)
+  ];
 }
 
 function extractItems(value) {
   if (Array.isArray(value)) return value;
   if (Array.isArray(value?.issues)) return value.issues;
+  if (Array.isArray(value?.transitions)) return value.transitions;
   if (Array.isArray(value?.workItems)) return value.workItems;
   if (Array.isArray(value?.values)) return value.values;
   if (Array.isArray(value?.content)) {
@@ -365,38 +553,63 @@ function extractItems(value) {
   return [];
 }
 
-function compactIssue(issue) {
+function compactIssue(issue, options = {}) {
   const fields = issue?.fields ?? issue ?? {};
+  const description = options.description !== false;
+  const metadata = options.metadata === true;
   return pruneEmpty({
     key: textOf(issue?.key ?? fields.key ?? fields.issueIdOrKey),
     type: textOf(fields.issuetype ?? fields.issueType ?? fields.issueTypeName ?? fields.type),
-    summary: textOf(fields.summary),
     status: textOf(fields.status),
-    assignee: textOf(fields.assignee),
-    priority: textOf(fields.priority),
+    summary: textOf(fields.summary),
+    assignee: metadata ? textOf(fields.assignee) : "",
+    priority: metadata ? textOf(fields.priority) : "",
+    description: description ? descriptionText(fields.description ?? issue?.description) : "",
     url: textOf(issue?.url ?? fields.url),
     text: textOf(issue?.text ?? fields.text)
   });
 }
 
-function compactSite(site) {
+function compactSite(site, options = {}) {
+  const scopes = options.scopes === true;
   return pruneEmpty({
     id: textOf(site?.id),
     name: textOf(site?.name),
     url: textOf(site?.url),
-    scopes: Array.isArray(site?.scopes) ? site.scopes.join(", ") : textOf(site?.scopes)
+    scopes: scopes && Array.isArray(site?.scopes) ? site.scopes.join(", ") : ""
   });
 }
 
-function compactProject(project) {
+function compactProject(project, options = {}) {
+  const types = options.types === true;
   return pruneEmpty({
     id: textOf(project?.id),
     key: textOf(project?.key),
     name: textOf(project?.name),
     type: textOf(project?.projectTypeKey),
-    issueTypes: Array.isArray(project?.issueTypes)
+    types: types && Array.isArray(project?.issueTypes)
       ? project.issueTypes.map((issueType) => textOf(issueType?.name)).filter(Boolean).join(", ")
       : ""
+  });
+}
+
+function compactComment(comment) {
+  if (!comment || typeof comment !== "object") return {};
+  return pruneEmpty({
+    id: textOf(comment.id),
+    author: textOf(comment.author),
+    created: textOf(comment.created),
+    updated: textOf(comment.updated),
+    body: textOf(comment.body)
+  });
+}
+
+function compactTransition(transition, options = {}) {
+  const toStatus = options.toStatus === true;
+  return pruneEmpty({
+    id: textOf(transition?.id),
+    name: textOf(transition?.name),
+    to: toStatus ? textOf(transition?.to) : ""
   });
 }
 
@@ -412,6 +625,21 @@ function textOf(value) {
   if (typeof value.value === "string") return cleanText(value.value);
   if (typeof value.text === "string") return cleanText(value.text);
   return cleanText(JSON.stringify(value));
+}
+
+function descriptionText(value) {
+  const text = textOf(value);
+  if (isEmptyAdfDocument(text)) return "";
+  return text;
+}
+
+function isEmptyAdfDocument(text) {
+  try {
+    const value = JSON.parse(text);
+    return value?.type === "doc" && value?.version === 1 && Array.isArray(value.content) && value.content.length === 0;
+  } catch {
+    return false;
+  }
 }
 
 function cleanText(value) {

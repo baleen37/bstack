@@ -5,48 +5,38 @@ description: Use Jira through a slim Atlassian MCP facade for issue lookup, tria
 
 # Jira
 
-Use the slim Jira MCP facade configured by this plugin. It connects to Atlassian MCP underneath and exposes compact tools instead of the full Jira API surface.
+Slim Atlassian MCP facade with compact key/value text output.
 
 ## Workflow
 
-1. Identify the Jira site, project key, and target issue type before querying or writing.
-2. Search with focused JQL before creating or updating issues.
-3. Summarize matching issues before deciding whether a new issue is needed.
-4. For writes, show the exact intended change and wait for user confirmation before setting `confirmed: true`.
-5. Prefer comments or updates on an existing issue over creating duplicates.
+1. Use `sites` to get `site`; issue tools take `key` like `SEARCH-14010`.
+2. Search narrow JQL before creating or updating.
+3. For writes, show the exact change before `confirm: true`.
+4. Prefer `comment` or `update` over duplicate `create`.
 
 ## Tools
 
-- `jira_auth_status`: check the active Atlassian MCP authentication.
-- `jira_list_sites`: list accessible Atlassian sites and Cloud IDs.
-- `jira_list_projects`: list visible Jira projects with compact metadata.
-- `jira_search_issues`: search JQL and return compact issue cards.
-- `jira_get_issue`: fetch one issue with a narrow field list.
-- `jira_create_issue`: create one issue after confirmation.
-- `jira_comment_issue`: add one comment after confirmation.
+- `auth`: auth check.
+- `sites`: site ids; `scopes: true` for scopes.
+- `projects`: projects; `types: true` for issue types.
+- `search`: JQL list with `key`, `type`, `status`, `summary`.
+- `issue`: one issue; `meta: true` for assignee/priority, `desc: true` for description.
+- `create`: requires `project`, `type`, `summary`, `confirm`; optional `description`, `fields`.
+- `comment`: add comment `body`; pass comment `id` to update.
+- `update`: update `fields` after confirmation; description is `fields.description`.
+- `transitions`: available transitions; `to: true` for target status.
+- `transition`: transition by `id` after confirmation.
 
-## Query Patterns
+No issue/comment delete tool is exposed. Use `transition`, `update`, or corrective `comment`.
 
-- Project scope: `project = KEY ORDER BY updated DESC`
-- Active work: `project = KEY AND statusCategory != Done ORDER BY priority DESC, updated DESC`
-- Duplicate check: combine project, component, label, summary terms, and exact error text.
-- Status report: group counts by status category, then cite only representative issues.
+## Patterns
 
-## Write Patterns
-
-- Create: confirm project, issue type, summary, description, labels, parent, and assignee first.
-- Comment: include only the new evidence or decision; avoid restating the whole thread.
-- Update: read the current issue first, then propose the smallest field change.
-- Transition: inspect available transitions before moving an issue.
-
-## Backlog
-
-- Break specs into independently actionable Epic, Story, Bug, or Task candidates.
-- Keep acceptance criteria and validation steps concrete.
-- Create parent issues before children only after the user confirms the hierarchy.
+- Project JQL: `project = KEY ORDER BY updated DESC`
+- Active JQL: `project = KEY AND statusCategory != Done ORDER BY updated DESC`
+- Duplicate check: search summary terms, labels/components, and exact errors.
+- Backlog: create independently actionable Epic/Story/Bug/Task with acceptance criteria.
 
 ## Safety
 
-- Do not expose private issue content outside the requested context.
-- Avoid broad JQL that pulls unrelated project data.
-- State when a conclusion is inferred rather than directly shown by Jira data.
+- Avoid broad JQL and unrelated private issue content.
+- State when a conclusion is inferred rather than shown by Jira.
