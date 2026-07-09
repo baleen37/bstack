@@ -1,6 +1,6 @@
 {
   "name": "notion",
-  "version": "17.32.0",
+  "version": "17.32.1",
   "description": "Notion workspace guidance backed by the official Notion MCP server",
   "author": {
     "name": "baleen37",
