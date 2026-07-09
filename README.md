@@ -1,176 +1,119 @@
 # bstack
 
-An AI coding assistant toolkit — Claude Code, OpenCode, and more.
+An AI coding assistant toolkit. It is designed for both Claude Code and Codex, and bundles personal workflow automation, safer Git operations, session handoff, LSP installation, and external tool integrations.
 
-## Features
+## Highlights
 
-bstack is a unified package bundled as plugins:
+- Git protection: blocks dangerous commands such as `--no-verify`
+- Session handoff: carries work context into the next session
+- LSP auto-installation: Bash, TypeScript, Python, Go, Kotlin, Lua, Nix, Terraform
+- Iterative development loop: PRD-driven automated improvement cycles
+- Personal skills: commit, review, research, PR creation, E2E verification
+- External integrations: Jira, Slack, Notion, Datadog
 
-- **Git Guard**: Automatically blocks dangerous git commands such as `--no-verify`
-- **Session Handoff**: Hands off and resumes context across Claude sessions
-- **LSP Servers**: Auto-installs language servers for Bash, TypeScript, Python, Go, Kotlin, Lua, Nix, and Terraform
-- **Ralph Loop**: PRD-driven automated iterative development loop
-- **Skills**: A collection of personal development workflow skills
-- **Jira Integration**: Jira issue triage, backlog generation, status reports, and more
+## 설치
 
-## Quick Start
-
-### Installation from GitHub
+Install directly from the GitHub marketplace.
 
 ```bash
-# Add this repository as a marketplace
 claude plugin marketplace add https://github.com/baleen37/bstack
-
-# Install the plugin
 claude plugin install bstack
 ```
 
-## Codex Compatibility
+## Codex 호환성
 
-This repository keeps Claude Code metadata as the source of truth and generates Codex plugin artifacts from it.
+This repository treats Claude Code metadata as the source of truth and generates Codex artifacts from it.
 
-- Generated files: `plugins/*/.codex-plugin/plugin.json`, `.agents/plugins/marketplace.json`
-- Shared content: `plugins/*/skills/**`
-- Do not edit generated Codex files directly
-
-To refresh the committed Codex artifacts locally:
+- Source of truth: `.claude-plugin/marketplace.json`, `plugins/*/.claude-plugin/plugin.json`
+- Generated artifacts: `.agents/plugins/marketplace.json`, `plugins/*/.codex-plugin/plugin.json`
+- Shared assets: `plugins/*/skills/**`
+- Do not edit generated Codex files directly; regenerate them with `bun run sync:codex`
 
 ```bash
 bun run sync:codex
 ```
 
+## Plugins
+
+| Plugin | Purpose |
+| --- | --- |
+| `me` | Personal workflow, handoff, commits, PRs, research, E2E, review |
+| `jira` | Jira search, creation, comments, and triage |
+| `slack` | Slack message, thread, channel, and user search |
+| `notion` | Notion page and database search, document writing |
+| `datadog` | Logs, monitors, APM, and metric investigation |
+| `autoresearch` | Automated experiment loop driven by metrics |
+
 ## Project Structure
 
 ```text
 bstack/
-├── plugins/
-│   ├── me/                    # Core personal workflow plugin
-│   │   ├── hooks/             # Session hooks (git guard, handoff, LSP checks)
-│   │   └── skills/            # Personal skills
-│   ├── jira/                  # Jira plugin backed by a slim Atlassian MCP facade
-│   ├── slack/                 # Slack plugin backed by Slack MCP
-│   ├── notion/                # Notion plugin backed by Notion MCP
-│   ├── datadog/               # Datadog plugin backed by pup CLI
-│   │   └── skills/            # Jira workflow skills
-│   ├── core/                  # Shared agent definitions
-│   ├── lsp-*/                 # Individual LSP plugins (bash, go, lua, etc.)
-├── scripts/                   # Utility scripts (handoff, dispatch, version sync)
-├── docs/                      # Development and testing documentation
-├── tests/                     # BATS tests
-├── schemas/                   # JSON schemas
-└── CLAUDE.md                  # Project instructions for Claude Code
+├── plugins/              # Plugin sources
+│   ├── me/               # Personal workflow plugin
+│   ├── jira/             # Jira integration
+│   ├── slack/            # Slack integration
+│   ├── notion/           # Notion integration
+│   ├── datadog/          # Datadog integration
+│   └── autoresearch/     # Automated experiment loop
+├── scripts/              # Sync and utility scripts
+├── tests/                # BATS tests
+├── schemas/              # JSON schemas
+└── CLAUDE.md             # Project guidance for AI agents
 ```
-
-### Skills
-
-#### `me` plugin (personal workflow)
-
-| Skill | Description |
-|-------|-------------|
-| `handoff` | Generate a handoff document for the next session at session end |
-| `create-pr` | Unified workflow to commit, push, and create a PR |
-| `commit` | Commit using Conventional Commits format |
-| `research` | Explore the codebase and investigate bugs |
-| `e2e` | End-to-end verification across multiple components |
-| `iterate` | Incremental improvement via repeated single-change cycles |
-| `competitive-agents` | Explore designs with parallel competing agents |
-| `remembering-conversations` | Search and apply prior conversation context |
-| `review-claudemd` | Surface improvements for CLAUDE.md |
-| `reddit-fetch` | Fetch Reddit content when WebFetch is blocked |
-
-#### `autoresearch` plugin
-
-| Skill | Description |
-|-------|-------------|
-| `autoresearch` | Autonomous experiment loop that iteratively optimizes a metric with git-tracked experiments |
-
-#### `jira` plugin
-
-| Skill | Description |
-|-------|-------------|
-| `jira` | Search, create, comment, and triage Jira via a slim Atlassian MCP facade |
-
-#### `slack` plugin
-
-| Skill | Description |
-|-------|-------------|
-| `slack-search` | Search messages, files, channels, users, and threads via the official Slack MCP |
-| `slack-messaging` | Draft, reply to, and post messages via the official Slack MCP |
-
-#### `notion` plugin
-
-| Skill | Description |
-|-------|-------------|
-| `notion-search` | Search pages and databases via the official Notion MCP |
-| `notion-document-writing` | Create and update documents via the official Notion MCP |
-
-#### `datadog` plugin
-
-| Skill | Description |
-|-------|-------------|
-| `datadog` | Investigate logs, monitors, APM, and metrics via the `pup` CLI |
 
 ## Development
 
-### Running Tests
+### Testing
 
 ```bash
-# Run all BATS tests
-bats tests/
-
-# Run pre-commit hooks manually
+bun run test
 pre-commit run --all-files
 ```
 
-### Version Management & Release
-
-This project manages versions automatically using **semantic-release** and **Conventional Commits**.
+### Codex 아티팩트 확인
 
 ```bash
-# Interactive commit (recommended)
-bun run commit
+bun run check:codex
+```
 
-# Or write manually
+### Commits
+
+This repository uses Conventional Commits and semantic-release.
+
+```bash
+bun run commit
 git commit -m "type(scope): description"
 ```
 
-**Types:**
+## Release
 
-- `feat`: New feature (minor version bump)
-- `fix`: Bug fix (patch version bump)
-- `docs`, `style`, `refactor`, `test`, `build`, `ci`, `chore`, `perf`: Patch version bump
+Releases are automated.
 
-#### Release Process
+1. Push commits to the `main` branch.
+2. GitHub Actions runs the tests.
+3. semantic-release determines the version.
+4. `.claude-plugin/marketplace.json` and each `plugins/*/.claude-plugin/plugin.json` are synchronized.
+5. A Git tag and GitHub Release are created.
 
-1. Push commits to main branch
-2. GitHub Actions runs tests then semantic-release
-3. Version is determined (feat → minor, fix → patch)
-4. `marketplace.json` and each `plugins/*/.claude-plugin/plugin.json` are updated
-5. Git tag is created and GitHub release is published
+## Pre-commit
 
-## Pre-commit Hooks
+Pre-commit hooks validate:
 
-```bash
-pre-commit run --all-files
-```
+- YAML syntax
+- JSON schema
+- ShellCheck
+- markdownlint
+- commitlint
 
-**Validations:**
-
-- YAML syntax validation
-- JSON schema validation
-- ShellCheck (shell script linting)
-- markdownlint (Markdown linting)
-- commitlint (commit message format)
-
-> Note: Pre-commit failures cannot be bypassed with `--no-verify` (enforced by git-guard).
+`git guard` blocks `--no-verify` bypasses, so the hooks cannot be skipped.
 
 ## Contributing
 
-1. **Conventional Commits** - Use `bun run commit` for interactive commit creation
-2. **Pre-commit Hooks** - All hooks must pass before committing
-3. **Test Coverage** - Add BATS tests for new features
-4. **Documentation** - Update README.md for changes
+1. Use Conventional Commits.
+2. After changes, run `bun run test` and `pre-commit run --all-files`.
+3. Add BATS tests for new functionality.
+4. Update `README.md` when documentation changes.
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file.
+MIT License. See [LICENSE](LICENSE) for details.
