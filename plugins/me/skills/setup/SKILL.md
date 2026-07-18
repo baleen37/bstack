@@ -32,11 +32,17 @@ CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
 mkdir -p "$CLAUDE_HOME" "$CODEX_HOME"
 cp "$SKILL_DIR/CLAUDE.md" "$CLAUDE_HOME/CLAUDE.md"
 cp "$SKILL_DIR/settings.json" "$CLAUDE_HOME/settings.json"
+node "$SKILL_DIR/configure-handoff-directory.mjs" "$CLAUDE_HOME/settings.json"
 cp "$SKILL_DIR/statusline.sh" "$CLAUDE_HOME/statusline.sh"
 ln -sf "$SKILL_DIR/AGENTS.md" "$CODEX_HOME/AGENTS.md"
 chmod +x "$CLAUDE_HOME/statusline.sh"
 touch "$CLAUDE_HOME/local.md"
 ```
+
+`configure-handoff-directory.mjs`는 setup 시점의
+`${XDG_DATA_HOME:-$HOME/.local/share}/bstack/handoff`를 절대 경로로 계산해
+`permissions.additionalDirectories`에 반영한다. 기존의 handoff 경로만
+교체하며 그 밖의 디렉터리 권한은 보존한다.
 
 ## Checklist
 
@@ -55,6 +61,7 @@ touch "$CLAUDE_HOME/local.md"
 ### settings.json
 
 - [ ] `permissions.allow` 필수 도구 포함 (`Bash`, `Read`, `Edit`, `Write`, `Glob`, `Grep` 등)
+- [ ] `permissions.additionalDirectories`에 현재 XDG handoff 경로 포함
 - [ ] `statusLine.command` → `bash ~/.claude/statusline.sh`
 - [ ] `enabledPlugins` — bstack, superpowers 활성화
 - [ ] `extraKnownMarketplaces` — bstack marketplace 등록
