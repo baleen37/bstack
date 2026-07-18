@@ -20,6 +20,8 @@ Personal Claude Code workflow toolkit for git safety, session continuity, verifi
 - `test` — Design, run, and improve tests using local conventions and `test-engineer`.
 - `qa` — Verify implementation scope and report `PASS`, `PARTIAL`, or `FAIL` with evidence.
 - `e2e` — Verify flows across multiple components, services, or layers.
+- `e2e-scenario-testing` — Verify a running web UI, CLI, or TUI with reusable scenario cards and falsifiable assertions.
+- `story-loop` — Inventory repository capabilities and loop through scenario testing, fixes, and fresh verification.
 
 ### Review
 
