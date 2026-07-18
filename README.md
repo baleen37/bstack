@@ -68,7 +68,6 @@ bstack/
 | Skill | Description |
 |-------|-------------|
 | `handoff` | 세션 종료 시 다음 세션을 위한 인계 문서 생성 |
-| `pickup` | 이전 세션의 인계 문서 로드 |
 | `create-pr` | 커밋, 푸시, PR 생성 통합 워크플로우 |
 | `fix-pr` | CI 실패, 머지 충돌 등 깨진 PR 수정 |
 | `commit` | Conventional Commits 형식으로 커밋 |

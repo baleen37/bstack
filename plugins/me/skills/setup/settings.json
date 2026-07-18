@@ -25,7 +25,7 @@
       "mcp__context7__*"
     ],
     "deny": [],
-    "additionalDirectories": ["~/.claude/handoff/"],
+    "additionalDirectories": ["~/.local/share/bstack/handoff/"],
     "defaultMode": "auto"
   },
   "enableAllProjectMcpServers": true,

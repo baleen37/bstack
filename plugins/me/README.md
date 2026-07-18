@@ -45,7 +45,6 @@ Personal Claude Code workflow toolkit for git safety, session continuity, verifi
 ### Session
 
 - `handoff` — Write structured session handoff files.
-- `pickup` — Resume from a handoff and warn on branch or worktree mismatch.
 
 ## Agents
 
