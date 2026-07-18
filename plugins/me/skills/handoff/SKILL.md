@@ -1,8 +1,8 @@
 ---
 name: handoff
 description: >-
-  Use when asked to "handoff", "인수인계", "write a handoff", or before ending
-  a session to preserve context for the next session.
+  Use when explicitly asked to "handoff", "인수인계", or "write a handoff" to
+  preserve context for the next session.
 allowed-tools:
   - Bash
   - Read
@@ -85,6 +85,7 @@ Do not invent a command when none was supplied.
    - No secrets (tokens, credentials, connection strings)
    - Every referenced file path exists; every claim of done/passing state has a
      re-check command
+   - `Current State` contains the resume gate in the required order
    - `Task`, `Completed`, `Current State`, and `Next Steps` are present and do
      not mix completed, in-progress, and unstarted work
 
@@ -119,6 +120,7 @@ continues: <previous handoff filename — only if this session resumed from one>
 - Workspace: `<worktree>` on `<branch>` at `<commit>`
 - Workspace health: clean / dirty, including user-owned unrelated changes
 - Last verified: `<command-or-check>` → <result>
+- Resume gate: compare recorded worktree/branch/commit → re-run Last verified → report drift or mismatch → only then start First action.
 
 ## Next Steps
 1. First action: <the exact work action to start after the Resume Protocol>

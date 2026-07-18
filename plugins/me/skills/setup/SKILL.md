@@ -28,10 +28,16 @@ SKILL_DIR="$(dirname "$0")"  # 또는 캐시 경로
 
 cp "$SKILL_DIR/CLAUDE.md" ~/.claude/CLAUDE.md
 cp "$SKILL_DIR/settings.json" ~/.claude/settings.json
+node "$SKILL_DIR/configure-handoff-directory.mjs" ~/.claude/settings.json
 cp "$SKILL_DIR/statusline.sh" ~/.claude/statusline.sh
 chmod +x ~/.claude/statusline.sh
 touch ~/.claude/local.md
 ```
+
+`configure-handoff-directory.mjs`는 setup 시점의
+`${XDG_DATA_HOME:-$HOME/.local/share}/bstack/handoff`를 절대 경로로 계산해
+`permissions.additionalDirectories`에 반영한다. 기존의 handoff 경로만
+교체하며 그 밖의 디렉터리 권한은 보존한다.
 
 ## Checklist
 
@@ -43,6 +49,7 @@ touch ~/.claude/local.md
 
 ### settings.json
 - [ ] `permissions.allow` 필수 도구 포함 (`Bash`, `Read`, `Edit`, `Write`, `Glob`, `Grep` 등)
+- [ ] `permissions.additionalDirectories`에 현재 XDG handoff 경로 포함
 - [ ] `statusLine.command` → `bash ~/.claude/statusline.sh`
 - [ ] `enabledPlugins` — bstack, superpowers 활성화
 - [ ] `extraKnownMarketplaces` — bstack marketplace 등록
