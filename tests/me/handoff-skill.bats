@@ -22,7 +22,7 @@ teardown() {
 }
 
 @test "me: handoff has one resume protocol without overlapping sections" {
-    grep -q '^## Resume Protocol$' "$SKILL_FILE"
+    [ "$(grep -c '^## Resume Protocol$' "$SKILL_FILE")" -eq 1 ]
     run grep -q '^## Resume Prompt$' "$SKILL_FILE"
     assert_failure
     run grep -q '^## Resume Checkpoint$' "$SKILL_FILE"
@@ -83,7 +83,8 @@ teardown() {
 
 
 @test "me: representative output separates compound direction without placeholders or empty sections" {
-    [ "$(grep -Fc '1. First action: Verify the merge.' "$OUTPUT_FIXTURE")" -eq 1 ]
+    [ "$(grep -Fc 'First action:' "$OUTPUT_FIXTURE")" -eq 1 ]
+    grep -Fq '1. First action: Verify the merge.' "$OUTPUT_FIXTURE"
     grep -Fq 'User direction: verify merge, then deploy beta (from user at handoff time)' "$OUTPUT_FIXTURE"
     grep -Fq '2. Deploy beta after merge verification succeeds' "$OUTPUT_FIXTURE"
 
