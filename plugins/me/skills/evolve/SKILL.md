@@ -1,6 +1,6 @@
 ---
 name: evolve
-description: Use when asked to "evolve skill", "스킬 개선", "회고", or "analyze this session". Reads the current session's transcript jsonl, extracts user corrections / verbose exploration / success patterns, and proposes patches to SKILL.md / AGENTS.md / CLAUDE.md one at a time with explicit user approval and individual commits.
+description: Use when asked to "evolve skill", "스킬 개선", "회고", or "analyze this session". Builds a transcript index, validates real-world scenarios with subagents, and proposes small patches to SKILL.md / AGENTS.md / CLAUDE.md with user approval.
 allowed-tools:
   - Bash
   - Read
@@ -9,163 +9,226 @@ allowed-tools:
   - Agent
 ---
 
-# /me:evolve — Transcript-driven skill & doc evolution
+# /me:evolve
 
-Extract improvement signals from a session transcript and propose patches to SKILL.md / AGENTS.md / CLAUDE.md. One proposal at a time → user approval → Edit → individual commit.
+Improve skills or local agent docs from transcript evidence. Keep changes small, evidence-bound, and approved by the
+user before applying.
 
-## When to run
-
-Only when the user invokes it explicitly. No automatic triggers.
-
-```
-/me:evolve                          analyze the current session
-/me:evolve --session <id>           analyze a specific session by transcript session id
-/me:evolve --recent                 analyze the most recent 10 sessions (multi-session review)
-/me:evolve --recent <N>             analyze the most recent N sessions
-/me:evolve --skill <name>           analyze a skill across ALL projects (not just this repo)
-/me:evolve --skill <name> --recent <N>  same, capped to the most recent N matching sessions
-/me:evolve --dry-run                show proposals only, don't apply
-```
-
-**`<id>` is a transcript session id** (the `.jsonl` filename under `~/.claude/projects/<project>/`), NOT the `ARGUMENTS` uuid that Claude Code injects when a slash command is invoked with a positional argument. If the user types `/me:evolve` with no explicit `--session` flag, do not pass `--session` to `build-index.ts` even if an `ARGUMENTS:` uuid appears in the prompt — let auto-detection run. Only forward `--session <id>` when the user explicitly provides a transcript session id.
-
-## What this skill does NOT do
-
-- Main agent never reads the raw transcript directly (avoid context blowup).
-- Never modify external plugin cache (`~/.claude/plugins/cache/`) — it is read-only and gets overwritten on plugin updates. Accumulate those as upstream suggestions instead. If the user points you at the plugin's source repo (the path varies per user) and asks you to fix it there, redirect the edit to that source repo and commit there; the cache itself stays untouched.
-- Never create new skills (that's `writing-skills` territory).
-- Never auto-commit or auto-push (user must approve each proposal).
-- SKILL.md files inside this repo's own `plugins/` ARE valid edit targets. "External cache" specifically means `~/.claude/plugins/cache/` only.
-
-## Phase 0 — Build the index
-
-The main agent does two things in Phase 0:
-
-> **Language rule**: All skill scripts are written in TypeScript (Bun runtime). Do not propose shell/Python alternatives — applies to planning, review-agent suggestions, and implementation subagent instructions.
-
-1. **Dirty-tree guard** — `git status --porcelain` must be empty. If dirty, print "commit or stash first, then re-run" and exit.
-
-2. **Build the index** — `build-index.ts` is read-only: auto-detects the transcript, extracts signals, prints JSON.
-
-Use the `Base directory for this skill: <path>` value injected at the top of this command prompt — do **not** rely on `${CLAUDE_PLUGIN_ROOT}` (it is not guaranteed to be set in the slash-command shell).
+## Commands
 
 ```bash
-bun "<Base directory>/scripts/build-index.ts" [--session <id>]
+/me:evolve
+/me:evolve --session <transcript-session-id>
+/me:evolve --recent [N]
+/me:evolve --cwd <worktree-dir> --recent [N]
+/me:evolve --cwd <worktree-dir> --skill <name> [--recent N]
+/me:evolve --skill <name> [--recent N]
+/me:evolve <skill> [<skill> ...]
+/me:evolve <worktree-or-transcript-path>
+/me:evolve --dry-run
 ```
 
-Exit codes: `0`=ok, `2`=bad argument (unknown flag, `--recent`/`--skill` combined with `--session`/a path, empty `--skill` name — and `--dry-run` must not be passed here), `14`=transcript/project dir not found, or no sessions invoking the `--skill` target.
+`--session` expects the `.jsonl` transcript id, not the slash-command `ARGUMENTS` uuid. If the user did not explicitly
+pass `--session`, do not invent one from `ARGUMENTS`.
 
-Capture stdout JSON into a variable. **Do not show it to the user** — pass it only to the next-step subagent.
+Plain skill arguments are slash-command shorthand. For example, `/me:evolve handoff pickup` means run separate
+`--skill handoff` and `--skill pickup` indexes; do not pass the raw positional list to `build-index.ts`.
 
-If `events` is empty, print "no improvement signals found in this session" and exit.
+Plain directory or `.jsonl` path arguments are analysis targets. A directory means "use the latest transcript for that
+cwd". If the argument mixes a path with natural-language intent, interpret the intent first; do not forward the whole
+sentence to the indexer.
 
-### --recent mode (multi-session review)
+Use `--cwd <worktree-dir>` when the user wants recent or skill-focused analysis for another worktree. For `--recent`
+and `--session` this changes transcript discovery and repo-owned skill mapping. For `--skill` it only changes
+repo-owned edit-target mapping — session discovery still scans all projects regardless of `--cwd`.
 
-When `--recent [N]` is passed (default N=10), the indexer aggregates the most recent N sessions instead of one, emitting a **multi-session index** (`mode: "recent"`). Sessions are collected across the whole project: the base project transcript directory **plus all `…--worktrees-*` sibling directories** (so worktree-per-task workflows still get a project-wide view, not one session per worktree). The output is keyed on `skills[]`:
+### Argument mapping rules
 
-- Each skill entry: `name`, `skill_path` (current on-disk SKILL.md), `stale`, `dropped`, `seen_in` (sessions it appeared in), `signal`, `events`.
-- **`signal`** is a one-line kind-count summary (e.g. `9 interrupt, 7 error, 9 repeat, 41 user, 17 agent`) — read it FIRST to decide which skills to dig into without walking every event. `interrupt`/`error`/`repeat` are listed first because they are the densest improvement signals. Skills are sorted by that density (interrupt+error+repeat count, then total events). A dropped skill's signal reads `dropped (stale)`.
-- **Observed bodies**: recent/skill mode groups observations by normalized SKILL.md body hash. `versions` are diagnostic only and show where each body hash was observed; freshness is decided only by hash. Top-level events include only sessions whose body hash matches the current normalized SKILL.md body. `observed_bodies` is diagnostic metadata, not proposal evidence.
-- The skill identifier is the last directory name of the Base directory (e.g. `qa`) and may lack the slash-command prefix (`me:`).
-- **`repo_path`** (optional): if the invoked skill's source also lives in the current repo (`plugins/*/skills/<name>/SKILL.md`), the indexer resolves it and reports it here. This is the **editable** target — even though `skill_path` points at the read-only plugin cache, a skill that is *this repo's own* can be edited directly at `repo_path`. Stale detection also compares against `repo_path`'s body when present (the cache may be an older installed version). So a proposal for a skill with a `repo_path` targets that path and is NOT external-cache.
+The indexer's `parseArgs` rejects conflicting flags with exit code `2`. Translate user input so it never trips these:
 
-`--recent` cannot be combined with `--session` (the indexer exits 2). `--dry-run` is still consumed by the main agent only and never forwarded to the indexer.
+- A skill name plus a recent window is `--skill <name> --recent N`, never `--recent N <name>`. A bare skill name
+  after `--recent` is parsed as a transcript path and exits `2`.
+- One `--skill <name>` per indexer run. For multiple skills, run the indexer once per skill and treat each index
+  independently through Phase 0/1. Never pass two `--skill` flags or a positional skill list.
+- A positional path/dir is standalone. It cannot combine with `--cwd`, `--session`, `--skill`, or `--recent`. To
+  focus a skill inside a worktree, use `--cwd <dir> --skill <name>` instead of a path plus a flag.
 
-### --skill mode (cross-project skill review)
+## Guardrails
 
-When `--skill <name>` is passed, the indexer scans the **entire** `~/.claude/projects/` tree — not just the current project and its worktree siblings — for sessions that actually invoked that skill, then emits the same `mode:"recent"` index filtered to that one skill. Use this when a skill is mostly exercised in *other* repos (e.g. `research`, which is used while exploring real codebases, not in this meta repo where it is authored): plain `--recent` run from this repo would never see those sessions.
+- Do not read full raw transcripts in the main agent. Use the index and narrow turn ranges only.
+- Do not edit external plugin cache paths under `~/.claude/plugins/cache/`; append those proposals to
+  `docs/superpowers/evolutions/YYYY-MM-DD-upstream-suggestions.md`.
+- Do not create new skills.
+- Do not apply patches, commit, or push without explicit user approval.
+- Repo-owned `plugins/*/skills/<name>/SKILL.md` files are valid edit targets.
+- Skill scripts are TypeScript for Bun. Do not add shell or Python alternatives.
 
-- A session "invokes the skill" when its transcript contains the `Base directory for this skill: …/skills/<name>` injection (same signal `loadTurns` uses) — a bare path mention does not count.
-- Matching sessions are sorted by mtime and capped to the most recent N (combine with `--recent N`; default 10).
-- `skills[]` is filtered to the target `name` only, even if those sessions invoked other skills too.
-- `--skill` cannot be combined with `--session` or a transcript path, and an empty name exits 2. If no session invokes the skill, the indexer exits 14.
-- `stale`/`repo_path` semantics are unchanged: a `research` skill whose source lives in this repo still resolves `repo_path` and is **not** external-cache.
+## Phase 0: Build Index
 
-## Phase 1 — Subagent analysis (Agent)
+1. Dirty trees may still run read-only index and proposal discovery. Do not commit, stash, revert, or clean user
+   changes.
+2. Run the indexer from the skill base directory:
 
-Dispatch one subagent (`general-purpose`). The indexer hands user utterances over raw, so **classification is the subagent's job**.
+```bash
+bun "<Base directory>/scripts/build-index.ts" [<jsonl-path-or-worktree-dir> | --cwd <dir>] [--session <id> | --recent N | --skill <name>]
+```
 
-> **Forbidden**: Do not add rule-based classification (regex, keyword matching) to `build-index.ts`. That pattern was abandoned because of false positives from words that happened to appear in normal prose. Classification must be done by the LLM.
+Do not forward `--dry-run` to the indexer. It is handled by the main agent.
 
-The prompt must include all of:
+Exit codes: `0` ok, `2` bad args, `14` transcript/project/session/skill not found.
 
-1. Spec path: `docs/superpowers/specs/2026-05-27-evolve-skill-design.md`
-2. The full index JSON from Phase 0 (`summary` + `events`). Read `summary.headline` (one-line state) and `summary.clusters` (same-kind events within ≤30 turns, ≥3 occurrences) first to spot dense regions, then walk `events[]` for causal-chain analysis. Clusters are a simple heuristic — skip meaningless ones.
-   - **Multi-session (`mode:"recent"`)**: the index is a `skills[]` array, already sorted by improvement-signal density. Read each skill's `signal` one-liner first to pick where to dig in, then analyze that skill's `events[]`. When a skill has a `repo_path`, that is the editable `target_file` and the proposal is `is_external_cache:false` (it's this repo's own skill); only when there is no `repo_path` and the target is under the plugin cache is it `is_external_cache:true`. Top-level events are the only valid proposal evidence. `observed_bodies` only explains which body hashes and `versions` were included or excluded. Never use entries with `current:false` as evidence. If `dropped:true`, the skill is not a proposal target. **Caveat**: a non-skill event (user/interrupt/error/repeat) is attributed to *every* skill invoked in its session, so skills that share the same `seen_in` sessions will show near-identical `signal` counts (the shared events are duplicated across them). When several skills have matching `signal`+`seen_in`, do NOT treat the counts as per-skill evidence — disambiguate by the event's actual content and which skill it truly concerns (use the `session` field), and lean on `kind:"skill"` events which are genuinely that skill's own. Cite the `session` field when quoting evidence. The editable target is `repo_path` when present, otherwise `skill_path`.
-3. **Classification task for `kind: "user"` events** — label each one with exactly one of (refer by array index, e.g. `events[12]`):
-   - **correction**: redirects/corrects the immediately preceding assistant action
-   - **success**: positive feedback on the preceding assistant action
-   - **directive**: a new instruction (not a correction or praise)
-   - **question**: a question
-   - **noise**: meta-chat, no analytical value
+If the indexer prints a `[evolve] warning: …` line to stderr (e.g. `0 tool_use and 0 skill injections`, or
+`parsed to 0 turns`), the harness transcript line format may have changed and extraction is silently producing empty
+results. Do not treat an empty index as "no signals" in that case — surface the warning to the user and stop, since the
+`FMT.*` format constants in `build-index.ts` likely need updating against the current transcript format.
 
-   Criterion is *the relation to the preceding assistant action (`event.prior`)*, not the words themselves. E.g. "stop and report" used as a directive verb is noise; "stop, that's wrong" reacting to a tool call is a correction.
+Stop early when the index has no friction signal. A `kind:"skill"` event is an anchor (which skill was
+active), not a friction signal — "has signals" means having interrupt/error/repeat/user events, not just
+skill anchors. Evaluate these conditions in order:
 
-4. Target-file selection — pick by *what kind of knowledge is missing*, not by signal pattern:
+- Single session with empty `events[]`: print `no improvement signals found in this session`.
+- Recent/skill mode with empty `skills[]`: print `no invoked skills found in recent sessions`.
+- All skills have signal `no events` (zero interrupt+error+repeat+user): print `no improvement signals found`.
+- Otherwise: probe the skills with the strongest signal first.
 
-   - **that SKILL.md** — skill triggers, body rules, Red Flags. Use when a skill should have run but didn't, or ran but violated its own contract.
-   - **a *related* SKILL.md (cross-skill)** — the skill that *carries the missing responsibility*, which is often NOT the skill the signal fired under. When the user's correction redirects to another skill's domain (e.g. research was running but the user said "use the browser" → the gap belongs to `me:browse`'s trigger, or to research's hand-off to it), fix the skill that should own the behavior. Ask: "which skill's contract, if it had been right, would have prevented this?" — that is the target, even if a different skill appears in `kind:"skill"`/`prior`. Prefer editing the owning skill's trigger/body over bolting a special-case onto the skill that merely happened to be active. When the fix is a hand-off (skill X should delegate to Y), the edit may belong to X, to Y, or both — choose by where the durable rule lives.
-   - **nearest AGENTS.md** — repo navigation, file locations, "where to look" knowledge. Use when the agent searched/read repeatedly before finding something.
-   - **nearest CLAUDE.md** — project conventions and rules that govern *all* work in this tree.
+## Index Notes
 
-   **"Nearest" resolution**: "that SKILL.md" = inferred from `events[]` items with `kind:"skill"` or tool calls in `prior`. "Nearest AGENTS.md/CLAUDE.md" = walk up from that SKILL.md's directory; first hit wins (fallback to repo-root CLAUDE.md). If no skill can be inferred, default to repo-root CLAUDE.md. For a cross-skill target, the editable path is that related skill's own `repo_path` (resolve it under `plugins/*/skills/<name>/SKILL.md`); it is still `is_external_cache:false` when it lives in this repo.
+Single-session output has `summary` and `events[]`.
 
-5. Output schema — one JSON block only, no other text. `event_index` is the integer position in the index's `events[]` array:
+Recent and skill output has `mode:"recent"` and `skills[]`. The shape is flat and version-agnostic — the indexer
+sums signals across every session that invoked a skill name and does not compare against the current disk body. Each
+skill includes:
 
-   ```json
-   {
-     "classifications": [
-       {"event_index": 3, "label": "correction", "reason": "redirects the prior grep"},
-       {"event_index": 7, "label": "noise", "reason": "meta-chat"}
-     ],
-     "proposals": [
-       {
-         "id": "P1",
-         "event_indexes": [3],
-         "target_file": "<absolute path>",
-         "is_external_cache": false,
-         "change_kind": "edit",
-         "patch": "<unified diff applicable with `git apply`>",
-         "rationale": "1-2 sentences",
-         "addresses_signal": "one line: the already-observed failure this patch's event_indexes point to, and why that failure would not have happened had the patch been in place"
-       }
-     ]
-   }
-   ```
+- `name`: plugin-qualified (`me:evolve`) when a qualifier is known (Skill-tool `input.skill` or an adjacent
+  slash command), else the bare basename (`evolve`). Qualification keeps same-named skills from different plugins
+  separate so their signals never merge.
+- `signal`: one-line event counts (e.g. `3 interrupt, 3 error, 6 repeat, 10 user`), or `no events`
+- `versions`: every skill version seen across sessions — context only, not used for matching
+- `seen_in`: the `session_id`s where this skill was invoked
+- `skill_path`: the cache SKILL.md path at invocation time (edit-target mapping is the proposal subagent's job)
+- `events[]`: all friction signals for this skill name, summed across sessions, each tagged with `session`
 
-   Fill `addresses_signal` as one line linking the already-observed failure (the patch's `event_indexes`) to why the patch would have prevented it. It is advisory for the user — not a pass/fail gate; never drop a proposal for reading weak.
+`--skill <name>` matches by qualifier: a qualified request (`--skill me:evolve`) returns only that plugin's skill;
+a bare request (`--skill evolve`) returns every plugin's `evolve` (e.g. `me:evolve` and a bare `evolve`).
 
-6. Instruction: "Read the events array first and notice that adjacent events near the same turn form causal chains. Only when needed, use `Bash` to extract just the relevant turn range from the jsonl. Never read the main transcript in full. Return only the result JSON."
+Because the indexer no longer tracks current-body state, the proposal subagent reads the actual repo-owned
+SKILL.md to judge whether a surfaced signal is already fixed before proposing a patch.
 
-## Phase 2 — Apply loop
+In `--recent` and `--skill`, each non-skill event (error/interrupt/repeat/user/agent) is attributed to the skill that
+was active at its turn — the most recently invoked skill before that turn — not copied to every skill in the session.
+Signals before the first skill invocation belong to no skill. So per-skill `signal` counts are scoped, but they are
+turn-proximity heuristics: an event during one skill's run that was really caused by adjacent work can still be
+mis-owned. Confirm ownership from event content before proposing, and prefer `kind:"skill"` events as anchors.
+Each event carries `session` (its source `session_id`). The same failure recurring across distinct `session`
+values is a strong signal; one concentrated in a single `session` is weak — likely steering noise from that run.
 
-After parsing the subagent's returned JSON:
+## Phase 1: Probe, Then Propose
 
-> Do not save Phase 1 results or a session retrospective to a separate report file. Unpack the JSON inline at the console. The only byproduct file is `upstream-suggestions.md` (and only when an external-cache proposal occurs).
+### 1A. Scenario Probes
 
-1. Divert proposals with `is_external_cache: true` to `docs/superpowers/evolutions/YYYY-MM-DD-upstream-suggestions.md` (append; create if missing). Never Edit them — they do not enter the plan below.
-2. **Present the whole plan once**, then ask for a single confirmation. Each entry shows its full diff (review in context). Multi-session (`--recent`/`--skill`) can yield many proposals — group entries under a `### <target_file>` heading so they stay scannable:
+Run small `Agent` probes before asking for patches.
 
-   ```
-   Plan (N patches, one commit each):
-   P1  <target_file>  —  <rationale>
-       addresses: <addresses_signal>
-       [patch diff]
-   P2  ...
+- Single-session index: 1-2 probes.
+- `--recent` or `--skill`: 2-3 probes in parallel.
+- Pick only lenses that have evidence in the index; do not manufacture no-signal work.
 
-   Apply? [all / none / <ids to apply, e.g. P1 P3>]
-   ```
+Useful lenses:
 
-   To amend a patch, exclude its id and edit the file by hand — there is no inline edit.
-3. Apply the selected ids **sequentially**, in order: `git apply <patch>` → `git commit -m "evolve: <subject>"` (one patch = one commit; revert with `git revert <sha>`).
-4. If a `git apply` fails mid-batch, **stop**: do not roll back already-committed patches (each stands alone). Report the failed id + git's error and the SHAs already committed, then hand control back.
-5. If nothing is left to apply (all diverted or excluded), say so and skip to Finalize.
-6. If `--dry-run` is passed, print the plan only (step 2) and stop. `--dry-run` is consumed by the main agent only — never forward it to `build-index.ts` (the script will exit 2 on unknown flags).
-7. Finalize: print the list of applied commit SHAs and the upstream-suggestions path (if any).
+- correction chain
+- cross-skill ownership
+- noisy directives
+- repeated exploration
+- shared-session signals in `--recent`
 
-## Safety
+Each probe may inspect only relevant `events[]` items and narrow
+transcript turn ranges. It returns:
 
-- `git status --porcelain` must be empty at start (refuse on dirty tree).
-- External-cache paths (`~/.claude/plugins/cache/`) are refused → diverted to upstream-suggestions.
-- Always show the diff to the user before applying any patch.
-- Each change gets its own commit → revert one with `git revert <sha>`.
+```json
+{
+  "scenario": "correction chain",
+  "verdict": "proposal-worthy | diagnostic-only | no-signal",
+  "event_indexes": [3],
+  "target_owner": "plugins/me/skills/research/SKILL.md",
+  "recommended_change": "one sentence",
+  "why_this_is_real_world": "one sentence"
+}
+```
+
+Synthesize probe results yourself. Keep only the best 1-2 `proposal-worthy` findings for proposal synthesis. Keep
+`diagnostic-only` findings only for the final Probe summary.
+
+### 1B. Proposal Subagent
+
+Dispatch one proposal subagent. Include:
+
+- the index JSON
+- synthesized probe findings
+- `docs/superpowers/specs/2026-05-27-evolve-skill-design.md`
+
+The subagent must classify user events by relation to `event.prior`:
+
+- `correction`
+- `success`
+- `directive`
+- `question`
+- `noise`
+
+Target the file that owns the missing knowledge:
+
+- that `SKILL.md` for trigger/body-rule failures
+- a related `SKILL.md` for cross-skill ownership
+- nearest `AGENTS.md` for repo navigation or file-location knowledge
+- nearest `CLAUDE.md` for project-wide conventions
+
+Required output is one JSON block:
+
+```json
+{
+  "classifications": [
+    {"event_index": 3, "label": "correction", "reason": "redirects prior grep"}
+  ],
+  "proposals": [
+    {
+      "id": "P1",
+      "probe_scenario": "correction chain",
+      "event_indexes": [3],
+      "target_file": "<absolute path>",
+      "is_external_cache": false,
+      "change_kind": "edit",
+      "patch": "<unified diff applicable with git apply>",
+      "rationale": "1-2 sentences",
+      "addresses_signal": "observed failure and why this patch would have prevented it"
+    }
+  ]
+}
+```
+
+Reject broad rewrites or proposals without direct `event_indexes`.
+
+## Phase 2: Approval And Apply
+
+After parsing proposals:
+
+1. Divert `is_external_cache:true` proposals to upstream suggestions; do not apply them.
+2. If `--dry-run` was passed, show the plan only; do not ask for approval, apply patches, or commit.
+3. Present one plan and ask once:
+
+```text
+Plan (N patches, one commit each):
+P1  <target_file> - <rationale>
+    probe: <probe_scenario>, events: <event_indexes>
+    addresses: <addresses_signal>
+    <full diff>
+
+Apply and commit? [all / none / P1 P3]
+```
+
+1. Before applying or committing selected patches, require `git status --porcelain` to be empty except for
+   upstream-suggestions files created by this run. If dirty, stop and ask the user to clean the tree.
+1. Apply selected patches sequentially: `git apply` then one commit per patch.
+1. If any patch fails, stop. Report the failed id, git error, and already-created commit SHAs.
+1. Finalize with:
+   - Probe summary: scenarios checked, proposal-worthy count, diagnostic-only/no-signal reasons
+   - applied proposal ids with `probe_scenario` and `event_indexes`
+   - commit SHAs
+   - upstream suggestions path, if any

@@ -36,7 +36,16 @@ setup() {
 @test "codex marketplace plugin entries use relative local paths and default policy" {
     local plugin_count
     plugin_count=$(jq -r '.plugins | length' "$MARKETPLACE_JSON")
-    [ "$plugin_count" -eq 5 ]
+
+    local expected_count
+    expected_count="$(
+        jq -r '.plugins[].source' "${PROJECT_ROOT}/.claude-plugin/marketplace.json" | \
+        sed 's|^\./plugins/||' | \
+        while IFS= read -r plugin; do
+            [ -d "${PROJECT_ROOT}/plugins/${plugin}/skills" ] && echo "$plugin"
+        done | wc -l | tr -d ' '
+    )"
+    [ "$plugin_count" -eq "$expected_count" ]
 
     jq -e '
       .plugins

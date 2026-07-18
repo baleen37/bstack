@@ -1,0 +1,19 @@
+{
+  "name": "notion",
+  "version": "17.32.1",
+  "description": "Notion workspace guidance backed by the official Notion MCP server",
+  "author": {
+    "name": "baleen37",
+    "email": "git@baleen.me"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/makenotion/claude-code-notion-plugin",
+  "keywords": [
+    "notion",
+    "knowledge-management",
+    "documentation",
+    "mcp"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json"
+}

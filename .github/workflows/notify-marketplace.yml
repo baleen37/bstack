@@ -16,18 +16,18 @@ jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
-      - name: Normalize version
-        id: version
-        env:
-          VERSION: ${{ github.event.release.tag_name || inputs.version }}
-        run: |
-          VERSION="${VERSION#v}"
-          echo "value=${VERSION}" >> "$GITHUB_OUTPUT"
-
-      - name: Trigger marketplace update
-        uses: baleen37/baleen-marketplace/.github/actions/dispatch-marketplace-update@12f7f29617c0083c78affd8c1e286e0a093fb0f9
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
         with:
-          github-token: ${{ secrets.BALEEN_MARKETPLACE_DISPATCH_TOKEN }}
-          event-type: update_versions
-          plugin: bstack
-          version: ${{ steps.version.outputs.value }}
+          app-id: ${{ secrets.BALEEN_RELEASE_APP_ID }}
+          private-key: ${{ secrets.BALEEN_RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: baleen-marketplace
+
+      - name: Notify marketplace
+        uses: baleen37/baleen-marketplace/.github/actions/notify@v1
+        with:
+          source: bstack
+          version: ${{ github.event.release.tag_name || inputs.version }}
+          token: ${{ steps.app-token.outputs.token }}

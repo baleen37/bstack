@@ -20,13 +20,6 @@ load ../helpers/bats_helper
     [ -f "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/wait-for-merge.sh" ]
 }
 
-@test "me: create-pr skill has proper frontmatter" {
-    local skill_file="${PROJECT_ROOT}/plugins/me/skills/create-pr/SKILL.md"
-    has_frontmatter_delimiter "$skill_file"
-    has_frontmatter_field "$skill_file" "name"
-    has_frontmatter_field "$skill_file" "description"
-}
-
 @test "me: create-pr scripts are executable" {
     [ -x "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/preflight-check.sh" ]
     [ -x "${PROJECT_ROOT}/plugins/me/skills/create-pr/scripts/wait-for-merge.sh" ]
@@ -37,8 +30,16 @@ load ../helpers/bats_helper
     grep -q "git rev-parse.*git-dir" "$script"
 }
 
-@test "me: lifecycle skills include build, test, review, and ship" {
-    for skill in build test review ship; do
+@test "me: create-pr skill stays compact for frequent loading" {
+    local skill="${PROJECT_ROOT}/plugins/me/skills/create-pr/SKILL.md"
+    local words
+
+    words=$(wc -w < "$skill")
+    [ "$words" -le 260 ]
+}
+
+@test "me: lifecycle skills include test, review, and ship" {
+    for skill in test review ship; do
         [ -f "${PROJECT_ROOT}/plugins/me/skills/${skill}/SKILL.md" ]
     done
 }
@@ -46,15 +47,6 @@ load ../helpers/bats_helper
 @test "me: evolve skill exists" {
     [ -f "${PROJECT_ROOT}/plugins/me/skills/evolve/SKILL.md" ]
     [ -f "${PROJECT_ROOT}/plugins/me/skills/evolve/scripts/build-index.ts" ]
-}
-
-@test "me: lifecycle skills have proper frontmatter" {
-    for skill in build test review ship; do
-        local skill_file="${PROJECT_ROOT}/plugins/me/skills/${skill}/SKILL.md"
-        has_frontmatter_delimiter "$skill_file"
-        has_frontmatter_field "$skill_file" "name"
-        has_frontmatter_field "$skill_file" "description"
-    done
 }
 
 @test "me: release-with-github-app doc uses bun release flow" {

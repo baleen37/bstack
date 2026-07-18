@@ -122,11 +122,11 @@ count_files() {
 }
 
 # Helper: Check if JSON field is allowed in plugin.json
-# Claude Code only supports: name, description, author, version, license, homepage, repository, keywords
+# Claude Code supports metadata plus optional skills/MCP/LSP pointers.
 # shellcheck disable=SC2076
 json_field_is_allowed() {
     local field="$1"
-    local allowed_fields="name description author version license homepage repository keywords lspServers"
+    local allowed_fields="name description author version license homepage repository keywords skills mcpServers lspServers"
     [[ " $allowed_fields " =~ " $field " ]]
 }
 
@@ -147,7 +147,7 @@ validate_plugin_manifest_fields() {
     while IFS= read -r field; do
         if ! json_field_is_allowed "$field"; then
             echo "Error: Invalid field '$field' in $file"
-            echo "Allowed fields: name, description, author, version, license, homepage, repository, keywords, lspServers"
+            echo "Allowed fields: name, description, author, version, license, homepage, repository, keywords, skills, mcpServers, lspServers"
             return 1
         fi
     done <<< "$all_fields"

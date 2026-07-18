@@ -8,7 +8,7 @@
   },
   "plugins": [
     {
-      "name": "bstack",
+      "name": "me",
       "description": "AI coding assistant toolkit - git workflow protection, session handoff, context management, and development automation",
       "source": "./plugins/me",
       "category": "development",
@@ -22,38 +22,50 @@
         "memory",
         "context"
       ],
-      "version": "17.21.2"
+      "version": "17.32.1"
     },
     {
       "name": "jira",
-      "description": "Atlassian Jira integration skills for Claude Code",
+      "description": "Jira workflow guidance backed by a slim Atlassian MCP facade",
       "source": "./plugins/jira",
       "category": "development",
       "tags": [
         "jira",
         "atlassian",
-        "confluence",
+        "mcp",
         "project-management"
       ],
-      "version": "17.21.2"
+      "version": "17.32.1"
     },
     {
-      "name": "ralph",
-      "description": "PRD-driven persistence loop — keeps Claude working until all user stories pass",
-      "source": "./plugins/ralph",
+      "name": "slack",
+      "description": "Slack workflow guidance backed by the official Slack MCP server",
+      "source": "./plugins/slack",
       "category": "development",
       "tags": [
-        "ralph",
-        "loop",
-        "persistence",
-        "prd",
-        "automation"
+        "slack",
+        "collaboration",
+        "messaging",
+        "mcp"
       ],
-      "version": "17.21.2"
+      "version": "17.32.1"
+    },
+    {
+      "name": "notion",
+      "description": "Notion workspace guidance backed by the official Notion MCP server",
+      "source": "./plugins/notion",
+      "category": "development",
+      "tags": [
+        "notion",
+        "knowledge-management",
+        "documentation",
+        "mcp"
+      ],
+      "version": "17.32.1"
     },
     {
       "name": "datadog",
-      "description": "Datadog observability skills for Claude Code via the pup CLI",
+      "description": "Datadog observability guidance via the pup CLI",
       "source": "./plugins/datadog",
       "category": "development",
       "tags": [
@@ -64,7 +76,7 @@
         "apm",
         "pup"
       ],
-      "version": "17.21.2"
+      "version": "17.32.1"
     },
     {
       "name": "autoresearch",
@@ -77,7 +89,7 @@
         "autonomous",
         "research"
       ],
-      "version": "17.21.2"
+      "version": "17.32.1"
     }
   ]
 }

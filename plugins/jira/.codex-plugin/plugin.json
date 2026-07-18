@@ -1,7 +1,7 @@
 {
   "name": "jira",
-  "version": "17.21.2",
-  "description": "Atlassian Jira integration skills for Claude Code - triage issues, capture tasks from meeting notes, generate status reports, and manage backlogs",
+  "version": "17.32.1",
+  "description": "Jira workflow guidance backed by a slim Atlassian MCP facade",
   "author": {
     "name": "baleen37",
     "email": "git@baleen.me"
@@ -10,9 +10,10 @@
   "keywords": [
     "jira",
     "atlassian",
-    "confluence",
+    "mcp",
     "project-management",
     "workflow"
   ],
-  "skills": "./skills/"
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json"
 }

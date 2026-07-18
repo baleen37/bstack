@@ -1,14 +1,35 @@
 #!/usr/bin/env bun
 // build-index.ts — transcript jsonl을 SessionIndex JSON으로 변환
-// 사용: bun build-index.ts [<jsonl-path>] [--session <id>]
+// 사용: bun build-index.ts [<jsonl-path-or-worktree-dir>] [--session <id>]
 // 출력: stdout에 JSON
 
-import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync, statSync, realpathSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { homedir } from "node:os";
-import { createHash } from "node:crypto";
+
+// ── 하네스 트랜스크립트 포맷 의존 상수 ──────────────────
+// 이 인덱서는 Claude Code가 기록하는 트랜스크립트 .jsonl 의 내부 라인 포맷에 의존한다.
+// 이 포맷은 공개 스키마가 없고 하네스 버전업으로 조용히 바뀔 수 있다. 깨질 때 throw가 아니라
+// 빈 결과를 내므로(=신호 없음과 구분 불가) 의존 지점을 여기 한 곳에 모아 추적·점검을 쉽게 한다.
+// line/Event/signal 용어 구분은 아래 "타입" 블록 참고. 새 의존이 생기면 반드시 이 블록에 추가할 것.
+const FMT = {
+  // 슬래시 스킬 호출 시 user 라인에 주입되는 본문의 첫 줄. 스킬 호출 검출의 유일한 앵커.
+  skillInjectionMarker: "Base directory for this skill:",
+  // 세션 제목 라인: { type: aiTitleType, [aiTitleField]: "..." }
+  aiTitleType: "ai-title",
+  aiTitleField: "aiTitle",
+  // user 라인이 하네스 주입 메타(스킬 본문 등)임을 표시하는 불리언 필드.
+  metaFlag: "isMeta",
+  // 인터럽트 마커: user 라인의 interruptedMessageId 존재 / assistant message.stop_reason 값.
+  userInterruptField: "interruptedMessageId",
+  assistantInterruptStopReason: "interrupted",
+} as const;
 
 // ── 타입 ───────────────────────────────────────────────
+// 용어 정리:
+//   line   — 하네스가 jsonl에 기록하는 한 줄(하네스 공식 용어로는 "event"). 이 코드의 입력 단위.
+//   Event  — 이 도구가 line들에서 추출한 friction 레코드. 이 코드의 출력 단위(아래 타입).
+//   signal — Event들을 kind별로 센 한 줄 요약 문자열(summarizeSignal). Event(단위)와 다른 층위.
 type EventKind = "user" | "skill" | "interrupt" | "error" | "agent" | "repeat";
 
 interface Event {
@@ -25,19 +46,11 @@ interface Event {
   model?: string;
   pattern?: string;
   n?: number;
-  session?: string;
-}
-
-interface Cluster {
-  kind: EventKind;
-  t_range: [number, number];
-  n: number;
-  example_t: number;
+  session?: string; // --recent/--skill에서만. 신호의 출처 session_id (cross-session 반복 판정용).
 }
 
 interface Summary {
   headline: string;
-  clusters: Cluster[];
 }
 
 interface SessionIndex {
@@ -48,25 +61,13 @@ interface SessionIndex {
   events: Event[];
 }
 
-interface ObservedBody {
-  hash: string;
-  current: boolean;
-  versions: string[];
-  seen_in: string[];
-  signal: string;
-}
-
 interface RecentSkill {
   name: string;
   skill_path: string;     // transcript가 가리킨 호출 시점 base 경로의 SKILL.md (보통 캐시 경로)
-  repo_path?: string;     // cwd repo 안에서 찾은 편집 가능한 SKILL.md (있으면 직접 edit 대상)
-  current_hash?: string;
-  observed_bodies: ObservedBody[];
-  stale: boolean;         // 세션 이후 본문 변경 여부
-  dropped: boolean;       // stale 또는 파일없음 → events 제외됨
-  seen_in: string[];      // 등장한 session_id 목록
+  versions: string[];     // 등장한 모든 버전 (정렬, 컨텍스트용). 신호 귀속에는 안 씀.
+  seen_in: string[];      // 등장한 session_id 목록 (정렬)
   signal: string;         // kind별 카운트 한 줄 요약 (LLM이 어디부터 볼지 판단용)
-  events: Event[];        // dropped면 빈 배열
+  events: Event[];        // 이 skill 이름에 귀속된 모든 Event(전 세션 합산). 각 Event에 출처 session 태그.
 }
 
 interface RecentIndex {
@@ -94,16 +95,35 @@ interface Turn {
 }
 
 interface SkillInvocation {
-  name: string;          // skill 식별자 (Base directory의 마지막 디렉터리명)
+  name: string;          // skill basename (Base directory의 마지막 디렉터리명)
   baseDir: string;       // 주입 본문의 Base directory 절대경로
   version: string;
-  hash: string;
+  turn: number;          // 주입 시점까지 누적된 turn 수 (= 직전 호출 turn). 이후 신호의 소유 스킬 결정용.
+  qualifier?: string;    // 이 호출을 띄운 Skill 도구 input.skill (`me:evolve`). 자격화 키의 1차 출처.
 }
 
 interface LoadedTranscript {
   turns: Turn[];
   sessionTitle?: string;
   skillInvocations: SkillInvocation[];
+}
+
+interface SignalSummary {
+  signal: string;
+  weight: number;
+}
+
+// qualified skill 이름(`me:research`)에서 basename(`research`)을 뽑는다. 콜론이 없으면 그대로.
+function skillBaseName(name: string): string {
+  return name.includes(":") ? name.split(":").pop()! : name;
+}
+
+function getOrCreate<K, V>(map: Map<K, V>, key: K, init: () => V): V {
+  const existing = map.get(key);
+  if (existing !== undefined) return existing;
+  const value = init();
+  map.set(key, value);
+  return value;
 }
 
 function normalizeToolResultContent(raw: any): string {
@@ -119,34 +139,45 @@ function loadTurns(jsonlPath: string): LoadedTranscript {
   const turns: Turn[] = [];
   const skillInvocations: SkillInvocation[] = [];
   let sessionTitle: string | undefined;
+  // Skill 도구 호출의 tool_use id → input.skill (`me:evolve`). 주입 본문은 sourceToolUseID로 이걸 가리킨다.
+  const skillToolQualifierById = new Map<string, string>();
   for (const line of lines) {
     const obj = JSON.parse(line);
-    if (obj.type === "ai-title" && typeof obj.aiTitle === "string") {
-      sessionTitle = obj.aiTitle;
+    if (obj.type === FMT.aiTitleType && typeof obj[FMT.aiTitleField] === "string") {
+      sessionTitle = obj[FMT.aiTitleField];
       continue;
     }
+    // assistant turn의 Skill 도구 호출에서 자격화된 skill 이름을 id별로 기록 (주입과 sourceToolUseID로 연결).
+    if (obj.type === "assistant" && Array.isArray(obj.message?.content)) {
+      for (const c of obj.message.content) {
+        if (c?.type === "tool_use" && c.name === "Skill" && typeof c.input?.skill === "string" && c.id) {
+          skillToolQualifierById.set(c.id, c.input.skill);
+        }
+      }
+    }
     // skill 호출시점 주입 본문 (isMeta user/text, 첫 줄 "Base directory for this skill:")
-    if (obj.type === "user" && obj.isMeta === true) {
+    if (obj.type === "user" && obj[FMT.metaFlag] === true) {
       const c = obj.message?.content;
       const text = Array.isArray(c) && c[0]?.type === "text" ? c[0].text : undefined;
       if (typeof text === "string") {
-        const m = text.match(new RegExp(`^Base directory for this skill:\\s*(.+?)\\s*(?:${LINE_BREAK}|$)`));
+        const m = text.match(new RegExp(`^${escapeRegExp(FMT.skillInjectionMarker)}\\s*(.+?)\\s*(?:${LINE_BREAK}|$)`));
         if (m) {
           const baseDir = m[1];
-          const injectedBody = restorePluginRoot(stripBaseDirLine(text), baseDir);
+          const qualifier = typeof obj.sourceToolUseID === "string" ? skillToolQualifierById.get(obj.sourceToolUseID) : undefined;
           skillInvocations.push({
             name: basename(baseDir),
             baseDir,
             version: skillVersion(baseDir),
-            hash: bodyHash(injectedBody),
+            turn: turns.length, // 주입은 turn으로 안 세므로 직전까지의 turn 수가 이 호출의 활성 시작점
+            ...(qualifier && qualifier.includes(":") ? { qualifier } : {}),
           });
         }
       }
       continue; // 주입 메시지는 turn으로 세지 않음
     }
     if (obj.type !== "user" && obj.type !== "assistant") continue;
-    const userInterruptedMarker = obj.interruptedMessageId !== undefined;
-    const assistantInterruptedMarker = obj.message?.stop_reason === "interrupted";
+    const userInterruptedMarker = obj[FMT.userInterruptField] !== undefined;
+    const assistantInterruptedMarker = obj.message?.stop_reason === FMT.assistantInterruptStopReason;
     const t: Turn = {
       index: turns.length + 1,
       type: obj.type,
@@ -175,45 +206,33 @@ function loadTurns(jsonlPath: string): LoadedTranscript {
   return { turns, sessionTitle, skillInvocations };
 }
 
-// ── skill 본문 정규화 + 해시 (stale 판정용) ──
+// 하네스 포맷이 바뀌면 파싱은 throw 없이 빈 결과를 내고, evolve는 그걸 "신호 없음"으로 오인한다.
+// 실제 세션이라면 거의 항상 성립하는 불변식이 깨졌을 때 stderr로 경고해 둘을 구분한다.
+// 경고는 진단용일 뿐 결과를 바꾸지 않는다(과잉 필터 금지: 실제로 비어있을 수도 있으므로 막지 않는다).
+const HEALTHCHECK_MIN_TURNS = 10;
+function warnIfFormatLooksBroken(jsonlPath: string, loaded: LoadedTranscript): void {
+  const { turns, skillInvocations } = loaded;
+  if (turns.length === 0) {
+    console.error(`[evolve] warning: ${basename(jsonlPath)} parsed to 0 turns — transcript line format may have changed`);
+    return;
+  }
+  if (turns.length < HEALTHCHECK_MIN_TURNS) return; // 짧은 세션은 도구·스킬이 없어도 정상
+  const sawToolUse = turns.some((t) => t.toolUses.length > 0);
+  if (!sawToolUse && skillInvocations.length === 0) {
+    console.error(
+      `[evolve] warning: ${basename(jsonlPath)} has ${turns.length} turns but 0 tool_use and 0 skill injections — ` +
+        `extraction may be silently failing (check FMT.* against the current harness transcript format)`,
+    );
+  }
+}
+
+// 정규식에 리터럴을 안전하게 끼워넣기 위한 메타문자 이스케이프.
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// 스킬 호출 본문 주입의 줄바꿈 변종(LF/CRLF/CR)을 매칭하기 위한 패턴. loadTurns의 Base directory 추출에 사용.
 const LINE_BREAK = "(?:\\r\\n|\\n|\\r)";
-const BASE_DIR_LINE = new RegExp(`^Base directory for this skill:.*${LINE_BREAK}+`);
-// 슬래시 커맨드를 인자와 함께 호출하면 주입 본문 끝에 "ARGUMENTS: …" 블록이 덧붙는다.
-// 이는 SKILL.md 본문이 아니라 호출 인자이므로 stale 해시 비교 전에 제거해야
-// 같은 본문이 인자 유무/내용에 따라 stale로 오판되지 않는다.
-const ARGUMENTS_TAIL = new RegExp(`${LINE_BREAK}${LINE_BREAK}ARGUMENTS:[\\s\\S]*$`);
-
-// transcript 주입 본문에서 "Base directory" 첫 줄(+뒤 빈 줄)과 끝의 "ARGUMENTS:" 블록을 제거
-function stripBaseDirLine(injected: string): string {
-  return injected.replace(BASE_DIR_LINE, "").replace(ARGUMENTS_TAIL, "");
-}
-
-// 스킬 주입 시 Claude Code는 본문의 ${CLAUDE_PLUGIN_ROOT}를 plugin root 절대경로로 치환한다.
-// 디스크 SKILL.md는 리터럴 ${CLAUDE_PLUGIN_ROOT}를 그대로 보존하므로, 동일 본문이라도
-// 치환 여부 때문에 해시가 어긋나 false-stale로 dropped된다. 해싱 전에 치환을 되돌린다.
-// plugin root = baseDir에서 끝의 "/skills/<name>"을 제거한 경로.
-function restorePluginRoot(injectedBody: string, baseDir: string): string {
-  const root = baseDir.replace(/[\\/]skills[\\/][^\\/]+[\\/]?$/, "");
-  if (!root || root === baseDir) return injectedBody;
-  return injectedBody.split(root).join("${CLAUDE_PLUGIN_ROOT}");
-}
-
-// 디스크 SKILL.md에서 YAML frontmatter(--- … ---) 제거
-function stripFrontmatter(raw: string): string {
-  if (!raw.startsWith("---")) return raw;
-  const end = raw.indexOf("\n---", 3);
-  if (end === -1) return raw;
-  const after = raw.indexOf("\n", end + 1);
-  return after === -1 ? "" : raw.slice(after + 1);
-}
-
-function bodyHash(body: string): string {
-  return createHash("sha256").update(body.replace(/\r\n?/g, "\n").trim()).digest("hex");
-}
-
-function shortHash(hash: string): string {
-  return hash.slice(0, 8);
-}
 
 function skillVersion(baseDir: string): string {
   const parts = baseDir.split(/[\\/]/);
@@ -230,11 +249,28 @@ function summarizeToolUse(tu: { name: string; input: any }): string {
   else if (name === "Read" || name === "Edit" || name === "Write") arg = tu.input?.file_path ?? "";
   else if (name === "Grep" || name === "Glob") arg = tu.input?.pattern ?? "";
   else if (name === "Agent") arg = tu.input?.description ?? "";
-  else arg = JSON.stringify(tu.input ?? {}).slice(0, 60);
+  else if (name === "Skill") arg = tu.input?.skill ?? "";
+  // 그 외 도구(MCP, PushNotification, Monitor 등)는 raw JSON을 덤프하지 않는다 — 도구 이름만.
   return arg ? `${name}: ${arg}` : name;
 }
 
 const BOOKKEEPING_TOOLS = new Set(["TaskCreate", "TaskUpdate", "TaskList", "TaskGet", "AskUserQuestion"]);
+
+// 거의 모든 Bash 호출에 붙는 셸 보일러플레이트. 이걸 repeat 키로 쓰면 "cd <worktree>"
+// 같은 비신호가 최상위 repeat을 차지한다. 키 산출 시 이런 세그먼트는 건너뛴다.
+const REPEAT_NOISE_PREFIXES = new Set(["cd", "echo", "ls", "pwd", "cat", "export", "true", "set"]);
+
+// repeat 집계용 Bash 키. &&/;/| 로 분리해 보일러플레이트 세그먼트를 버리고 첫 의미있는 명령의
+// 앞 2토큰을 키로 쓴다. 의미있는 세그먼트가 없으면 빈 문자열(=repeat 후보 제외).
+function repeatBashKey(cmd: string): string {
+  for (const segment of cmd.split(/&&|\|\||;|\|/)) {
+    const tokens = segment.trim().split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) continue;
+    if (REPEAT_NOISE_PREFIXES.has(tokens[0])) continue;
+    return tokens.slice(0, 2).join(" ");
+  }
+  return "";
+}
 
 function priorAssistantActions(turns: Turn[], currentIdx: number): string[] {
   const actions: string[] = [];
@@ -270,12 +306,16 @@ function detectSlashCommand(userText: string): DetectedSlash | undefined {
   }
   const prefix = userText.trim().match(SLASH_CMD_PREFIX);
   if (!prefix) return undefined;
-  const args = prefix[2]?.trim();
+  const rest = prefix[2] ?? "";
+  // 슬래시 커맨드 이름에는 경로 구분자가 없다. 이름 바로 뒤에 "/"가 오면 이건
+  // 슬래시 커맨드가 아니라 절대경로("/Users/…")로 시작하는 사용자 발화다. skill로 오분류하지 않는다.
+  if (rest.startsWith("/")) return undefined;
+  const args = rest.trim();
   return args ? { name: prefix[1], args: args.slice(0, 200) } : { name: prefix[1] };
 }
 
 const PSEUDO_USER_PREFIXES = [
-  "Base directory for this skill:",
+  FMT.skillInjectionMarker,
   "<bash-input>",
   "<bash-stdout>",
   "<bash-stderr>",
@@ -292,7 +332,7 @@ function isPseudoUser(userText: string): boolean {
 }
 
 // ── events 빌드 ────────────────────────────────────────
-function buildEvents(turns: Turn[]): Event[] {
+function buildEvents(turns: Turn[], skillInvocations: SkillInvocation[] = []): Event[] {
   const events: Event[] = [];
   const interruptClaimed = new Set<number>();
 
@@ -329,7 +369,15 @@ function buildEvents(turns: Turn[]): Event[] {
         if (!tr.isError) continue;
         const prevAssist = [...turns.slice(0, i)].reverse().find((a) => a.type === "assistant" && a.toolUses.length > 0);
         const toolName = prevAssist?.toolUses[prevAssist.toolUses.length - 1]?.name ?? "unknown";
-        events.push({ t: t.index, kind: "error", tool: toolName, text: tr.content.slice(0, 200) });
+        // tool 이름만으로는 "어떤 인자로 호출하다 났는지"를 알 수 없어 소유권 판정이 막힌다.
+        // user처럼 직전 행동을 prior로 담아(예: "Edit: /path") 어느 파일/명령이 에러를 냈는지 보이게 한다.
+        events.push({
+          t: t.index,
+          kind: "error",
+          tool: toolName,
+          text: tr.content.slice(0, 200),
+          prior: priorAssistantActions(turns, i),
+        });
       }
     } else {
       // assistant
@@ -354,16 +402,13 @@ function buildEvents(turns: Turn[]): Event[] {
   for (const t of turns) {
     for (const tu of t.toolUses) {
       if (tu.name === "Bash") {
-        const cmd: string = tu.input?.command ?? "";
-        const prefix = cmd.split(/\s+/).slice(0, 2).join(" ");
+        const prefix = repeatBashKey(tu.input?.command ?? "");
         if (!prefix) continue;
-        if (!bashOccur.has(prefix)) bashOccur.set(prefix, []);
-        bashOccur.get(prefix)!.push(t.index);
+        getOrCreate(bashOccur, prefix, () => []).push(t.index);
       } else if (tu.name === "Read") {
         const p: string = tu.input?.file_path ?? "";
         if (!p) continue;
-        if (!readOccur.has(p)) readOccur.set(p, []);
-        readOccur.get(p)!.push(t.index);
+        getOrCreate(readOccur, p, () => []).push(t.index);
       }
     }
   }
@@ -376,64 +421,55 @@ function buildEvents(turns: Turn[]): Event[] {
     if (list.length < 3) continue;
     repeats.push({ t: list[list.length - 1], kind: "repeat", pattern: path, n: list.length });
   }
+  // Skill 도구로 호출된 스킬은 슬래시 텍스트 없이 isMeta 본문 주입으로만 들어와 위 루프가 못 잡는다.
+  // 주입(skillInvocations)을 skill 이벤트로 추가하되, 슬래시로 이미 잡은 같은 호출과는 중복 제거한다.
+  // 같은 호출이면 슬래시 이벤트와 주입 turn이 인접(±1)하고 이름이 대응한다(슬래시는 qualified
+  // `me:foo`, 주입 name은 basename `foo`일 수 있어 양쪽을 basename으로 맞춰 비교한다).
+  const slashSkills = events.filter((e) => e.kind === "skill");
+  const injectionSkills: Event[] = [];
+  for (const inv of skillInvocations) {
+    const dup = slashSkills.some(
+      (e) => Math.abs(e.t - inv.turn) <= 1 && e.name !== undefined && skillBaseName(e.name) === skillBaseName(inv.name),
+    );
+    if (dup) continue;
+    injectionSkills.push({ t: inv.turn, kind: "skill", name: inv.name });
+  }
   // 정렬: 모든 events를 turn 기준 안정 정렬 (같은 turn 안에서는 emit 순서 유지)
-  const combined = [...events, ...repeats];
+  const combined = [...events, ...repeats, ...injectionSkills];
   combined.sort((a, b) => a.t - b.t);
   return combined;
 }
 
 // ── summary: 얕은 탐색용 ───────────────────────────────
-const SUMMARY_KINDS: EventKind[] = ["interrupt", "error", "repeat", "user"];
-const CLUSTER_GAP = 30;
-const CLUSTER_MIN = 3;
-
-function buildClusters(events: Event[]): Cluster[] {
-  const clusters: Cluster[] = [];
-  for (const kind of SUMMARY_KINDS) {
-    const turns = events.filter((e) => e.kind === kind).map((e) => e.t);
-    if (turns.length < CLUSTER_MIN) continue;
-    let start = turns[0];
-    let prev = turns[0];
-    let count = 1;
-    for (let i = 1; i <= turns.length; i++) {
-      const t = turns[i];
-      if (t !== undefined && t - prev <= CLUSTER_GAP) {
-        count++;
-        prev = t;
-        continue;
-      }
-      if (count >= CLUSTER_MIN) clusters.push({ kind, t_range: [start, prev], n: count, example_t: start });
-      if (t === undefined) break;
-      start = t;
-      prev = t;
-      count = 1;
-    }
-  }
-  return clusters.sort((a, b) => a.t_range[0] - b.t_range[0]);
-}
-
-function buildHeadline(turns: number, events: Event[], clusters: Cluster[]): string {
+// single-session headline. SKILL.md는 이걸 freshness check로만 쓴다(턴 수 + 개선 신호 카운트).
+function buildSummary(turns: number, events: Event[]): Summary {
   const counts: Record<string, number> = {};
   for (const e of events) counts[e.kind] = (counts[e.kind] ?? 0) + 1;
   const parts: string[] = [`${turns} turns`];
   for (const kind of ["user", "interrupt", "error", "repeat"] as const) {
     if (counts[kind]) parts.push(`${counts[kind]} ${kind}${counts[kind] > 1 ? "s" : ""}`);
   }
-  if (clusters.length > 0) parts.push(`${clusters.length} cluster${clusters.length > 1 ? "s" : ""}`);
-  return parts.join(" · ");
+  return { headline: parts.join(" · ") };
 }
 
-function buildSummary(turns: number, events: Event[]): Summary {
-  const clusters = buildClusters(events);
+// kind별 카운트 → 한 줄 요약. interrupt/error/repeat은 개선 신호가 농축된 종류라 앞세운다.
+function summarizeSignal(events: Event[]): SignalSummary {
+  const counts: Record<string, number> = {};
+  for (const event of events) counts[event.kind] = (counts[event.kind] ?? 0) + 1;
+
+  const order: EventKind[] = ["interrupt", "error", "repeat", "user", "agent", "skill"];
+  const parts = order.filter((kind) => counts[kind]).map((kind) => `${counts[kind]} ${kind}`);
   return {
-    headline: buildHeadline(turns, events, clusters),
-    clusters,
+    signal: parts.length ? parts.join(", ") : "no events",
+    weight: (counts["interrupt"] ?? 0) + (counts["error"] ?? 0) + (counts["repeat"] ?? 0),
   };
 }
 
 function buildIndex(jsonlPath: string): SessionIndex {
-  const { turns, sessionTitle } = loadTurns(jsonlPath);
-  const events = buildEvents(turns);
+  const loaded = loadTurns(jsonlPath);
+  warnIfFormatLooksBroken(jsonlPath, loaded);
+  const { turns, sessionTitle, skillInvocations } = loaded;
+  const events = buildEvents(turns, skillInvocations);
   return {
     session_id: basename(jsonlPath, ".jsonl"),
     ...(sessionTitle ? { session_title: sessionTitle } : {}),
@@ -443,159 +479,137 @@ function buildIndex(jsonlPath: string): SessionIndex {
   };
 }
 
-// cwd에서 위로 올라가며 `plugins/` 를 가진 디렉터리(=이 repo 루트)를 찾는다.
-function findRepoRoot(cwd: string): string | null {
-  let dir = cwd;
-  for (let i = 0; i < 30; i++) {
-    if (existsSync(join(dir, "plugins"))) return dir;
-    const parent = join(dir, "..");
-    const resolved = resolve(parent);
-    if (resolved === dir) break;
-    dir = resolved;
+function jsonlFilesInDir(dir: string): Array<{ path: string; mtime: number }> {
+  try {
+    return readdirSync(dir)
+      .filter((f) => f.endsWith(".jsonl"))
+      .map((f) => {
+        const path = join(dir, f);
+        return { path, mtime: statSync(path).mtimeMs };
+      });
+  } catch {
+    return [];
   }
-  return null;
 }
 
-// repo 안에서 같은 이름 skill의 편집 가능한 SKILL.md 경로를 찾는다 (plugins/*/skills/<name>/SKILL.md).
-// transcript가 캐시 경로를 가리켜도, cwd repo에 그 skill 소스가 있으면 그걸 직접 편집 대상으로 쓴다.
-function repoSkillPath(repoRoot: string | null, name: string): string | undefined {
-  if (!repoRoot) return undefined;
-  const pluginsDir = join(repoRoot, "plugins");
-  if (!existsSync(pluginsDir)) return undefined;
-  for (const plugin of readdirSync(pluginsDir).sort()) {
-    const candidate = join(pluginsDir, plugin, "skills", name, "SKILL.md");
-    if (existsSync(candidate)) return candidate;
-  }
-  return undefined;
+// transcript 파일을 최신순(mtime 내림차순)으로 정렬하는 비교자.
+const byNewest = (a: { mtime: number }, b: { mtime: number }): number => b.mtime - a.mtime;
+
+function formatRecentHeadline(sessionCount: number, skills: RecentSkill[]): string {
+  return `${sessionCount} sessions · ${skills.length} skills`;
 }
 
-function currentBodyHash(skillMd: string): string | null {
-  if (!existsSync(skillMd)) return null;
-  return bodyHash(stripFrontmatter(readFileSync(skillMd, "utf8")));
+// 한 skill 이름에 대한 multi-session 누적 상태. body-hash 폐기 후로는 버전 무관하게 평면 합산한다.
+interface SkillAccumulator {
+  baseDir: string;       // 입력에서 처음 본 호출 경로 (cache SKILL.md 경로 노출용)
+  versions: Set<string>; // 등장한 모든 버전 (컨텍스트용)
+  seen: Set<string>;     // 이 skill이 등장한 모든 session_id
+  events: Event[];       // 이 skill에 귀속된 모든 Event (전 세션 합산)
 }
 
-function buildRecentIndex(paths: string[], cwd: string): RecentIndex {
-  const repoRoot = findRepoRoot(cwd);
+function newAccumulator(baseDir: string): SkillAccumulator {
+  return { baseDir, versions: new Set(), seen: new Set(), events: [] };
+}
+
+function buildRecentIndex(paths: string[]): RecentIndex {
   const sessions: RecentIndex["sessions"] = [];
-  // name -> 누적 상태
-  const acc = new Map<string, {
-    baseDir: string;
-    versionsByHash: Map<string, Set<string>>;
-    seenByHash: Map<string, Set<string>>;
-    seen: Set<string>;
-    eventsByHash: Map<string, Event[]>;
-  }>();
+  const acc = new Map<string, SkillAccumulator>();
 
   for (const p of paths) {
     const sessionId = basename(p, ".jsonl");
-    const { turns, sessionTitle, skillInvocations } = loadTurns(p);
-    const events = buildEvents(turns);
+    const loaded = loadTurns(p);
+    warnIfFormatLooksBroken(p, loaded);
+    const { turns, sessionTitle, skillInvocations } = loaded;
+    const events = buildEvents(turns, skillInvocations);
     sessions.push({ session_id: sessionId, ...(sessionTitle ? { session_title: sessionTitle } : {}), turns: turns.length });
 
-    // 이 세션에서 호출된 skill 이름 집합 + 호출시점 본문 해시
-    const invokedNames = new Set<string>();
-    const invokedHashesByName = new Map<string, Set<string>>();
+    // 각 invocation(basename)을 그 호출의 qualifier(`me:evolve`)로 자격화한다. 1차 출처는 Skill 도구
+    // input.skill(inv.qualifier), 2차는 인접(±1) 슬래시 이벤트. 둘 다 없으면 basename 유지.
+    // 이렇게 키를 qualified로 잡아야 다른 플러그인의 같은 basename 스킬이 한 키로 병합되지 않는다.
+    const slashEvents = events.filter((e) => e.kind === "skill" && e.name?.includes(":"));
+    const keyOf = (inv: SkillInvocation): string => {
+      if (inv.qualifier) return inv.qualifier;
+      const qualified = slashEvents.find(
+        (e) => Math.abs(e.t - inv.turn) <= 1 && skillBaseName(e.name!) === inv.name,
+      );
+      return qualified?.name ?? inv.name;
+    };
+
+    // 이 세션에서 호출된 skill을 누적기에 등록 (버전·세션 합산). invokedKeys: basename → 자격화된 키.
+    const invokedKeys = new Map<string, string>();
     for (const inv of skillInvocations) {
-      invokedNames.add(inv.name);
-      if (!invokedHashesByName.has(inv.name)) invokedHashesByName.set(inv.name, new Set());
-      invokedHashesByName.get(inv.name)!.add(inv.hash);
-      if (!acc.has(inv.name)) {
-        acc.set(inv.name, {
-          baseDir: inv.baseDir,
-          versionsByHash: new Map(),
-          seenByHash: new Map(),
-          seen: new Set(),
-          eventsByHash: new Map(),
-        });
-      }
-      const a = acc.get(inv.name)!;
-      // baseDir는 cache-only 현재 본문 조회를 위해 newest-first 입력에서 처음 관측한 호출 경로를 유지한다.
+      const key = keyOf(inv);
+      invokedKeys.set(inv.name, key);
+      const a = getOrCreate(acc, key, () => newAccumulator(inv.baseDir));
       a.seen.add(sessionId);
-      if (!a.versionsByHash.has(inv.hash)) a.versionsByHash.set(inv.hash, new Set());
-      a.versionsByHash.get(inv.hash)!.add(inv.version);
-      if (!a.seenByHash.has(inv.hash)) a.seenByHash.set(inv.hash, new Set());
-      a.seenByHash.get(inv.hash)!.add(sessionId);
-      if (!a.eventsByHash.has(inv.hash)) a.eventsByHash.set(inv.hash, []);
+      a.versions.add(inv.version);
     }
 
-    // events를 해당 세션에서 호출된 skill의 호출시점 본문 해시로 귀속.
-    // events의 session 식별을 위해 session 필드 마킹.
+    // events를 해당 세션에서 호출된 skill에 귀속. events에 출처 session 태그.
+    // 비-skill 신호(error/interrupt/repeat/user/agent)는 시간상 그 직전에 호출된 스킬에만 귀속한다.
+    // 이렇게 해야 한 세션에서 여러 스킬이 호출됐을 때 같은 error가 모든 스킬에 복사되어
+    // per-skill signal·정렬 가중치를 오염시키는 일을 막는다. 첫 스킬 호출 이전 신호는 어디에도 안 붙는다.
+    // 활성 스킬은 호출 turn(invocation.turn) 시퀀스로 결정한다 — 슬래시 텍스트 유무와 무관.
+    // skillInvocations와 events는 둘 다 turn 오름차순이므로 포인터 하나로 함께 훑는다.
+    let invIdx = 0;
+    let activeKey: string | undefined;
     for (const ev of events) {
+      while (invIdx < skillInvocations.length && skillInvocations[invIdx].turn <= ev.t) {
+        activeKey = invokedKeys.get(skillInvocations[invIdx].name);
+        invIdx++;
+      }
       const tagged: Event = { ...ev, session: sessionId };
-      // skill 이벤트는 그 세션에서 관측된 해당 skill의 모든 body hash에, 그 외 신호는 같은 세션에서 호출된 모든 skill hash에 귀속
       if (ev.kind === "skill" && ev.name) {
-        const fallback = ev.name.includes(":") ? ev.name.split(":").pop()! : ev.name;
-        const target = invokedHashesByName.has(ev.name) ? ev.name : fallback;
-        const hashes = invokedHashesByName.get(target);
-        if (!hashes) continue;
-        for (const hash of hashes) acc.get(target)!.eventsByHash.get(hash)!.push(tagged);
+        // ev.name 은 슬래시 qualifier(`me:evolve`)거나 basename. 둘 다 invokedKeys의 basename으로 환원해 키를 찾는다.
+        const key = invokedKeys.get(skillBaseName(ev.name));
+        if (key === undefined) continue;
+        acc.get(key)!.events.push(tagged);
       } else {
-        for (const name of invokedNames) {
-          for (const hash of invokedHashesByName.get(name) ?? []) acc.get(name)!.eventsByHash.get(hash)!.push(tagged);
-        }
+        if (activeKey === undefined) continue;
+        acc.get(activeKey)!.events.push(tagged);
       }
     }
   }
 
-  // kind별 카운트 → 한 줄 요약. interrupt/error/repeat은 개선 신호가 농축된 종류라 앞세운다.
-  function summarizeSignal(events: Event[]): { signal: string; weight: number } {
-    const c: Record<string, number> = {};
-    for (const e of events) c[e.kind] = (c[e.kind] ?? 0) + 1;
-    const order: EventKind[] = ["interrupt", "error", "repeat", "user", "agent", "skill"];
-    const parts = order.filter((k) => c[k]).map((k) => `${c[k]} ${k}`);
-    const weight = (c["interrupt"] ?? 0) + (c["error"] ?? 0) + (c["repeat"] ?? 0);
-    return { signal: parts.length ? parts.join(", ") : "no events", weight };
-  }
-
-  const skills: Array<RecentSkill & { _weight: number }> = [];
+  // skill + 정렬 키(weight)를 함께 모은다. 정렬 키는 출력 타입(RecentSkill)을 오염시키지 않게 분리한다.
+  const ranked: Array<{ skill: RecentSkill; weight: number }> = [];
   for (const [name, a] of acc) {
-    const cacheSkillMd = join(a.baseDir, "SKILL.md");
-    // cwd repo에 같은 skill 소스가 있으면 그게 편집 가능한 "현재 본문"의 진짜 출처다 (캐시는 구버전일 수 있음).
-    const repoPath = repoSkillPath(repoRoot, name);
-    const nowHashFull = currentBodyHash(repoPath ?? cacheSkillMd);
-    const hasCurrentBody = nowHashFull !== null && a.versionsByHash.has(nowHashFull);
-    const matchingEvents = hasCurrentBody ? a.eventsByHash.get(nowHashFull) ?? [] : [];
-    // stale = 현재 본문이 호출시점 본문들 중 어느 것과도 일치하지 않음
-    const stale = !hasCurrentBody;
-    const dropped = stale;
-    const evs = dropped ? [] : matchingEvents;
-    const { signal, weight } = summarizeSignal(evs);
-    const observed_bodies = [...a.versionsByHash.keys()].sort().map((hash) => ({
-      hash: shortHash(hash),
-      current: hash === nowHashFull,
-      versions: [...(a.versionsByHash.get(hash) ?? [])].sort(),
-      seen_in: [...(a.seenByHash.get(hash) ?? [])].sort(),
-      signal: summarizeSignal(a.eventsByHash.get(hash) ?? []).signal,
-    }));
-    skills.push({
-      name,
-      skill_path: cacheSkillMd,
-      ...(repoPath ? { repo_path: repoPath } : {}),
-      ...(nowHashFull ? { current_hash: shortHash(nowHashFull) } : {}),
-      observed_bodies,
-      stale,
-      dropped,
-      seen_in: [...a.seen].sort(),
-      signal: dropped ? "dropped (stale)" : signal,
-      events: evs,
-      _weight: weight,
+    const { signal, weight } = summarizeSignal(a.events);
+    ranked.push({
+      skill: {
+        name,
+        skill_path: join(a.baseDir, "SKILL.md"),
+        versions: [...a.versions].sort(),
+        seen_in: [...a.seen].sort(),
+        signal,
+        events: a.events,
+      },
+      weight,
     });
   }
-  // 개선 신호(interrupt+error+repeat) 많은 순 → 동률이면 전체 event 수 순 → 이름순
-  skills.sort((x, y) => y._weight - x._weight || y.events.length - x.events.length || x.name.localeCompare(y.name));
-  for (const s of skills) delete (s as { _weight?: number })._weight;
+  // 개선 신호(interrupt+error+repeat) 많은 순 → 동률이면 전체 event 수 순 → 이름순.
+  ranked.sort(
+    (x, y) => y.weight - x.weight || y.skill.events.length - x.skill.events.length || x.skill.name.localeCompare(y.skill.name),
+  );
+  const skills = ranked.map((r) => r.skill);
 
-  const droppedN = skills.filter((s) => s.dropped).length;
   return {
     mode: "recent",
     session_count: sessions.length,
     sessions,
     skills,
-    summary: { headline: `${sessions.length} sessions · ${skills.length} skills · ${droppedN} dropped` },
+    summary: { headline: formatRecentHeadline(sessions.length, skills) },
   };
 }
 
 // ── Phase 0: transcript 자동 탐지 ──────────────────────
+// 트랜스크립트 저장소 루트. 기본은 ~/.claude/projects. 테스트는 라이브 세션과 섞이지 않도록
+// EVOLVE_PROJECTS_DIR 로 격리된 디렉터리를 주입한다(이 override가 없으면 --skill/--recent 스캔이
+// 실행 중인 현재 세션까지 끌어와 결과가 비결정적이 된다).
+function projectsRoot(): string {
+  return process.env.EVOLVE_PROJECTS_DIR || join(homedir(), ".claude", "projects");
+}
+
 function encodeCwd(cwd: string): string {
   return cwd.replace(/[/.]/g, "-");
 }
@@ -608,33 +622,42 @@ function projectBasePrefix(cwd: string): string {
 }
 
 function recentSessionPaths(cwd: string, n: number): string[] {
-  const projectsRoot = join(homedir(), ".claude", "projects");
-  if (!existsSync(projectsRoot)) {
-    console.error(`transcript directory not found: ${projectsRoot}`);
+  const root = projectsRoot();
+  if (!existsSync(root)) {
+    console.error(`transcript directory not found: ${root}`);
     process.exit(14);
   }
   // 같은 프로젝트의 모든 worktree 디렉터리를 합친다: base 자체 + base--worktrees-* 형제들.
   // bstack처럼 worktree마다 transcript가 쪼개지는 경우 "최근 N개 세션"이 전체에서 모이게.
   const base = projectBasePrefix(cwd);
-  const dirs = readdirSync(projectsRoot).filter((d) => d === base || d.startsWith(base + "--worktrees-"));
+  const dirs = readdirSync(root).filter((d) => d === base || d.startsWith(base + "--worktrees-"));
   const files = dirs
-    .flatMap((d) => {
-      const full = join(projectsRoot, d);
-      try {
-        return readdirSync(full)
-          .filter((f) => f.endsWith(".jsonl"))
-          .map((f) => ({ path: join(full, f), mtime: statSync(join(full, f)).mtimeMs }));
-      } catch {
-        return [];
-      }
-    })
-    .sort((a, b) => b.mtime - a.mtime)
+    .flatMap((d) => jsonlFilesInDir(join(root, d)))
+    .sort(byNewest)
     .slice(0, n);
   if (files.length === 0) {
-    console.error(`no .jsonl files for project ${base} (and its worktrees) under ${projectsRoot}`);
+    console.error(`no .jsonl files for project ${base} (and its worktrees) under ${root}`);
     process.exit(14);
   }
   return files.map((f) => f.path);
+}
+
+function transcriptProjectDir(cwd: string): string {
+  return join(projectsRoot(), encodeCwd(cwd));
+}
+
+function latestTranscriptPathForCwd(cwd: string): string {
+  const projectDir = transcriptProjectDir(cwd);
+  if (!existsSync(projectDir)) {
+    console.error(`transcript directory not found: ${projectDir}`);
+    process.exit(14);
+  }
+  const files = jsonlFilesInDir(projectDir).sort(byNewest);
+  if (files.length === 0) {
+    console.error(`no .jsonl files in ${projectDir}`);
+    process.exit(14);
+  }
+  return files[0].path;
 }
 
 // 주어진 transcript에서 `<name>` skill이 호출된 적 있는지 loadTurns 와 동일한 기준으로 판정.
@@ -648,68 +671,95 @@ function transcriptInvokesSkill(jsonlPath: string, name: string): boolean {
   } catch {
     return false;
   }
-  const esc = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const esc = escapeRegExp(name);
   // baseDir 마지막 세그먼트가 정확히 <name> 이어야 한다: …/skills/<name> 뒤에 / 또는 escape개행(\n) 또는 따옴표.
-  const re = new RegExp(`Base directory for this skill:[^\\n"]*?/${esc}(?:/|\\\\n|")`);
+  const re = new RegExp(`${escapeRegExp(FMT.skillInjectionMarker)}[^\\n"]*?/${esc}(?:/|\\\\n|")`);
   return re.test(text);
 }
 
 function skillNameCandidates(name: string): string[] {
-  const short = name.includes(":") ? name.split(":").pop()! : name;
-  return [...new Set([name, short])];
+  return [...new Set([name, skillBaseName(name)])];
 }
 
 function findSkillSessionPaths(names: string[], n: number): string[] {
-  const projectsRoot = join(homedir(), ".claude", "projects");
-  if (!existsSync(projectsRoot)) {
-    console.error(`transcript directory not found: ${projectsRoot}`);
+  const root = projectsRoot();
+  if (!existsSync(root)) {
+    console.error(`transcript directory not found: ${root}`);
     process.exit(14);
   }
-  return readdirSync(projectsRoot)
+  return readdirSync(root)
     .flatMap((d) => {
-      const full = join(projectsRoot, d);
+      const full = join(root, d);
       try {
         if (!statSync(full).isDirectory()) return [];
-        return readdirSync(full)
-          .filter((f) => f.endsWith(".jsonl"))
-          .map((f) => join(full, f));
+        return jsonlFilesInDir(full).map((f) => f.path);
       } catch {
         return [];
       }
     })
     .filter((p) => names.some((name) => transcriptInvokesSkill(p, name)))
     .map((p) => ({ path: p, mtime: statSync(p).mtimeMs }))
-    .sort((a, b) => b.mtime - a.mtime)
+    .sort(byNewest)
     .slice(0, n)
     .map((f) => f.path);
 }
 
+function noSkillSessions(name: string): never {
+  console.error(`no sessions invoking skill '${name}' found under ${projectsRoot()}`);
+  process.exit(14);
+}
+
 // ~/.claude/projects 전체에서 `<name>` skill이 호출된 세션을 mtime 순 최근 N개 수집.
-// --recent 가 현재 프로젝트+worktree로 한정되는 것과 달리, --skill 은 프로젝트 경계를 넘는다.
-function skillSessionPaths(names: string[], n: number): string[] {
-  const files = findSkillSessionPaths(names, n);
-  if (files.length === 0) {
-    console.error(`no sessions invoking skill '${names[0]}' found under ${join(homedir(), ".claude", "projects")}`);
+// Exact skill names win. If there is no exact match for a qualified name like `me:research`,
+// fall back to its basename (`research`) without scanning exact sessions twice.
+// (출력 name 자격화·요청 필터는 호출부가 opts.skill 로 처리하므로 여기선 paths만 반환한다.)
+function resolveSkillSessionPaths(name: string, n: number): { paths: string[] } {
+  const exactPaths = findSkillSessionPaths([name], n);
+  if (exactPaths.length > 0) return { paths: exactPaths };
+
+  const fallbackNames = skillNameCandidates(name).filter((candidate) => candidate !== name);
+  if (fallbackNames.length === 0) noSkillSessions(name);
+
+  const paths = findSkillSessionPaths(fallbackNames, n);
+  if (paths.length === 0) noSkillSessions(name);
+  return { paths };
+}
+
+function expandHomePath(path: string): string {
+  return path === "~" || path.startsWith("~/") ? join(homedir(), path.slice(2)) : path;
+}
+
+function resolveCwdPath(path: string): string {
+  const resolved = resolve(expandHomePath(path));
+  if (!existsSync(resolved)) {
+    console.error(`cwd path not found: ${resolved}`);
     process.exit(14);
   }
-  return files;
+  const real = realpathSync(resolved);
+  if (!statSync(real).isDirectory()) {
+    console.error(`--cwd expects a directory: ${real}`);
+    process.exit(2);
+  }
+  return real;
 }
 
 function resolveTranscriptPath(opts: { jsonlPath?: string; sessionId?: string; cwd: string }): string {
   if (opts.jsonlPath) {
-    const resolved = resolve(opts.jsonlPath);
-    if (!existsSync(resolved)) {
-      console.error(`transcript file not found: ${resolved}`);
+    const path = resolve(expandHomePath(opts.jsonlPath));
+    if (!existsSync(path)) {
+      console.error(`transcript file not found: ${path}`);
       process.exit(14);
     }
-    if (!statSync(resolved).isFile()) {
+    const resolved = realpathSync(path);
+    const stat = statSync(resolved);
+    if (stat.isDirectory()) return latestTranscriptPathForCwd(resolved);
+    if (!stat.isFile()) {
       console.error(`transcript path is not a file: ${resolved}`);
       process.exit(14);
     }
     return resolved;
   }
-  const encoded = encodeCwd(opts.cwd);
-  const projectDir = join(homedir(), ".claude", "projects", encoded);
+  const projectDir = transcriptProjectDir(opts.cwd);
   if (!existsSync(projectDir)) {
     console.error(`transcript directory not found: ${projectDir}`);
     process.exit(14);
@@ -722,26 +772,48 @@ function resolveTranscriptPath(opts: { jsonlPath?: string; sessionId?: string; c
     }
     return candidate;
   }
-  const files = readdirSync(projectDir)
-    .filter((f) => f.endsWith(".jsonl"))
-    .map((f) => ({ path: join(projectDir, f), mtime: statSync(join(projectDir, f)).mtimeMs }))
-    .sort((a, b) => b.mtime - a.mtime);
-  if (files.length === 0) {
-    console.error(`no .jsonl files in ${projectDir}`);
-    process.exit(14);
-  }
-  return files[0].path;
+  return latestTranscriptPathForCwd(opts.cwd);
 }
 
 // ── 진입점 ─────────────────────────────────────────────
-function parseArgs(argv: string[]): { jsonlPath?: string; sessionId?: string; recent?: number; skill?: string } {
+function printUsage(): void {
+  console.log(`Usage: bun build-index.ts [<jsonl-path-or-worktree-dir>] [--cwd <dir>] [--session <id> | --recent [N] | --skill <name> [--recent N]]
+
+Options:
+  --cwd <dir>          Resolve current/recent transcripts and repo-owned skills from another cwd.
+  --session <id>       Read a transcript id from the current cwd project.
+  --recent [N]         Aggregate recent sessions; defaults to 10.
+  --skill <name>       Aggregate recent sessions that invoked one skill.
+  --help, -h           Show this help.
+
+Notes:
+  --dry-run is handled by the /me:evolve skill, not this indexer.
+  Plain multi-skill shorthand must be expanded by the caller into separate --skill runs.`);
+}
+
+function parseArgs(argv: string[]): { jsonlPath?: string; sessionId?: string; recent?: number; skill?: string; cwd?: string } {
   const args = argv.slice(2);
   let jsonlPath: string | undefined;
   let sessionId: string | undefined;
   let recent: number | undefined;
   let skill: string | undefined;
+  let cwd: string | undefined;
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === "--session") {
+    if (args[i] === "--help" || args[i] === "-h") {
+      printUsage();
+      process.exit(0);
+    } else if (args[i] === "--cwd") {
+      if (cwd !== undefined) {
+        console.error("--cwd can only be specified once");
+        process.exit(2);
+      }
+      const next = args[++i];
+      if (next === undefined || next.startsWith("--")) {
+        console.error("--cwd requires a directory");
+        process.exit(2);
+      }
+      cwd = resolveCwdPath(next);
+    } else if (args[i] === "--session") {
       if (sessionId !== undefined) {
         console.error("--session can only be specified once");
         process.exit(2);
@@ -781,6 +853,9 @@ function parseArgs(argv: string[]): { jsonlPath?: string; sessionId?: string; re
       if (next !== undefined && /^[1-9][0-9]*$/.test(next)) {
         recent = parseInt(next, 10);
         i++;
+      } else if (next !== undefined && (next.endsWith(".jsonl") || next.includes("/") || next.includes("\\"))) {
+        console.error("--recent cannot be combined with a transcript path");
+        process.exit(2);
       } else if (next !== undefined && !next.startsWith("--")) {
         console.error("--recent requires a positive integer");
         process.exit(2);
@@ -800,7 +875,15 @@ function parseArgs(argv: string[]): { jsonlPath?: string; sessionId?: string; re
     console.error("--session cannot be combined with a transcript path");
     process.exit(2);
   }
-  if (skill !== undefined && (sessionId !== undefined || jsonlPath !== undefined)) {
+  if (cwd !== undefined && jsonlPath !== undefined) {
+    console.error("--cwd cannot be combined with a transcript path");
+    process.exit(2);
+  }
+  if (skill !== undefined && jsonlPath !== undefined) {
+    console.error("do not combine --skill with positional arguments; expand plain multi-skill shorthand into separate --skill runs");
+    process.exit(2);
+  }
+  if (skill !== undefined && sessionId !== undefined) {
     console.error("--skill cannot be combined with --session or a transcript path");
     process.exit(2);
   }
@@ -812,29 +895,31 @@ function parseArgs(argv: string[]): { jsonlPath?: string; sessionId?: string; re
     console.error("--skill requires a skill name");
     process.exit(2);
   }
-  return { jsonlPath, sessionId, recent, skill };
+  return { jsonlPath, sessionId, recent, skill, cwd };
 }
 
 const opts = parseArgs(process.argv);
+const targetCwd = opts.cwd ?? process.cwd();
 if (opts.skill !== undefined) {
   const n = opts.recent ?? 10;
-  const exactPaths = findSkillSessionPaths([opts.skill], n);
-  const skillNames = exactPaths.length > 0 ? [opts.skill] : skillNameCandidates(opts.skill);
-  const paths = exactPaths.length > 0 ? exactPaths : skillSessionPaths(skillNames, n);
-  const index = buildRecentIndex(paths, process.cwd());
-  // --skill 은 대상 스킬 하나로 좁혀서 내보낸다 (같은 세션의 다른 스킬은 제외).
-  index.skills = index.skills.filter((s) => skillNames.includes(s.name));
-  const droppedN = index.skills.filter((s) => s.dropped).length;
-  index.summary.headline = `${index.session_count} sessions · ${index.skills.length} skills · ${droppedN} dropped`;
+  const { paths } = resolveSkillSessionPaths(opts.skill, n);
+  const index = buildRecentIndex(paths);
+  // --skill 은 요청한 스킬만 남긴다. 출력 name은 자격화됐을 수 있으므로(`a:dup`):
+  // 요청이 qualified(`a:dup`)면 그 이름만, bare basename(`dup`)이면 basename이 같은 모든 플러그인을 남긴다.
+  const wantedQualified = opts.skill.includes(":");
+  index.skills = index.skills.filter((s) =>
+    wantedQualified ? s.name === opts.skill : skillBaseName(s.name) === opts.skill,
+  );
+  index.summary.headline = formatRecentHeadline(index.session_count, index.skills);
   console.log(JSON.stringify(index, null, 2));
 } else if (opts.recent !== undefined) {
-  const paths = recentSessionPaths(process.cwd(), opts.recent);
-  console.log(JSON.stringify(buildRecentIndex(paths, process.cwd()), null, 2));
+  const paths = recentSessionPaths(targetCwd, opts.recent);
+  console.log(JSON.stringify(buildRecentIndex(paths), null, 2));
 } else {
   const transcriptPath = resolveTranscriptPath({
     jsonlPath: opts.jsonlPath,
     sessionId: opts.sessionId,
-    cwd: process.cwd(),
+    cwd: targetCwd,
   });
   console.log(JSON.stringify(buildIndex(transcriptPath), null, 2));
 }
