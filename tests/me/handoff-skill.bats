@@ -27,6 +27,13 @@ setup() {
     grep -q 'Does not start a new session or read prior handoffs' "$SKILL_FILE"
 }
 
+@test "me: handoff resolves XDG output once and reuses HANDOFF_DIR" {
+    grep -Fq 'HANDOFF_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/bstack/handoff"' "$SKILL_FILE"
+    grep -Fq '$HANDOFF_DIR/YYYY-MM-DD-HHmm-<topic>.md' "$SKILL_FILE"
+    grep -Fq 'Writes a file under `$HANDOFF_DIR`' "$SKILL_FILE"
+    grep -Fq 'mkdir -p "$HANDOFF_DIR"' "$SKILL_FILE"
+}
+
 @test "me: handoff distinguishes temporary context from permanent rules" {
     grep -q 'AGENTS.md' "$SKILL_FILE"
     grep -q 'CLAUDE.md' "$SKILL_FILE"

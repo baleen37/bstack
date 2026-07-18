@@ -11,12 +11,16 @@ allowed-tools:
 
 # /handoff: Write a session handoff file
 
-Save the current session's context to
-`~/.local/share/bstack/handoff/YYYY-MM-DD-HHmm-<topic>.md` as a structured
-markdown file. Runs only when the user explicitly asks for it.
+Resolve the output directory once before any path operation:
 
-The handoff directory is `${XDG_DATA_HOME:-$HOME/.local/share}/bstack/handoff`
-— honor `$XDG_DATA_HOME` when set. Written below as `~/.local/share/bstack/handoff/`.
+```bash
+HANDOFF_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/bstack/handoff"
+```
+
+Save the current session's context to
+`$HANDOFF_DIR/YYYY-MM-DD-HHmm-<topic>.md` as a structured markdown file. Runs
+only when the user explicitly asks for it. When `XDG_DATA_HOME` is unset, the
+resolved directory is `~/.local/share/bstack/handoff`.
 
 There is no resume logic in this skill. The next session picks up context by
 pasting the file path or contents directly and follows the Resume Protocol.
@@ -34,14 +38,14 @@ at handoff time)`.
 - Extracts the task, completed work, current state, next steps, blockers, and
   stable context pointers from the current conversation
 - Collects a git/environment snapshot
-- Writes a file under `~/.local/share/bstack/handoff/`
+- Writes a file under `$HANDOFF_DIR`
 - Prints the saved path
 
 ## What `/handoff` does NOT do
 
 - Does not start a new session or read prior handoffs (write-only)
 - Does not dump the full conversation history
-- Does not save to the project directory (global `~/.local/share/bstack/handoff/` only)
+- Does not save to the project directory (global `$HANDOFF_DIR` only)
 - Does not register any automatic trigger (no SessionEnd hook, etc.)
 
 ## Steps
@@ -59,12 +63,13 @@ at handoff time)`.
 3. **Build filename** — local time:
 
    ```text
-   ~/.local/share/bstack/handoff/YYYY-MM-DD-HHmm-<topic>.md
+   $HANDOFF_DIR/YYYY-MM-DD-HHmm-<topic>.md
    ```
 
-   e.g. `~/.local/share/bstack/handoff/2026-04-22-1430-add-handoff-skill.md`
+   With `XDG_DATA_HOME` unset, this resolves to
+   `~/.local/share/bstack/handoff/2026-04-22-1430-add-handoff-skill.md`.
 
-4. **Ensure directory** — `mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/bstack/handoff"`
+4. **Ensure directory** — `mkdir -p "$HANDOFF_DIR"`
 
 5. **Write the file** using the template below. Always include `Task`,
    `Completed`, `Current State`, and `Next Steps`. Emit conditional sections
