@@ -40,3 +40,11 @@ setup() {
     grep -q 'First action' "$SKILL_FILE"
     grep -q 'Last verified' "$SKILL_FILE"
 }
+
+@test "me: handoff preserves user direction and derives one safe first action" {
+    grep -q 'User direction' "$SKILL_FILE"
+    grep -q 'first required action' "$SKILL_FILE"
+    grep -q 'Do not invent a command' "$SKILL_FILE"
+    run grep -q 'make it the `First action`' "$SKILL_FILE"
+    assert_failure
+}

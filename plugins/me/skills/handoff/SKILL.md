@@ -29,9 +29,11 @@ pasting the file path or contents directly and follows the Resume Protocol.
 
 If the user passes text after `/handoff` (e.g. `/handoff now we need to join and
 index this into search`), treat it as an **explicit next-step instruction** and
-make it the `First action` at the top of `## Next Steps`, before any steps
-inferred from the conversation. Include it verbatim and label it: `(from user
-at handoff time)`.
+preserve the full instruction verbatim as `User direction` in `## Next Steps`,
+labelled `(from user at handoff time)`. Derive one singular `First action` from
+its first required action and put that at the top, before any steps inferred
+from the conversation. Put later required actions after it.
+Do not invent a command when none was supplied.
 
 ## What `/handoff` does
 
@@ -120,6 +122,7 @@ continues: <previous handoff filename — only if this session resumed from one>
 
 ## Next Steps
 1. First action: <the exact action to resume safely, including any required preflight re-check>
+   - User direction: <full verbatim /handoff instruction — only when provided> (from user at handoff time)
 2. <next action> → verify with `<check>` or Done when: <evidence>
 
 ## Blockers & Open Questions
