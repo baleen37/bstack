@@ -1,6 +1,6 @@
 {
   "name": "jira",
-  "version": "17.32.1",
+  "version": "17.33.0",
   "description": "Jira workflow guidance backed by a slim Atlassian MCP facade",
   "author": {
     "name": "baleen37",
