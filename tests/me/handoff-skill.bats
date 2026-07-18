@@ -45,6 +45,9 @@ setup() {
     grep -q 'User direction' "$SKILL_FILE"
     grep -q 'first required action' "$SKILL_FILE"
     grep -q 'Do not invent a command' "$SKILL_FILE"
+    grep -Fq 'First action: <the exact work action to start after the Resume Protocol>' "$SKILL_FILE"
+    run grep -Fq 'First action: <the exact action to resume safely, including any required preflight re-check>' "$SKILL_FILE"
+    assert_failure
     run grep -q 'make it the `First action`' "$SKILL_FILE"
     assert_failure
 }

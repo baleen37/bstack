@@ -121,7 +121,7 @@ continues: <previous handoff filename — only if this session resumed from one>
 - Last verified: `<command-or-check>` → <result>
 
 ## Next Steps
-1. First action: <the exact action to resume safely, including any required preflight re-check>
+1. First action: <the exact work action to start after the Resume Protocol>
    - User direction: <full verbatim /handoff instruction — only when provided> (from user at handoff time)
 2. <next action> → verify with `<check>` or Done when: <evidence>
 
@@ -164,8 +164,8 @@ The receiving session must:
 - **Prefer stable pointers.** Use paths, PRs, issues, docs, commands, artifact
   names, and source links over copied output.
 - **Next Steps should be verifiable.** Prefer "do X → verify with Y" when the check matters.
-- **First action is singular.** Put the exact preflight or work action that the
-  receiving session must perform first at the beginning of `Next Steps`.
+- **First action is singular.** Put the exact work action to start after the
+  Resume Protocol at the beginning of `Next Steps`.
 - **State claims need a re-check path.** Pair every "merged / tests pass / deployed"
   claim with the exact command to re-verify it. The next session cannot tell a
   verified claim from an assumed one — an unverifiable claim gets treated as
