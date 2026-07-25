@@ -143,7 +143,7 @@ output that failed. Do not claim success without evidence.
 
 For the heavy categories, delegate rather than re-implement:
 
-- **Code quality** — tests pass, lint/type/build clean, code reviewed (use `me:review`, `me:test`)
+- **Code quality** — tests pass, lint/type/build clean, code reviewed
 - **Security** — no secrets, audit clean, auth/CORS/rate limits in place (use `me:security-auditor`)
 - **Performance / a11y** — see `references/performance-checklist.md`, `references/accessibility-checklist.md`
 - **Infra / docs** — env vars set, migrations ready, health endpoint exists, docs/changelog updated
