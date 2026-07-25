@@ -9,8 +9,10 @@ Keep source discovery and discarded leads out of the parent context.
 
 ## Delegate
 
-When source discovery is needed, send the complete question to one
-`me:researcher`. Do not split one request across multiple researchers.
+When source discovery is needed, invoke exactly one
+`Agent: subagent_type="me:researcher"` with the complete question. The parent
+must not search, browse, or otherwise discover sources itself. Do not split one
+request across multiple researchers.
 
 Explicitly select the most token-efficient available model that can meet the
 evidence bar. Do not rely on an inherited default. Escalate only after the
