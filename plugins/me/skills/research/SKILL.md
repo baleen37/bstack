@@ -5,31 +5,29 @@ description: Use when external facts, documentation, standards, papers, releases
 
 # Research
 
-Keep source discovery and discarded leads out of the parent context.
-
 ## Scope
 
-Before any other action, reject codebase exploration and local bug
-investigation as outside this skill. Respond immediately without reading
+Reject codebase exploration and local bug investigation as outside this skill.
+Respond without reading
 repository files, searching, browsing, or delegating.
 
 ## Delegate
 
-When source discovery is needed, invoke exactly one
-`Agent: subagent_type="me:researcher"` with the complete question. The parent
-must not search, browse, or otherwise discover sources itself. Do not split one
-request across multiple researchers.
+When source discovery is needed, send the complete question to one
+`me:researcher`; do not split one request across researchers.
 
-Explicitly select the most token-efficient available model that can meet the
-evidence bar. Do not rely on an inherited default. Escalate only after the
-result fails a stated quality requirement.
+Use the least expensive capable model. Escalate only after the result fails a
+stated quality requirement.
 
-Give the researcher:
+If delegation is unavailable or fails, research directly under the
+researcher's read-only evidence and output contract.
+
+Give:
 
 - the question and decision it must support,
 - freshness or date constraints,
 - the evidence bar,
-- the required output fields.
+- required output fields.
 
 If the user supplies one exact source and only asks to read it, read it
 directly. Any source discovery belongs in the researcher.
