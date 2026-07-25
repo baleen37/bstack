@@ -22,20 +22,20 @@ stated quality requirement.
 If delegation is unavailable or fails, research directly under the
 researcher's read-only evidence and output contract.
 
-Give:
+Give the researcher:
 
 - the question and decision it must support,
-- freshness or date constraints,
+- freshness/date constraints,
 - the evidence bar,
 - required output fields.
 
-If the user supplies one exact source and only asks to read it, read it
-directly. Any source discovery belongs in the researcher.
+If the user supplies an exact source only to read, read it directly. Source
+discovery belongs in the researcher unless delegation is unavailable or fails.
 
-Use the returned synthesis without repeating the investigation. Spot-check a
+Use returned synthesis without repeating investigation. Spot-check a
 citation only when the claim is material, suspicious, or high-risk.
 
 ## Result
 
 Return the direct answer, claim-bearing sources, and material gaps. Keep raw
-search results, dead ends, and unused sources inside the researcher context.
+search results, dead ends, and unused sources outside the final answer.
