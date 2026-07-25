@@ -38,15 +38,8 @@ load ../helpers/bats_helper
     [ "$words" -le 260 ]
 }
 
-@test "me: lifecycle skills include test, review, and ship" {
-    for skill in test review ship; do
-        [ -f "${PROJECT_ROOT}/plugins/me/skills/${skill}/SKILL.md" ]
-    done
-}
-
-@test "me: evolve skill exists" {
-    [ -f "${PROJECT_ROOT}/plugins/me/skills/evolve/SKILL.md" ]
-    [ -f "${PROJECT_ROOT}/plugins/me/skills/evolve/scripts/build-index.ts" ]
+@test "me: lifecycle skills include ship" {
+    [ -f "${PROJECT_ROOT}/plugins/me/skills/ship/SKILL.md" ]
 }
 
 @test "me: release-with-github-app doc uses bun release flow" {
