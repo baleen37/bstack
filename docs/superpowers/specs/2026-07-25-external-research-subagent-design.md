@@ -72,8 +72,10 @@ Do not hard-code a named model. Use the most token-efficient available model
 that can meet the evidence bar. A more capable model is appropriate only when
 the requested research quality cannot otherwise be met.
 
-The agent frontmatter uses `model: inherit`, satisfying the repository-required
-field without pinning a named model.
+The agent frontmatter uses `model: inherit` to satisfy the repository-required
+field without pinning a named model. Each dispatch must still explicitly select
+the most token-efficient available model that can meet the evidence bar; it
+must not silently inherit the session default.
 
 ## Output Contract
 
