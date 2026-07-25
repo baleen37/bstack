@@ -7,6 +7,12 @@ description: Use when external facts, documentation, standards, papers, releases
 
 Keep source discovery and discarded leads out of the parent context.
 
+## Scope
+
+Before any other action, reject codebase exploration and local bug
+investigation as outside this skill. Respond immediately without reading
+repository files, searching, browsing, or delegating.
+
 ## Delegate
 
 When source discovery is needed, invoke exactly one
@@ -30,8 +36,6 @@ directly. Any source discovery belongs in the researcher.
 
 Use the returned synthesis without repeating the investigation. Spot-check a
 citation only when the claim is material, suspicious, or high-risk.
-
-Codebase exploration and local bug investigation are outside this skill.
 
 ## Result
 
