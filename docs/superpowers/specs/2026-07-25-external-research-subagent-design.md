@@ -5,9 +5,10 @@
 Make `me:research` a token-efficient path for finding accurate external
 information that can be reused as reference material.
 
-The skill delegates external research to one `me:researcher` subagent so search
-results, discarded leads, and long source text do not consume the parent
-agent's context.
+The skill delegates external research to one `me:researcher` subagent when
+available, so search results, discarded leads, and long source text do not
+consume the parent agent's context. If delegation is unavailable or fails, the
+parent researches directly under the same contract.
 
 ## Scope
 
@@ -33,7 +34,9 @@ Out of scope:
 The skill is a small routing contract:
 
 1. Recognize requests that require finding external information.
-2. Delegate the complete research question to one `me:researcher`.
+2. Delegate the complete research question to one `me:researcher` when
+   available; if delegation is unavailable or fails, load the researcher
+   contract and research directly.
 3. Give the subagent a self-contained brief containing:
    - the question,
    - freshness or date constraints,
@@ -44,7 +47,8 @@ The skill is a small routing contract:
    repeating the whole investigation.
 
 If the user supplies one exact source and only asks for that source to be read,
-the parent may read it directly. Any source discovery uses the researcher.
+the parent loads the researcher contract and reads it directly. Any source
+discovery uses one researcher when available, with the same direct fallback.
 
 ### `plugins/me/agents/researcher.md`
 
@@ -108,7 +112,8 @@ prose assertions:
 
 For each scenario, check:
 
-- One researcher subagent handles the request.
+- One researcher handles source discovery when delegation is available;
+  otherwise the parent loads and follows the same contract.
 - Raw search results and dead ends stay out of the parent response.
 - Every material external claim has a source that was opened.
 - The answer contains no codebase exploration or mutation.

@@ -1,5 +1,8 @@
 # External Research Subagent Implementation Plan
 
+> **Current behavior:** The delegation fallback plan supersedes this plan's
+> unconditional delegation path while preserving its evidence contract.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make `me:research` a compact, external-source-only workflow that delegates source discovery to one token-efficient researcher subagent.
