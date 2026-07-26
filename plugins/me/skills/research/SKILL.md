@@ -19,8 +19,10 @@ When source discovery is needed, send the complete question to one
 Use the least expensive capable model. Escalate only after the result fails a
 stated quality requirement.
 
-If delegation is unavailable or fails, research directly under the
-researcher's read-only evidence and output contract.
+When researching directly—because delegation is unavailable or failed, or
+because the user supplied one exact source only to read—first read
+`../../agents/researcher.md` and follow its read-only evidence and output
+contract.
 
 Give the researcher:
 
@@ -28,9 +30,6 @@ Give the researcher:
 - freshness/date constraints,
 - the evidence bar,
 - required output fields.
-
-If the user supplies an exact source only to read, read it directly. Source
-discovery belongs in the researcher unless delegation is unavailable or fails.
 
 Use returned synthesis without repeating investigation. Spot-check a
 citation only when the claim is material, suspicious, or high-risk.
