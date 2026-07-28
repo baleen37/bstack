@@ -68,6 +68,16 @@ describe("knowledge-base CLI", () => {
     expect(services.search).toHaveBeenCalledWith("배포 절차", "all", 10);
   });
 
+  it("rejects a whitespace-only search query before calling the service", async () => {
+    const services = fakeServices();
+    const output = memoryIo();
+
+    await expect(runCli(["search", "   "], services, output.io)).resolves.toBe(2);
+
+    expect(output.stderr()).toContain("<query> must not be empty");
+    expect(services.search).not.toHaveBeenCalled();
+  });
+
   it("prints search results as JSON only when requested", async () => {
     const output = memoryIo();
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { realpathSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import {
   parseArgs,
@@ -142,6 +143,9 @@ async function runSearch(
     json: { type: "boolean" },
   });
   const query = exactlyOne(parsed.positionals, "<query> is required");
+  if (query.trim() === "") {
+    throw new UsageError("<query> must not be empty");
+  }
   const results = await services.search(query, scope(parsed.values.scope), limit(parsed.values.limit));
   io.stdout(parsed.values.json ? json(results) : formatSearchResults(results));
   return 0;
@@ -278,7 +282,18 @@ export function assertSupportedNodeVersion(version = process.versions.node): voi
   }
 }
 
-if (process.argv[1] !== undefined && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
+function isEntrypoint(argv1: string | undefined): boolean {
+  if (argv1 === undefined) {
+    return false;
+  }
+  try {
+    return fileURLToPath(import.meta.url) === realpathSync(resolve(argv1));
+  } catch {
+    return false;
+  }
+}
+
+if (isEntrypoint(process.argv[1])) {
   try {
     assertSupportedNodeVersion();
     process.exitCode = await runCli(process.argv.slice(2), createServices(), {

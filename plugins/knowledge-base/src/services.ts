@@ -61,48 +61,59 @@ export function createServices(): KnowledgeBaseServices {
 
     async index(scope, force) {
       const { config, paths } = await loadConfigured();
-      const store = await openIndexStore(config.checkoutPath, paths);
-      try {
-        return await indexKnowledge(store, scope, force, paths.modelFile);
-      } finally {
-        await store.close();
-      }
+      return useStore(
+        openIndexStore(config.checkoutPath, paths),
+        (store) => indexKnowledge(store, scope, force, paths.modelFile),
+      );
     },
 
     async search(query, scope, limit) {
       const { paths } = await loadConfigured();
-      const store = await openSearchStore(paths);
-      try {
-        return await searchKnowledge(store, query, scope, limit);
-      } finally {
-        await store.close();
-      }
+      return useStore(openSearchStore(paths), (store) => searchKnowledge(store, query, scope, limit));
     },
 
     async get(ref, fromLine, maxLines) {
       const { paths } = await loadConfigured();
-      const store = await openSearchStore(paths);
-      try {
-        return await getKnowledge(store, ref, fromLine, maxLines);
-      } finally {
-        await store.close();
-      }
+      return useStore(openSearchStore(paths), (store) => getKnowledge(store, ref, fromLine, maxLines));
     },
 
     async status() {
       const { paths } = await loadConfigured();
-      const store = await openSearchStore(paths);
-      try {
-        return await getKnowledgeStatus(store);
-      } finally {
-        await store.close();
-      }
+      return useStore(openSearchStore(paths), (store) => getKnowledgeStatus(store));
     },
 
     async startMcp() {
       throw new Error("MCP server is not available");
     },
   };
+}
+
+async function useStore<TStore extends { close(): Promise<void> }, TResult>(
+  openStore: Promise<TStore>,
+  operation: (store: TStore) => Promise<TResult>,
+): Promise<TResult> {
+  const store = await openStore;
+  let operationError: unknown;
+  let operationFailed = false;
+  try {
+    return await operation(store);
+  } catch (error) {
+    operationFailed = true;
+    operationError = error;
+    throw error;
+  } finally {
+    try {
+      await store.close();
+    } catch (closeError) {
+      if (operationFailed) {
+        throw new AggregateError(
+          [operationError, closeError],
+          "knowledge-base operation and store close both failed",
+        );
+      }
+      throw closeError;
+    }
+  }
 }
 
 async function loadConfigured(): Promise<{
