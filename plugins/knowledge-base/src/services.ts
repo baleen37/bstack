@@ -1,6 +1,7 @@
 import { homedir } from "node:os";
 import { isAbsolute } from "node:path";
 import { loadConfig, saveConfig } from "./config.js";
+import { startMcpServer } from "./mcp.js";
 import { ensureModel } from "./model.js";
 import { resolvePaths } from "./paths.js";
 import { commandRunner } from "./process.js";
@@ -83,7 +84,7 @@ export function createServices(): KnowledgeBaseServices {
     },
 
     async startMcp() {
-      throw new Error("MCP server is not available");
+      await startMcpServer(this);
     },
   };
 }
