@@ -84,30 +84,30 @@ eligible_codex_plugins() {
 
         local claude_manifest="${PROJECT_ROOT}/plugins/${plugin}/.claude-plugin/plugin.json"
         local codex_manifest="${PROJECT_ROOT}/plugins/${plugin}/.codex-plugin/plugin.json"
+        local expected_display_name
+        local expected_capabilities='["Skills"]'
+        local expected_prompt
 
-        jq -e '
-          .interface.displayName | strings | select(length > 0)
-        ' "$codex_manifest" >/dev/null
-        jq -e '
-          .interface.shortDescription | strings | select(length > 0)
-        ' "$codex_manifest" >/dev/null
-        jq -e '
-          .interface.longDescription | strings | select(length > 0)
-        ' "$codex_manifest" >/dev/null
-        jq -e '
-          .interface.developerName | strings | select(length > 0)
-        ' "$codex_manifest" >/dev/null
+        expected_display_name="$(awk -F '-' '{
+            for (part = 1; part <= NF; part++) {
+                printf "%s%s%s", (part == 1 ? "" : " "), toupper(substr($part, 1, 1)), substr($part, 2)
+            }
+        }' <<< "$plugin")"
+        expected_prompt="Use ${expected_display_name} for this task."
+        expected_prompt="${expected_prompt:0:127}"
+
+        [ "$(jq -r '.interface.displayName' "$codex_manifest")" = "$expected_display_name" ]
+        [ "$(jq -r '.interface.shortDescription' "$codex_manifest")" = "$(jq -r '.description' "$claude_manifest")" ]
+        [ "$(jq -r '.interface.longDescription' "$codex_manifest")" = "$(jq -r '.description' "$claude_manifest")" ]
+        [ "$(jq -r '.interface.developerName' "$codex_manifest")" = "$(jq -r '.author.name' "$claude_manifest")" ]
         [ "$(jq -r '.interface.category' "$codex_manifest")" = "Productivity" ]
-        jq -e '.interface.capabilities | index("Skills")' "$codex_manifest" >/dev/null
-        jq -e '
-          (.interface.defaultPrompt | type == "array") and
-          (.interface.defaultPrompt | length == 1) and
-          (.interface.defaultPrompt[0] | type == "string" and length > 0 and length < 128)
-        ' "$codex_manifest" >/dev/null
 
         if [ "$(jq -r '.mcpServers // empty' "$claude_manifest")" != "" ]; then
-            jq -e '.interface.capabilities | index("MCP")' "$codex_manifest" >/dev/null
+            expected_capabilities='["Skills","MCP"]'
         fi
+
+        [ "$(jq -c '.interface.capabilities' "$codex_manifest")" = "$expected_capabilities" ]
+        [ "$(jq -c '.interface.defaultPrompt' "$codex_manifest")" = "$(jq -cn --arg prompt "$expected_prompt" '[ $prompt ]')" ]
     done <<< "$expected_plugins"
 }
 

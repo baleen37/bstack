@@ -68,3 +68,18 @@ manifest.
   markdownlint violations. Its only automatic change, a final newline in
   `plugins/me/skills/setup/CLAUDE.md`, was reverted. New/changed Task 7 files introduced no reported
   ShellCheck or markdownlint finding.
+
+## Fix round 1
+
+- Hardened the local stdio launcher test to require the exact two-element argument array
+  `[-lc, exec "${KNOWLEDGE_BASE_BIN:-knowledge-base}" mcp]` and reject `npx`, `bunx`, npm install,
+  and bun install tokens anywhere in its arguments.
+- Replaced presence-only Codex interface checks with source-derived equality checks for title-cased
+  display name, both descriptions, developer name, exact capabilities, category, and the bounded
+  one-item default prompt. The assertion derives the display name independently with portable `awk`
+  rather than copying the generator's jq implementation.
+- This was a test-gap fix: the existing launcher and generator already met the strengthened
+  contracts. The first test invocation exposed an `awk` test-authoring error (reserved `index`
+  identifier), not a product failure; after renaming it to `part`, targeted BATS passed 11/11.
+- Reverification: root suite passed (66 root tests plus all plugin/integration suites), sync/check
+  passed, and plugin plus skill validators passed.
