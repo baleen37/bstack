@@ -33,7 +33,8 @@ hook은 dotfiles와 다음 pane option contract를 공유한다.
 소유 session을 추적하기 위해 private pane option
 `@agent_status_session_id`도 사용한다. Active event는 input의 `session_id`를
 private option에 기록하면서 공개 상태를 갱신한다. `SessionEnd`는 input의
-`session_id`가 현재 private option과 일치할 때만 두 option을 해제한다.
+`session_id`가 현재 private option과 일치할 때만 두 option을 해제한다. 이
+비교와 해제는 하나의 tmux `if-shell -F` command queue에서 수행한다.
 
 Claude 전용 `Notification`과 `StopFailure`는 공용 `hooks.json`에 넣지 않는다.
 Codex interactive TUI가 같은 실패 event를 제공하지 않기 때문이다. `PreToolUse`,
@@ -52,9 +53,9 @@ Event는 위 고정 상태로 변환하고, session ID는 pane 소유권 판정�
 - `session_id`가 없거나 빈 문자열이면 성공으로 종료한다.
 - 알려진 active event는 한 tmux command sequence에서
   `@agent_status_session_id`와 `@agent_status`를 함께 설정한다.
-- `SessionEnd`는 현재 `@agent_status_session_id`를 읽고 input의 `session_id`와
-  일치할 때만 한 tmux command sequence에서 `@agent_status`와
-  `@agent_status_session_id`를 함께 해제한다.
+- `SessionEnd`는 tmux `if-shell -F`에서 현재 `@agent_status_session_id`와
+  input의 `session_id`를 비교하고, 일치할 때만 같은 command queue에서
+  `@agent_status`와 `@agent_status_session_id`를 함께 해제한다.
 - 성공적인 변경 뒤 `tmux refresh-client -S`를 시도한다.
 - 잘못된 JSON, 알 수 없는 event, tmux command 실패는 hook consumer를
   중단시키지 않고 성공으로 종료한다.

@@ -32,6 +32,21 @@ printf '%s\n' "$*" >> "$TMUX_LOG"
 
 while (($#)); do
     case "$1" in
+        if-shell)
+            format="$5"
+            command="$6"
+            expected_session_id="${format##*,}"
+            expected_session_id="${expected_session_id%\}}"
+            current_session_id=""
+            if [[ -f "${TMUX_STATE_DIR}/session_id" ]]; then
+                current_session_id="$(cat "${TMUX_STATE_DIR}/session_id")"
+            fi
+            if [[ "$current_session_id" == "$expected_session_id" ]]; then
+                [[ "$command" == "set-option -pu -t %7 @agent_status ; set-option -pu -t %7 @agent_status_session_id" ]]
+                rm -f "${TMUX_STATE_DIR}/status" "${TMUX_STATE_DIR}/session_id"
+            fi
+            exit 0
+            ;;
         show-option)
             option="$5"
             if [[ "$option" == "@agent_status" ]]; then
@@ -133,7 +148,7 @@ assert_tmux_log() {
         'printf "%s\\n" '\''{"hook_event_name":"SessionEnd","session_id":"session-1"}'\'' | "$1"' _ "$HOOK"
 
     assert_success
-    assert_tmux_log $'show-option -pv -t %7 @agent_status_session_id\nset-option -pu -t %7 @agent_status ; set-option -pu -t %7 @agent_status_session_id\nrefresh-client -S'
+    assert_tmux_log $'if-shell -F -t %7 #{==:#{@agent_status_session_id},session-1} set-option -pu -t %7 @agent_status ; set-option -pu -t %7 @agent_status_session_id\nrefresh-client -S'
 }
 
 @test "agent status: missing TMUX_PANE is a successful no-op" {

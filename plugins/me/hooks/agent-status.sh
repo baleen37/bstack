@@ -30,13 +30,9 @@ case "$event" in
         state="needs_input"
         ;;
     SessionEnd)
-        current_session_id="$(
-            tmux show-option -pv -t "$TMUX_PANE" @agent_status_session_id 2>/dev/null
-        )" || exit 0
-        [[ "$current_session_id" == "$session_id" ]] || exit 0
-
-        tmux set-option -pu -t "$TMUX_PANE" @agent_status \; \
-            set-option -pu -t "$TMUX_PANE" @agent_status_session_id \
+        tmux if-shell -F -t "$TMUX_PANE" \
+            "#{==:#{@agent_status_session_id},${session_id}}" \
+            "set-option -pu -t $TMUX_PANE @agent_status ; set-option -pu -t $TMUX_PANE @agent_status_session_id" \
             >/dev/null 2>&1 || true
         tmux refresh-client -S >/dev/null 2>&1 || true
         exit 0
