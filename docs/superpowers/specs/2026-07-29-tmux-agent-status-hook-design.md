@@ -10,6 +10,8 @@ pane-local tmux 상태로 기록한다. Herdr, daemon, 상태 파일, 네트워�
 
 - 같은 plugin hook이 Claude Code와 Codex에서 동작한다.
 - tmux 안에서 실행된 agent만 현재 `TMUX_PANE`의 `@agent_status`를 변경한다.
+- 같은 pane에서 새 session이 시작된 뒤 도착한 이전 session의 `SessionEnd`가
+  새 상태를 지우지 않는다.
 - tmux 밖의 agent와 tmux command 실패는 agent 실행을 방해하지 않는다.
 - hook input의 prompt, cwd, message는 tmux command나 status text에 사용하지
   않는다.
@@ -27,6 +29,12 @@ hook은 dotfiles와 다음 pane option contract를 공유한다.
 | `Stop` | `ready` |
 | `SessionEnd` | option 해제 |
 
+`@agent_status`는 dotfiles와 공유하는 공개 상태 계약이다. Hook은 pane의 현재
+소유 session을 추적하기 위해 private pane option
+`@agent_status_session_id`도 사용한다. Active event는 input의 `session_id`를
+private option에 기록하면서 공개 상태를 갱신한다. `SessionEnd`는 input의
+`session_id`가 현재 private option과 일치할 때만 두 option을 해제한다.
+
 Claude 전용 `Notification`과 `StopFailure`는 공용 `hooks.json`에 넣지 않는다.
 Codex interactive TUI가 같은 실패 event를 제공하지 않기 때문이다. `PreToolUse`,
 `PostToolUse`, subagent event도 main turn 상태에 필요한 최소 범위를 넘으므로
@@ -36,19 +44,22 @@ Codex interactive TUI가 같은 실패 event를 제공하지 않기 때문이다
 
 ### `plugins/me/hooks/agent-status.sh`
 
-스크립트는 stdin JSON의 `hook_event_name`만 `jq`로 읽고 위 고정 상태로
-변환한다.
+스크립트는 stdin JSON의 `hook_event_name`과 `session_id`를 `jq`로 읽는다.
+Event는 위 고정 상태로 변환하고, session ID는 pane 소유권 판정에만 사용한다.
 
 - `set -euo pipefail`을 사용한다.
 - `TMUX_PANE`이 없거나 `tmux`가 PATH에 없으면 성공으로 종료한다.
-- 알려진 active event는
-  `tmux set-option -p -t "$TMUX_PANE" @agent_status "$state"`를 실행한다.
-- `SessionEnd`는
-  `tmux set-option -pu -t "$TMUX_PANE" @agent_status`를 실행한다.
+- `session_id`가 없거나 빈 문자열이면 성공으로 종료한다.
+- 알려진 active event는 한 tmux command sequence에서
+  `@agent_status_session_id`와 `@agent_status`를 함께 설정한다.
+- `SessionEnd`는 현재 `@agent_status_session_id`를 읽고 input의 `session_id`와
+  일치할 때만 한 tmux command sequence에서 `@agent_status`와
+  `@agent_status_session_id`를 함께 해제한다.
 - 성공적인 변경 뒤 `tmux refresh-client -S`를 시도한다.
 - 잘못된 JSON, 알 수 없는 event, tmux command 실패는 hook consumer를
   중단시키지 않고 성공으로 종료한다.
-- option value는 고정 문자열이며 hook input을 shell argument로 전달하지 않는다.
+- 공개 status option value는 고정 문자열이다. Hook input의 `session_id`만
+  private owner option value로 전달하며 prompt, cwd, message는 사용하지 않는다.
 
 ### `plugins/me/hooks/hooks.json`
 
@@ -61,8 +72,9 @@ command path는 저장소 관례대로 다음 fallback을 사용한다.
 "${PLUGIN_ROOT:-$CLAUDE_PLUGIN_ROOT}/hooks/agent-status.sh"
 ```
 
-각 command에는 짧은 timeout을 둔다. Plugin source에 포함된 `hooks/hooks.json`은
-Claude와 Codex가 함께 자동 발견하므로 사용자 dotfiles에 provider별 hook 설정을
+네 active event command의 timeout은 `5`, 빠른 정리가 필요한 `SessionEnd`의
+timeout은 `3`이다. Plugin source에 포함된 `hooks/hooks.json`은 Claude와
+Codex가 함께 자동 발견하므로 사용자 dotfiles에 provider별 hook 설정을
 복제하지 않는다.
 
 ## 오류 처리와 한계
@@ -80,11 +92,13 @@ Claude와 Codex가 함께 자동 발견하므로 사용자 dotfiles에 provider�
 사용해 다음 동작을 검증한다.
 
 - 각 공통 event의 정확한 `set-option` argument
-- `SessionEnd`의 pane option 해제
+- 소유자가 일치하는 `SessionEnd`의 두 pane option 해제
+- A start, B prompt, 늦은 A end 순서에서 B의 owner와 `running` 상태가
+  유지되고 B end에서 두 option이 해제되는 race 회귀
 - `TMUX_PANE` 미설정과 tmux 부재 시 no-op
-- 잘못된 JSON과 알 수 없는 event의 no-op
+- 잘못된 JSON, 알 수 없는 event, 없거나 빈 `session_id`의 no-op
 - tmux 실패가 hook exit code에 전파되지 않음
-- `hooks.json`의 다섯 event와 portable plugin-root command
+- `hooks.json`의 다섯 event, event별 timeout, portable plugin-root command
 
 검증은 focused BATS, ShellCheck, Codex artifact drift check, 전체 BATS,
 pre-commit 순서로 실행한다. 버전 파일은 semantic-release가 관리하므로 직접
