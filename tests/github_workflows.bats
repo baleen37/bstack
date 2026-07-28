@@ -139,3 +139,22 @@ job_has_if_condition() {
 
     [[ "$fetch_depth" == "0" ]]
 }
+
+@test "knowledge-base package is built and tested in CI without the real-model opt-in smoke" {
+    ensure_yaml_validator
+    local build_command
+    local test_command
+    build_command=$(yaml_get "$CI_WORKFLOW" '.jobs.test.steps[] | select(.name == "Build knowledge-base package") | .run')
+    test_command=$(yaml_get "$CI_WORKFLOW" '.jobs.test.steps[] | select(.name == "Test knowledge-base package") | .run')
+
+    [[ "$build_command" == "bun --cwd plugins/knowledge-base run build" ]]
+    [[ "$test_command" == "bun --cwd plugins/knowledge-base run test" ]]
+    ! grep -q 'KNOWLEDGE_BASE_REAL_MODEL=1' "$CI_WORKFLOW"
+}
+
+@test "release synchronizes and commits the nested knowledge-base package version" {
+    local release_config="${PROJECT_ROOT}/.releaserc.js"
+
+    grep -q 'plugins/knowledge-base/package.json' "$release_config"
+    grep -q "'plugins/knowledge-base/package.json'" "$release_config"
+}

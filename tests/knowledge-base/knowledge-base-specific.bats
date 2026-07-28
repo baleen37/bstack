@@ -29,3 +29,45 @@ setup() {
   [ "$status" -eq 1 ]
   grep -R -q 'rerank:[[:space:]]*false' "${PROJECT_ROOT}/plugins/knowledge-base/src"
 }
+
+@test "knowledge-base built CLI serves MCP only over stdio" {
+  local package_dir="${PROJECT_ROOT}/plugins/knowledge-base"
+  local cli="${package_dir}/dist/cli.js"
+
+  run bun --cwd "$package_dir" run build
+  [ "$status" -eq 0 ]
+  [ -f "$cli" ]
+
+  pushd "$package_dir" >/dev/null
+  run env \
+    KNOWLEDGE_BASE_CONFIG_DIR="${TEST_TEMP_DIR}/config" \
+    KNOWLEDGE_BASE_DATA_DIR="${TEST_TEMP_DIR}/data" \
+    KNOWLEDGE_BASE_CACHE_DIR="${TEST_TEMP_DIR}/cache" \
+    node --input-type=module --eval '
+      import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+      import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+
+      const transport = new StdioClientTransport({
+        command: process.execPath,
+        args: [process.argv[1], "mcp"],
+        env: process.env,
+        stderr: "pipe",
+      });
+      const client = new Client({ name: "knowledge-base-stdio-smoke", version: "1.0.0" });
+      try {
+        await client.connect(transport);
+        const { tools } = await client.listTools();
+        const names = tools.map((tool) => tool.name).sort();
+        if (JSON.stringify(names) !== JSON.stringify(["get", "search", "status"])) {
+          throw new Error(`unexpected MCP tools: ${JSON.stringify(names)}`);
+        }
+        if (client.getServerVersion()?.name !== "knowledge-base") {
+          throw new Error("MCP initialization did not report knowledge-base");
+        }
+      } finally {
+        await client.close();
+      }
+    ' "$cli"
+  popd >/dev/null
+  [ "$status" -eq 0 ]
+}
