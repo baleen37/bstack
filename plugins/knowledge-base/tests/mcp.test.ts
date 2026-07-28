@@ -32,23 +32,57 @@ function rawMcpFrames(): Promise<{ frames: Record<string, unknown>[]; stderr: st
     const frames: Record<string, unknown>[] = [];
     let stderr = "";
     let stdout = "";
-    let finished = false;
-    const timeout = setTimeout(() => finish(new Error("MCP child timed out")), 2_000);
+    let observedStdout = "";
+    let terminated = false;
+    let failure: Error | undefined;
+    const timeout = setTimeout(() => terminate(new Error("MCP child timed out")), 2_000);
+    let forceKillTimeout: ReturnType<typeof setTimeout> | undefined;
 
-    function finish(error?: Error): void {
-      if (finished) {
+    function terminate(error: Error): void {
+      if (failure === undefined) {
+        failure = error;
+      }
+      if (terminated) {
         return;
       }
-      finished = true;
-      clearTimeout(timeout);
-      if (!child.killed) {
+      terminated = true;
+      if (child.exitCode === null && !child.killed) {
         child.kill("SIGTERM");
       }
-      if (error === undefined) {
-        resolvePromise({ frames, stderr });
-      } else {
-        rejectPromise(error);
+      forceKillTimeout = setTimeout(() => {
+        if (child.exitCode === null) {
+          child.kill("SIGKILL");
+        }
+      }, 500);
+    }
+
+    function parseFrames(): Record<string, unknown>[] {
+      if (!stdout.endsWith("\n")) {
+        throw new Error(`MCP child emitted an unterminated stdout frame: ${stdout}`);
       }
+      const lines = stdout.slice(0, -1).split("\n");
+      return lines.map((rawLine) => {
+        const line = rawLine.replace(/\r$/, "");
+        if (line === "") {
+          throw new Error("MCP child emitted an empty stdout frame");
+        }
+        try {
+          return JSON.parse(line) as Record<string, unknown>;
+        } catch {
+          throw new Error(`MCP child emitted non-JSON stdout: ${line}`);
+        }
+      });
+    }
+
+    function cleanup(): void {
+      clearTimeout(timeout);
+      if (forceKillTimeout !== undefined) {
+        clearTimeout(forceKillTimeout);
+      }
+      child.stdout.removeAllListeners("data");
+      child.stderr.removeAllListeners("data");
+      child.stdin.removeAllListeners("error");
+      child.removeAllListeners("error");
     }
 
     child.stderr.setEncoding("utf8");
@@ -56,28 +90,23 @@ function rawMcpFrames(): Promise<{ frames: Record<string, unknown>[]; stderr: st
     child.stdout.setEncoding("utf8");
     child.stdout.on("data", (chunk: string) => {
       stdout += chunk;
+      observedStdout += chunk;
       while (true) {
-        const newline = stdout.indexOf("\n");
+        const newline = observedStdout.indexOf("\n");
         if (newline === -1) {
           return;
         }
-        const line = stdout.slice(0, newline).replace(/\r$/, "");
-        stdout = stdout.slice(newline + 1);
-        if (line === "") {
-          finish(new Error("MCP child emitted an empty stdout frame"));
-          return;
-        }
+        const line = observedStdout.slice(0, newline).replace(/\r$/, "");
+        observedStdout = observedStdout.slice(newline + 1);
 
         let frame: Record<string, unknown>;
         try {
           frame = JSON.parse(line) as Record<string, unknown>;
         } catch {
-          finish(new Error(`MCP child emitted non-JSON stdout: ${line}`));
-          return;
+          continue;
         }
-        frames.push(frame);
 
-        if (frame.id === 1) {
+        if (!terminated && frame.id === 1 && "result" in frame) {
           child.stdin.write(`${JSON.stringify({
             jsonrpc: "2.0",
             method: "notifications/initialized",
@@ -90,19 +119,26 @@ function rawMcpFrames(): Promise<{ frames: Record<string, unknown>[]; stderr: st
             params: {},
           })}\n`);
         }
-        if (frame.id === 2) {
+        if (!terminated && frame.id === 2) {
           child.stdin.end();
         }
       }
     });
-    child.once("error", (error) => finish(error));
-    child.once("exit", () => {
-      if (stdout !== "") {
-        finish(new Error(`MCP child emitted an unterminated stdout frame: ${stdout}`));
-      } else if (!frames.some((frame) => frame.id === 2)) {
-        finish(new Error(`MCP child exited before tools/list response: ${stderr}`));
-      } else {
-        finish();
+    child.stdin.once("error", (error) => terminate(error));
+    child.once("error", (error) => terminate(error));
+    child.once("close", () => {
+      cleanup();
+      try {
+        frames.push(...parseFrames());
+        if (!frames.some((frame) => frame.id === 2)) {
+          throw new Error(`MCP child exited before tools/list response: ${stderr}`);
+        }
+        if (failure !== undefined) {
+          throw failure;
+        }
+        resolvePromise({ frames, stderr });
+      } catch (error) {
+        rejectPromise(error);
       }
     });
 
