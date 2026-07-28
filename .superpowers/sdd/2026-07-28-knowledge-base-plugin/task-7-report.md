@@ -83,3 +83,15 @@ manifest.
   identifier), not a product failure; after renaming it to `part`, targeted BATS passed 11/11.
 - Reverification: root suite passed (66 root tests plus all plugin/integration suites), sync/check
   passed, and plugin plus skill validators passed.
+
+## Fix round 2
+
+- Made the interface equality oracle derive `displayName` from the actual Claude manifest `.name`
+  JSON value, not the marketplace directory name. It now uses jq's explicit ASCII kebab-case
+  transformation: split on `-`, uppercase each segment's first ASCII character, preserve the
+  remainder, and join with spaces.
+- Compared `shortDescription`, `longDescription`, and `developerName` as compact JSON values with
+  `jq -c`, avoiding shell command-substitution newline normalization. The corrected source-derived
+  display name now also drives the exact 127-character default-prompt array expectation.
+- This was another test-oracle gap: the generator required no implementation change. Targeted BATS
+  passed 11/11, the root suite passed, and `bun run sync:codex` plus `bun run check:codex` passed.
