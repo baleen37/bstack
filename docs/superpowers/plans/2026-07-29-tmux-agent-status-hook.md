@@ -53,7 +53,7 @@ tests proving:
 
 ```bash
 env -u TMUX_PANE "$HOOK"
-PATH="$TEST_TEMP_DIR/no-tmux" TMUX_PANE="%7" "$HOOK"
+PATH="$TEST_TEMP_DIR/no-tmux" TMUX_PANE="%7" /bin/bash "$HOOK"
 printf '%s\n' 'not-json' | TMUX_PANE="%7" "$HOOK"
 printf '%s\n' '{"hook_event_name":"Other"}' | TMUX_PANE="%7" "$HOOK"
 ```
@@ -154,4 +154,3 @@ Expected: all tests and hooks pass.
 git add tests/me/agent-status.bats plugins/me/hooks/agent-status.sh plugins/me/hooks/hooks.json
 git commit -m "feat(me): add tmux agent status hooks"
 ```
-
