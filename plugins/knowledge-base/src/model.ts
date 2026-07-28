@@ -1,21 +1,9 @@
-import { createHash, randomUUID } from "node:crypto";
-import { createReadStream } from "node:fs";
-import { mkdir, open, rename, rm } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import { basename, dirname, join } from "node:path";
+import { mkdir, open, removeTemporary, rename, syncDirectory } from "./model-io.js";
+import { ModelValidationError, verifyModelFile } from "./model-verify.js";
 
-class ModelValidationError extends Error {}
-
-interface ModelSpec {
-  url: string;
-  size: number;
-  sha256: string;
-}
-
-interface EnsureModelOperations {
-  modelSpec?: ModelSpec;
-  syncDirectory?: (directory: string) => Promise<void>;
-  removeTemporary?: (file: string) => Promise<void>;
-}
+export { verifyModelFile } from "./model-verify.js";
 
 export const MODEL_SPEC = Object.freeze({
   url: "https://huggingface.co/n24q02m/Qwen3-Embedding-0.6B-GGUF/resolve/4aea43eaa9633282b1eee7be8cf7ac59a0011709/qwen3-embedding-0.6b-q4-k-m.gguf",
@@ -23,46 +11,12 @@ export const MODEL_SPEC = Object.freeze({
   sha256: "690ce73e3716962cbdbfb0dcb9ea6ad633430101ba3247c6e6d36cbdd06f3871",
 } as const);
 
-export async function verifyModelFile(
-  file: string,
-  expected: { size: number; sha256: string },
-): Promise<void> {
-  const hash = createHash("sha256");
-  const magic = Buffer.alloc(4);
-  let size = 0;
-  let magicLength = 0;
-
-  for await (const chunk of createReadStream(file)) {
-    size += chunk.length;
-    hash.update(chunk);
-    if (magicLength < magic.length) {
-      const length = Math.min(chunk.length, magic.length - magicLength);
-      chunk.copy(magic, magicLength, 0, length);
-      magicLength += length;
-    }
-  }
-
-  if (size !== expected.size) {
-    throw new ModelValidationError(
-      `model size mismatch: expected ${expected.size}, got ${size}`,
-    );
-  }
-  if (magicLength !== magic.length || !magic.equals(Buffer.from("GGUF"))) {
-    throw new ModelValidationError("model file is missing GGUF magic");
-  }
-  if (hash.digest("hex") !== expected.sha256) {
-    throw new ModelValidationError("model SHA-256 mismatch");
-  }
-}
-
 export async function ensureModel(
   destination: string,
   fetchImpl: typeof fetch = fetch,
-  operations: EnsureModelOperations = {},
 ): Promise<string> {
-  const modelSpec = operations.modelSpec ?? MODEL_SPEC;
   try {
-    await verifyModelFile(destination, modelSpec);
+    await verifyModelFile(destination, MODEL_SPEC);
     return destination;
   } catch (error) {
     if (!(error instanceof ModelValidationError) && !isMissingFile(error)) {
@@ -83,7 +37,7 @@ export async function ensureModel(
 
   try {
     handle = await open(temporary, "wx", 0o600);
-    const response = await fetchImpl(modelSpec.url);
+    const response = await fetchImpl(MODEL_SPEC.url);
     if (!response.ok) {
       throw new Error(`model download failed with HTTP ${response.status}`);
     }
@@ -98,10 +52,10 @@ export async function ensureModel(
     await handle.close();
     handle = undefined;
 
-    await verifyModelFile(temporary, modelSpec);
+    await verifyModelFile(temporary, MODEL_SPEC);
     await rename(temporary, destination);
     renamed = true;
-    await (operations.syncDirectory ?? syncDirectory)(directory);
+    await syncDirectory(directory);
     return destination;
   } catch (error) {
     const cleanupErrors: unknown[] = [];
@@ -114,7 +68,7 @@ export async function ensureModel(
     }
     if (!renamed) {
       try {
-        await (operations.removeTemporary ?? removeTemporary)(temporary);
+        await removeTemporary(temporary);
       } catch (cleanupError) {
         cleanupErrors.push(cleanupError);
       }
@@ -134,10 +88,6 @@ function isMissingFile(error: unknown): error is NodeJS.ErrnoException {
     && error.code === "ENOENT";
 }
 
-async function removeTemporary(file: string): Promise<void> {
-  await rm(file, { force: true });
-}
-
 async function writeChunk(
   handle: Awaited<ReturnType<typeof open>>,
   chunk: Uint8Array,
@@ -153,14 +103,5 @@ async function writeChunk(
       throw new Error("model download write made no progress");
     }
     offset += bytesWritten;
-  }
-}
-
-async function syncDirectory(directory: string): Promise<void> {
-  const handle = await open(directory, "r");
-  try {
-    await handle.sync();
-  } finally {
-    await handle.close();
   }
 }

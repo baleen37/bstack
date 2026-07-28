@@ -2,16 +2,40 @@ import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ensureModel, MODEL_SPEC, verifyModelFile } from "../src/model.js";
 
 const bytes = Buffer.from([0x47, 0x47, 0x55, 0x46, 0x01]);
 const sha256 = createHash("sha256").update(bytes).digest("hex");
-const fixtureModelSpec = {
-  url: "https://example.test/model.gguf",
-  size: bytes.length,
-  sha256,
-} as const;
+
+async function withMockedEnsureModel(
+  verify: (file: string) => Promise<void>,
+  io: Record<string, unknown>,
+  test: (ensure: typeof ensureModel) => Promise<void>,
+): Promise<void> {
+  vi.resetModules();
+  vi.doMock("../src/model-verify.js", async () => ({
+    ...await vi.importActual("../src/model-verify.js"),
+    verifyModelFile: verify,
+  }));
+  vi.doMock("../src/model-io.js", async () => ({
+    ...await vi.importActual("../src/model-io.js"),
+    ...io,
+  }));
+  const { ensureModel: mockedEnsureModel } = await import("../src/model.js");
+  await test(mockedEnsureModel);
+}
+
+function missingFileError(): NodeJS.ErrnoException {
+  return Object.assign(new Error("missing model"), { code: "ENOENT" });
+}
+
+afterEach(() => {
+  vi.doUnmock("../src/model-io.js");
+  vi.doUnmock("../src/model-verify.js");
+  vi.doUnmock("node:fs/promises");
+  vi.resetModules();
+});
 
 describe("model artifact", () => {
   it("accepts matching size, hash, and GGUF magic", async () => {
@@ -83,14 +107,16 @@ describe("model artifact", () => {
   it("returns a verified existing destination without fetching", async () => {
     const root = await mkdtemp(join(tmpdir(), "knowledge-model-existing-"));
     const destination = join(root, "model.gguf");
-    await writeFile(destination, bytes);
+    const existing = Buffer.from("existing valid model");
+    await writeFile(destination, existing);
     const fetchImpl: typeof fetch = async () => {
       throw new Error("fetch must not be called for a valid model");
     };
 
-    await expect(ensureModel(destination, fetchImpl, { modelSpec: fixtureModelSpec }))
-      .resolves.toBe(destination);
-    await expect(readFile(destination)).resolves.toEqual(bytes);
+    await withMockedEnsureModel(async () => undefined, {}, async (ensure) => {
+      await expect(ensure(destination, fetchImpl)).resolves.toBe(destination);
+    });
+    await expect(readFile(destination)).resolves.toEqual(existing);
   });
 
   it("leaves the verified renamed destination when directory sync fails", async () => {
@@ -98,15 +124,16 @@ describe("model artifact", () => {
     const root = await mkdtemp(join(tmpdir(), "knowledge-model-directory-sync-"));
     const destination = join(root, "model.gguf");
 
-    await expect(ensureModel(
-      destination,
-      async () => new Response(bytes),
-      {
-        modelSpec: fixtureModelSpec,
-        syncDirectory: async () => { throw directorySyncError; },
+    await withMockedEnsureModel(
+      async (file) => {
+        if (file === destination) throw missingFileError();
       },
-    ))
-      .rejects.toBe(directorySyncError);
+      { syncDirectory: async () => { throw directorySyncError; } },
+      async (ensure) => {
+        await expect(ensure(destination, async () => new Response(bytes)))
+          .rejects.toBe(directorySyncError);
+      },
+    );
     await expect(readFile(destination)).resolves.toEqual(bytes);
     await expect(readdir(root)).resolves.toEqual(["model.gguf"]);
   });
@@ -115,18 +142,82 @@ describe("model artifact", () => {
     const root = await mkdtemp(join(tmpdir(), "knowledge-model-cleanup-"));
     const destination = join(root, "model.gguf");
     const cleanupError = new Error("temporary cleanup failed");
-    try {
-      await ensureModel(destination, async () => new Response(bytes), {
-        removeTemporary: async () => { throw cleanupError; },
-      });
-      expect.unreachable("the invalid fixture must not install");
-    } catch (error) {
-      expect(error).toBeInstanceOf(AggregateError);
-      expect((error as AggregateError).errors).toContain(cleanupError);
-      expect((error as AggregateError).errors).toContainEqual(
-        expect.objectContaining({ message: expect.stringContaining("size mismatch") }),
+    await withMockedEnsureModel(
+      async (file) => {
+        if (file === destination) throw missingFileError();
+        throw new Error("invalid downloaded model");
+      },
+      { removeTemporary: async () => { throw cleanupError; } },
+      async (ensure) => {
+        try {
+          await ensure(destination, async () => new Response(bytes));
+          expect.unreachable("the invalid fixture must not install");
+        } catch (error) {
+          expect(error).toBeInstanceOf(AggregateError);
+          expect((error as AggregateError).errors).toContain(cleanupError);
+          expect((error as AggregateError).errors).toContainEqual(
+            expect.objectContaining({ message: "invalid downloaded model" }),
+          );
+        }
+      },
+    );
+    expect(await readdir(root)).toHaveLength(1);
+  });
+
+  it("preserves directory sync and close errors", async () => {
+    const root = await mkdtemp(join(tmpdir(), "knowledge-model-directory-errors-"));
+    const syncError = new Error("directory sync failed");
+    const closeError = new Error("directory close failed");
+    vi.resetModules();
+    vi.doMock("node:fs/promises", async () => {
+      const actual = await vi.importActual<typeof import("node:fs/promises")>(
+        "node:fs/promises",
       );
-      expect(await readdir(root)).toHaveLength(1);
-    }
+      return {
+        ...actual,
+        open: async (file: string, ...args: unknown[]) => {
+          if (file === root) {
+            return {
+              sync: async () => { throw syncError; },
+              close: async () => { throw closeError; },
+            };
+          }
+          return actual.open(file, ...(args as []));
+        },
+      };
+    });
+    const { syncDirectory } = await import("../src/model-io.js");
+
+    await expect(syncDirectory(root)).rejects.toSatisfy((error: unknown) => {
+      return error instanceof AggregateError
+        && error.errors.includes(syncError)
+        && error.errors.includes(closeError);
+    });
+  });
+
+  it("returns a directory close error when sync succeeds", async () => {
+    const root = await mkdtemp(join(tmpdir(), "knowledge-model-directory-close-"));
+    const closeError = new Error("directory close failed");
+    vi.resetModules();
+    vi.doMock("node:fs/promises", async () => {
+      const actual = await vi.importActual<typeof import("node:fs/promises")>(
+        "node:fs/promises",
+      );
+      return {
+        ...actual,
+        open: async (file: string, ...args: unknown[]) => {
+          if (file === root) {
+            return {
+              sync: async () => undefined,
+              close: async () => { throw closeError; },
+            };
+          }
+          return actual.open(file, ...(args as []));
+        },
+      };
+    });
+    const { syncDirectory } = await import("../src/model-io.js");
+
+    await expect(syncDirectory(root)).rejects.toBe(closeError);
   });
 });
