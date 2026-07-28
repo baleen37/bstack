@@ -175,6 +175,25 @@ describe("qmd adapter", () => {
     });
   });
 
+  it.each(["models/embed.gguf", "hf:org/embed.gguf"])
+    ("rejects an untrusted model path before embedding: %s", async (modelPath) => {
+      const store = fakeStore();
+
+      await expect(indexKnowledge(store as never, "personal", false, modelPath))
+        .rejects.toThrow("invalid_model_path");
+      expect(store.embed).not.toHaveBeenCalled();
+    });
+
+  it("rejects an invalid absolute embedding artifact before embedding", async () => {
+    const store = fakeStore();
+    const invalidArtifact = new Error("model SHA-256 mismatch");
+    verifyModelFile.mockRejectedValueOnce(invalidArtifact);
+
+    await expect(indexKnowledge(store as never, "personal", false, "/models/embed.gguf"))
+      .rejects.toBe(invalidArtifact);
+    expect(store.embed).not.toHaveBeenCalled();
+  });
+
   it("updates and embeds both collections for all scope", async () => {
     const store = fakeStore();
     store.update.mockResolvedValue({});
@@ -197,7 +216,10 @@ describe("qmd adapter", () => {
 
   it("retrieves only canonical qmd references", async () => {
     const store = fakeStore();
-    store.get.mockResolvedValue({ title: "배포 절차" });
+    store.get.mockResolvedValue({
+      filepath: "qmd://wooto/배포 절차.md",
+      title: "배포 절차",
+    });
     store.getDocumentBody.mockResolvedValue("첫 줄\n둘째 줄");
 
     await expect(getKnowledge(store as never, "qmd://wooto/배포 절차.md", 2, 1)).resolves.toEqual({
@@ -212,6 +234,18 @@ describe("qmd adapter", () => {
     );
   });
 
+  it("rejects a fuzzy qmd get result with a different filepath", async () => {
+    const store = fakeStore();
+    store.get.mockResolvedValue({
+      filepath: "qmd://personal/100X_plan.md",
+      title: "다른 문서",
+    });
+
+    await expect(getKnowledge(store as never, "qmd://personal/100%25_plan.md"))
+      .rejects.toThrow("not_found");
+    expect(store.getDocumentBody).not.toHaveBeenCalled();
+  });
+
   it.each(["personal/배포.md", "#abc123", "qmd://shared/배포.md"])
     ("rejects non-canonical retrieval ref %s", async (ref) => {
       const store = fakeStore();
@@ -219,6 +253,18 @@ describe("qmd adapter", () => {
       await expect(getKnowledge(store as never, ref)).rejects.toThrow("invalid_ref");
       expect(store.get).not.toHaveBeenCalled();
     });
+
+  it.each([
+    "qmd://personal/%2F.md",
+    "qmd://personal/%2E%2E",
+    "qmd://personal/bad%",
+    "qmd://personal/a//b",
+  ])("rejects unsafe canonical escape %s", async (ref) => {
+    const store = fakeStore();
+
+    await expect(getKnowledge(store as never, ref)).rejects.toThrow("invalid_ref");
+    expect(store.get).not.toHaveBeenCalled();
+  });
 
   it("returns qmd index status and health together", async () => {
     const store = fakeStore();

@@ -70,6 +70,7 @@ export async function indexKnowledge(
   force: boolean,
   modelPath: string,
 ): Promise<{ update: UpdateResult; embedded: EmbedResult[] }> {
+  await verifyEmbeddingModel(modelPath);
   const collections = scope === "all" ? undefined : [scope];
   const update = await store.update(collections ? { collections } : undefined);
   const targets: readonly KnowledgeCollection[] = scope === "all"
@@ -142,8 +143,8 @@ export async function getKnowledge(
   }
 
   const document = await store.get(canonical.qmdUri);
-  if ("error" in document) {
-    throw new Error(document.error);
+  if ("error" in document || document.filepath !== canonical.qmdUri) {
+    throw new Error("not_found");
   }
   const body = await store.getDocumentBody(canonical.qmdUri, { fromLine, maxLines });
   if (body === null) {
@@ -160,14 +161,18 @@ export async function getKnowledgeStatus(
 }
 
 async function prepareStore(paths: ResolvedPaths): Promise<void> {
-  if (!isAbsolute(paths.modelFile)) {
-    throw new Error("invalid_model_path");
-  }
-  await verifyModelFile(paths.modelFile, MODEL_SPEC);
+  await verifyEmbeddingModel(paths.modelFile);
   await mkdir(dirname(paths.indexFile), { recursive: true, mode: 0o700 });
   process.env.QMD_EMBED_MODEL = paths.modelFile;
   process.env.QMD_GENERATE_MODEL = paths.disabledGenerateModel;
   process.env.QMD_RERANK_MODEL = paths.disabledRerankModel;
+}
+
+async function verifyEmbeddingModel(modelPath: string): Promise<void> {
+  if (!isAbsolute(modelPath)) {
+    throw new Error("invalid_model_path");
+  }
+  await verifyModelFile(modelPath, MODEL_SPEC);
 }
 
 function normalizeReference(ref: string): CanonicalReference | undefined {
