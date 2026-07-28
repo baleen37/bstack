@@ -1,6 +1,9 @@
+import { execFile as execFileCallback } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, open, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
+import { promisify } from "node:util";
 import { afterEach, describe, expect, it } from "vitest";
 import { saveConfig } from "../src/config.js";
 import { ensureModel } from "../src/model.js";
@@ -10,6 +13,7 @@ import type { Scope } from "../src/types.js";
 
 const enabled = process.env.KNOWLEDGE_BASE_REAL_MODEL === "1";
 const realModelTest = enabled ? it : it.skip;
+const execFile = promisify(execFileCallback);
 
 interface EvalRecord {
   query: string;
@@ -39,6 +43,7 @@ afterEach(async () => {
 describe("real embedding model", () => {
   realModelTest("downloads, indexes, searches, and rejects a corrupted verified artifact", async () => {
     const fixture = await loadFixture();
+    const checkoutBefore = await snapshotCheckout(fixture.checkout);
     const temporaryRoot = await mkdtemp(join(tmpdir(), "knowledge-base-real-model-"));
     temporaryRoots.push(temporaryRoot);
     const configDir = join(temporaryRoot, "config");
@@ -59,20 +64,24 @@ describe("real embedding model", () => {
     });
     await ensureModel(paths.modelFile);
 
-    const services = createServices();
-    await services.index("all", true);
-    for (const record of fixture.records) {
-      const results = await services.search(record.query, record.scope, record.maxRank);
-      expect(results.findIndex((result) => result.uri === record.expectedUri) + 1)
-        .toBeGreaterThan(0);
-      expect(results.findIndex((result) => result.uri === record.expectedUri) + 1)
-        .toBeLessThanOrEqual(record.maxRank);
-    }
+    try {
+      const services = createServices();
+      await services.index("all", true);
+      for (const record of fixture.records) {
+        const results = await services.search(record.query, record.scope, 3);
+        const rank = results.findIndex((result) => result.uri === record.expectedUri) + 1;
+        expect(rank).toBeGreaterThan(0);
+        expect(rank).toBeLessThanOrEqual(3);
+        expect(rank).toBeLessThanOrEqual(record.maxRank);
+      }
 
-    expect(await findGgufFiles(cacheDir)).toEqual([paths.modelFile]);
-    await corruptOneByte(paths.modelFile);
-    await expect(services.search(fixture.records[0]!.query, fixture.records[0]!.scope, 3))
-      .rejects.toThrow("model SHA-256 mismatch");
+      expect(await findGgufFiles(cacheDir)).toEqual([paths.modelFile]);
+      await corruptOneByte(paths.modelFile);
+      await expect(services.search(fixture.records[0]!.query, fixture.records[0]!.scope, 3))
+        .rejects.toThrow("model SHA-256 mismatch");
+    } finally {
+      await expect(snapshotCheckout(fixture.checkout)).resolves.toEqual(checkoutBefore);
+    }
   }, 20 * 60_000);
 });
 
@@ -130,5 +139,54 @@ async function corruptOneByte(file: string): Promise<void> {
     await handle.sync();
   } finally {
     await handle.close();
+  }
+}
+
+async function snapshotCheckout(checkout: string): Promise<{
+  markdown: Array<{ path: string; sha256: string }>;
+  git?: { head: string; status: string };
+}> {
+  const markdown = await snapshotMarkdown(checkout, ["personal", "wooto"]);
+  try {
+    const [head, status] = await Promise.all([
+      execFile("git", ["rev-parse", "HEAD"], { cwd: checkout }),
+      execFile("git", ["status", "--porcelain"], { cwd: checkout }),
+    ]);
+    return {
+      markdown,
+      git: { head: head.stdout, status: status.stdout },
+    };
+  } catch {
+    return { markdown };
+  }
+}
+
+async function snapshotMarkdown(checkout: string, collections: readonly string[]): Promise<
+  Array<{ path: string; sha256: string }>
+> {
+  const files: Array<{ path: string; sha256: string }> = [];
+  for (const collection of collections) {
+    await collectMarkdown(join(checkout, collection), checkout, files);
+  }
+  return files.sort((left, right) => left.path.localeCompare(right.path));
+}
+
+async function collectMarkdown(
+  directory: string,
+  checkout: string,
+  files: Array<{ path: string; sha256: string }>,
+): Promise<void> {
+  const entries = await readdir(directory, { withFileTypes: true });
+  for (const entry of entries) {
+    const file = join(directory, entry.name);
+    if (entry.isDirectory()) {
+      await collectMarkdown(file, checkout, files);
+    } else if (entry.isFile() && entry.name.endsWith(".md")) {
+      const content = await readFile(file);
+      files.push({
+        path: relative(checkout, file),
+        sha256: createHash("sha256").update(content).digest("hex"),
+      });
+    }
   }
 }
