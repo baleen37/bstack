@@ -18,5 +18,18 @@
     "context",
     "compacting"
   ],
-  "skills": "./skills/"
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Me",
+    "shortDescription": "AI coding assistant toolkit - git workflow protection, session handoff, context management, and development automation",
+    "longDescription": "AI coding assistant toolkit - git workflow protection, session handoff, context management, and development automation",
+    "developerName": "baleen37",
+    "category": "Productivity",
+    "capabilities": [
+      "Skills"
+    ],
+    "defaultPrompt": [
+      "Use Me for this task."
+    ]
+  }
 }

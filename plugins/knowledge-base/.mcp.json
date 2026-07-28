@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "knowledge-base": {
+      "command": "sh",
+      "args": [
+        "-lc",
+        "exec \"${KNOWLEDGE_BASE_BIN:-knowledge-base}\" mcp"
+      ],
+      "cwd": "."
+    }
+  }
+}

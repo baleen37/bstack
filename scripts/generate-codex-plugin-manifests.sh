@@ -18,7 +18,28 @@ is_skill_plugin() {
 render_manifest() {
   local claude_manifest="$1"
   jq '
-    . + {skills: "./skills/"} |
+    def display_name:
+      split("-") |
+      map(if length == 0 then . else (.[0:1] | ascii_upcase) + .[1:] end) |
+      join(" ");
+
+    . as $claude |
+    ($claude.name | display_name) as $display_name |
+    ($claude.description) as $description |
+    ($claude.author.name) as $developer_name |
+    (["Skills"] + (if $claude.mcpServers != null then ["MCP"] else [] end)) as $capabilities |
+    . + {
+      skills: "./skills/",
+      interface: {
+        displayName: $display_name,
+        shortDescription: $description,
+        longDescription: $description,
+        developerName: $developer_name,
+        category: "Productivity",
+        capabilities: $capabilities,
+        defaultPrompt: [("Use \($display_name) for this task." | .[:127])]
+      }
+    } |
     with_entries(select(.value != null))
   ' "${claude_manifest}"
 }

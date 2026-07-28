@@ -1,0 +1,19 @@
+{
+  "name": "knowledge-base",
+  "version": "17.35.0",
+  "description": "Local hybrid search over a private personal and organization knowledge base",
+  "author": {
+    "name": "baleen37",
+    "email": "git@baleen.me"
+  },
+  "license": "MIT",
+  "keywords": [
+    "knowledge-base",
+    "search",
+    "rag",
+    "mcp",
+    "qmd"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json"
+}

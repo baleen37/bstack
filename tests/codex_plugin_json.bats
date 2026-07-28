@@ -75,6 +75,42 @@ eligible_codex_plugins() {
     done <<< "$expected_plugins"
 }
 
+@test "codex plugin manifests expose required interface metadata" {
+    local expected_plugins
+    expected_plugins="$(eligible_codex_plugins)"
+
+    while IFS= read -r plugin; do
+        [ -n "$plugin" ] || continue
+
+        local claude_manifest="${PROJECT_ROOT}/plugins/${plugin}/.claude-plugin/plugin.json"
+        local codex_manifest="${PROJECT_ROOT}/plugins/${plugin}/.codex-plugin/plugin.json"
+
+        jq -e '
+          .interface.displayName | strings | select(length > 0)
+        ' "$codex_manifest" >/dev/null
+        jq -e '
+          .interface.shortDescription | strings | select(length > 0)
+        ' "$codex_manifest" >/dev/null
+        jq -e '
+          .interface.longDescription | strings | select(length > 0)
+        ' "$codex_manifest" >/dev/null
+        jq -e '
+          .interface.developerName | strings | select(length > 0)
+        ' "$codex_manifest" >/dev/null
+        [ "$(jq -r '.interface.category' "$codex_manifest")" = "Productivity" ]
+        jq -e '.interface.capabilities | index("Skills")' "$codex_manifest" >/dev/null
+        jq -e '
+          (.interface.defaultPrompt | type == "array") and
+          (.interface.defaultPrompt | length == 1) and
+          (.interface.defaultPrompt[0] | type == "string" and length > 0 and length < 128)
+        ' "$codex_manifest" >/dev/null
+
+        if [ "$(jq -r '.mcpServers // empty' "$claude_manifest")" != "" ]; then
+            jq -e '.interface.capabilities | index("MCP")' "$codex_manifest" >/dev/null
+        fi
+    done <<< "$expected_plugins"
+}
+
 @test "codex plugin manifests copy core metadata from claude manifests" {
     local expected_plugins
     expected_plugins="$(eligible_codex_plugins)"
@@ -95,9 +131,12 @@ eligible_codex_plugins() {
 
     grep -q "'plugins/\\*/.codex-plugin/plugin.json'" "$check_script"
     grep -q "git ls-files --others --exclude-standard" "$check_script"
-    ! grep -q "plugins/jira/.codex-plugin/plugin.json" "$check_script"
-    ! grep -q "plugins/me/.codex-plugin/plugin.json" "$check_script"
-    ! grep -q "plugins/ralph/.codex-plugin/plugin.json" "$check_script"
+    run grep -q "plugins/jira/.codex-plugin/plugin.json" "$check_script"
+    [ "$status" -eq 1 ]
+    run grep -q "plugins/me/.codex-plugin/plugin.json" "$check_script"
+    [ "$status" -eq 1 ]
+    run grep -q "plugins/ralph/.codex-plugin/plugin.json" "$check_script"
+    [ "$status" -eq 1 ]
 }
 
 @test "marketplace sync workflow covers all generated codex plugin manifests" {
@@ -105,9 +144,12 @@ eligible_codex_plugins() {
 
     grep -q "'plugins/\\*/.codex-plugin/plugin.json'" "$workflow"
     grep -q "git ls-files --others --exclude-standard" "$workflow"
-    ! grep -q "plugins/jira/.codex-plugin/plugin.json" "$workflow"
-    ! grep -q "plugins/me/.codex-plugin/plugin.json" "$workflow"
-    ! grep -q "plugins/ralph/.codex-plugin/plugin.json" "$workflow"
+    run grep -q "plugins/jira/.codex-plugin/plugin.json" "$workflow"
+    [ "$status" -eq 1 ]
+    run grep -q "plugins/me/.codex-plugin/plugin.json" "$workflow"
+    [ "$status" -eq 1 ]
+    run grep -q "plugins/ralph/.codex-plugin/plugin.json" "$workflow"
+    [ "$status" -eq 1 ]
 }
 
 @test "marketplace notification uses notify@v1 dispatch action" {
@@ -120,9 +162,14 @@ eligible_codex_plugins() {
     grep -q "uses: actions/create-github-app-token@v1" "$workflow"
     grep -qF 'app-id: ${{ secrets.BALEEN_RELEASE_APP_ID }}' "$workflow"
     grep -qF 'private-key: ${{ secrets.BALEEN_RELEASE_APP_PRIVATE_KEY }}' "$workflow"
-    ! grep -q "repository-dispatch@main" "$workflow"
-    ! grep -q "dispatch-marketplace-update" "$workflow"
-    ! grep -q "event-type: update_versions" "$workflow"
-    ! grep -q "client-payload:" "$workflow"
-    ! grep -q '"plugin":' "$workflow"
+    run grep -q "repository-dispatch@main" "$workflow"
+    [ "$status" -eq 1 ]
+    run grep -q "dispatch-marketplace-update" "$workflow"
+    [ "$status" -eq 1 ]
+    run grep -q "event-type: update_versions" "$workflow"
+    [ "$status" -eq 1 ]
+    run grep -q "client-payload:" "$workflow"
+    [ "$status" -eq 1 ]
+    run grep -q '"plugin":' "$workflow"
+    [ "$status" -eq 1 ]
 }
