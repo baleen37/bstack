@@ -5,11 +5,23 @@ import { basename, dirname, join } from "node:path";
 
 class ModelValidationError extends Error {}
 
-export const MODEL_SPEC = {
+interface ModelSpec {
+  url: string;
+  size: number;
+  sha256: string;
+}
+
+interface EnsureModelOperations {
+  modelSpec?: ModelSpec;
+  syncDirectory?: (directory: string) => Promise<void>;
+  removeTemporary?: (file: string) => Promise<void>;
+}
+
+export const MODEL_SPEC = Object.freeze({
   url: "https://huggingface.co/n24q02m/Qwen3-Embedding-0.6B-GGUF/resolve/4aea43eaa9633282b1eee7be8cf7ac59a0011709/qwen3-embedding-0.6b-q4-k-m.gguf",
   size: 396_474_496,
   sha256: "690ce73e3716962cbdbfb0dcb9ea6ad633430101ba3247c6e6d36cbdd06f3871",
-} as const;
+} as const);
 
 export async function verifyModelFile(
   file: string,
@@ -46,9 +58,11 @@ export async function verifyModelFile(
 export async function ensureModel(
   destination: string,
   fetchImpl: typeof fetch = fetch,
+  operations: EnsureModelOperations = {},
 ): Promise<string> {
+  const modelSpec = operations.modelSpec ?? MODEL_SPEC;
   try {
-    await verifyModelFile(destination, MODEL_SPEC);
+    await verifyModelFile(destination, modelSpec);
     return destination;
   } catch (error) {
     if (!(error instanceof ModelValidationError) && !isMissingFile(error)) {
@@ -65,10 +79,11 @@ export async function ensureModel(
     `.${basename(destination)}.${process.pid}.${randomUUID()}.tmp`,
   );
   let handle: Awaited<ReturnType<typeof open>> | undefined;
+  let renamed = false;
 
   try {
     handle = await open(temporary, "wx", 0o600);
-    const response = await fetchImpl(MODEL_SPEC.url);
+    const response = await fetchImpl(modelSpec.url);
     if (!response.ok) {
       throw new Error(`model download failed with HTTP ${response.status}`);
     }
@@ -83,13 +98,33 @@ export async function ensureModel(
     await handle.close();
     handle = undefined;
 
-    await verifyModelFile(temporary, MODEL_SPEC);
+    await verifyModelFile(temporary, modelSpec);
     await rename(temporary, destination);
-    await syncDirectory(directory);
+    renamed = true;
+    await (operations.syncDirectory ?? syncDirectory)(directory);
     return destination;
   } catch (error) {
-    await handle?.close().catch(() => undefined);
-    await rm(temporary, { force: true });
+    const cleanupErrors: unknown[] = [];
+    if (handle !== undefined) {
+      try {
+        await handle.close();
+      } catch (cleanupError) {
+        cleanupErrors.push(cleanupError);
+      }
+    }
+    if (!renamed) {
+      try {
+        await (operations.removeTemporary ?? removeTemporary)(temporary);
+      } catch (cleanupError) {
+        cleanupErrors.push(cleanupError);
+      }
+    }
+    if (cleanupErrors.length > 0) {
+      throw new AggregateError(
+        [error, ...cleanupErrors],
+        "model installation failed and cleanup failed",
+      );
+    }
     throw error;
   }
 }
@@ -97,6 +132,10 @@ export async function ensureModel(
 function isMissingFile(error: unknown): error is NodeJS.ErrnoException {
   return typeof error === "object" && error !== null && "code" in error
     && error.code === "ENOENT";
+}
+
+async function removeTemporary(file: string): Promise<void> {
+  await rm(file, { force: true });
 }
 
 async function writeChunk(
