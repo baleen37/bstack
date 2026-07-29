@@ -32,12 +32,14 @@ function availabilityFor(exitCode: number, stderr: string): RuntimeResult["avail
   return "available";
 }
 
-function sanitizeCodexSchema(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(sanitizeCodexSchema);
+const schemaNameMaps = new Set(["properties", "$defs", "definitions", "patternProperties", "dependentSchemas"]);
+
+function sanitizeCodexSchema(value: unknown, isNameMap = false): unknown {
+  if (Array.isArray(value)) return value.map((entry) => sanitizeCodexSchema(entry));
   if (typeof value !== "object" || value === null) return value;
   return Object.fromEntries(Object.entries(value)
-    .filter(([key]) => key !== "$schema" && key !== "format" && key !== "minLength")
-    .map(([key, entry]) => [key, sanitizeCodexSchema(entry)]));
+    .filter(([key]) => isNameMap || (key !== "$schema" && key !== "format" && key !== "minLength"))
+    .map(([key, entry]) => [key, sanitizeCodexSchema(entry, schemaNameMaps.has(key))]));
 }
 
 function runtimeErrorMessage(stdoutLines: string[]): string {

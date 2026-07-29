@@ -145,6 +145,38 @@ teardown() {
     "$TEST_TEMP_DIR/codex.schema.json"
 }
 
+@test "research evaluator: preserves schema property names while sanitizing their schemas" {
+  cat >"$TEST_TEMP_DIR/property-schema.ts" <<EOF
+import { runStructured } from "${PROJECT_ROOT}/plugins/me/skills/research/scripts/runtime-adapters";
+
+await runStructured({
+  runtime: "codex",
+  systemPrompt: "execution",
+  userPrompt: "answer",
+  schema: {
+    type: "object",
+    properties: {
+      format: { type: "string", format: "uri" },
+      minLength: { type: "string", minLength: 1 },
+      "\$schema": { type: "string", "\$schema": "https://example.test/schema" },
+    },
+    required: ["format", "minLength", "\$schema"],
+    additionalProperties: false,
+  },
+  workingDirectory: process.cwd(),
+});
+EOF
+  run env RESEARCH_EVAL_CODEX_BIN="$TEST_TEMP_DIR/bin/codex" bun "$TEST_TEMP_DIR/property-schema.ts"
+  [ "$status" -eq 0 ]
+  jq -e '
+    (.properties | has("format") and has("minLength") and has("$schema"))
+    and (.required == ["format", "minLength", "$schema"])
+    and (.properties.format.type == "string" and (.properties.format | has("format") | not))
+    and (.properties.minLength.type == "string" and (.properties.minLength | has("minLength") | not))
+    and (.properties["$schema"].type == "string" and (.properties["$schema"] | has("$schema") | not))' \
+    "$TEST_TEMP_DIR/codex.schema.json"
+}
+
 @test "research evaluator: preserves Codex JSONL failures without stderr" {
   run env \
     RESEARCH_EVAL_CODEX_BIN="$TEST_TEMP_DIR/bin/codex" \
