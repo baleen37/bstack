@@ -5,36 +5,29 @@ description: Use when external facts, documentation, standards, papers, releases
 
 # Research
 
-## Scope
+Classify the request before using tools.
 
-Reject codebase exploration and local bug investigation as outside this skill.
-Respond without reading
-repository files, searching, browsing, or delegating.
+## Route
 
-## Delegate
+- Local codebase exploration or local bug investigation is outside this skill.
+  Reply with that boundary without reading files, browsing, or delegating.
+- If the user supplied one exact source and only wants it inspected, use a
+  direct fetch or open action such as `curl` on only that URL. Do not use any
+  search tool or delegate.
+- When source discovery or comparison is needed, send the complete request once
+  to `me:researcher`. Do not fan out.
 
-When source discovery is needed, send the complete question to one
-`me:researcher`; do not split one request across researchers.
+Give the researcher the question, decision to support, freshness constraint,
+evidence bar, and required output. Use the lowest-cost capable option available;
+escalate only after a stated quality requirement fails.
 
-Use the least expensive capable model. Escalate only after the result fails a
-stated quality requirement.
+If delegation is unavailable or fails, read `../../agents/researcher.md` and
+apply its external, read-only contract directly. The exact-source path follows
+the same evidence contract without discovery.
 
-When researching directly—because delegation is unavailable or failed, or
-because the user supplied one exact source only to read—first read
-`../../agents/researcher.md` and follow its read-only evidence and output
-contract.
+## Return
 
-Give the researcher:
-
-- the question and decision it must support,
-- freshness/date constraints,
-- the evidence bar,
-- required output fields.
-
-Use returned synthesis without repeating investigation. Spot-check a
-citation only when the claim is material, suspicious, or high-risk.
-
-## Result
-
-Return the direct answer, claim-bearing sources, and material gaps. Keep raw
-search results, dead ends, and unused sources outside the final answer.
+Use the research result without repeating its investigation. Return the direct
+answer with citations next to supported claims and only material uncertainty.
+Keep search logs, dead ends, unused sources, and duplicated evidence out of the
+response.
