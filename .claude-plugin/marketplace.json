@@ -22,7 +22,7 @@
         "memory",
         "context"
       ],
-      "version": "17.38.1"
+      "version": "17.38.2"
     },
     {
       "name": "slack",
@@ -35,7 +35,7 @@
         "messaging",
         "mcp"
       ],
-      "version": "17.38.1"
+      "version": "17.38.2"
     },
     {
       "name": "notion",
@@ -48,7 +48,7 @@
         "documentation",
         "mcp"
       ],
-      "version": "17.38.1"
+      "version": "17.38.2"
     },
     {
       "name": "datadog",
@@ -63,7 +63,7 @@
         "apm",
         "pup"
       ],
-      "version": "17.38.1"
+      "version": "17.38.2"
     },
     {
       "name": "autoresearch",
@@ -76,7 +76,7 @@
         "autonomous",
         "research"
       ],
-      "version": "17.38.1"
+      "version": "17.38.2"
     },
     {
       "name": "knowledge-base",
@@ -90,7 +90,7 @@
         "mcp",
         "qmd"
       ],
-      "version": "17.38.1"
+      "version": "17.38.2"
     }
   ]
 }
