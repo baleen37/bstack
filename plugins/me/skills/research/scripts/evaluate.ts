@@ -399,7 +399,17 @@ async function rescore(args: Arguments): Promise<number> {
     usage("source run has different instruction hashes or evaluation identity");
   }
 
-  const rescoredRuns = sourceRuns.map((run) => scoreRun(run));
+  const scenarios = await loadScenarios(scenariosPath);
+  const selected = await selectedScenarios(args, scenarios);
+  if (args.scenarios.length > 0 && selected.some((scenario) =>
+    !sourceRuns.some((run) => run.scenario.id === scenario.id)
+  )) {
+    usage("--scenario has no saved run in --rescore-from");
+  }
+  const selectedIds = new Set(selected.map((scenario) => scenario.id));
+  const selectedArtifacts = runFiles.map((file, index) => ({ file, run: sourceRuns[index] }))
+    .filter(({ run }) => selectedIds.has(run.scenario.id));
+  const rescoredRuns = selectedArtifacts.map(({ run }) => scoreRun(run));
   const summary: EvaluationSummary = {
     ...summarize(rescoredRuns),
     instructionHashes: {
@@ -408,7 +418,7 @@ async function rescore(args: Arguments): Promise<number> {
     },
   };
   await writeJson(join(outputDir, "instructions.json"), instructions);
-  await Promise.all(runFiles.map((file, index) =>
+  await Promise.all(selectedArtifacts.map(({ file }, index) =>
     writeJson(join(outputDir, "runs", file), rescoredRuns[index])
   ));
   await writeJson(join(outputDir, "summary.json"), summary);
