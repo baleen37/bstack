@@ -1382,3 +1382,39 @@ bun plugins/me/skills/research/scripts/evaluate.ts \
 The command must produce a summary for exactly the ten preserved run files,
 make no network or model call, and leave `.research-eval/baseline/codex`
 unchanged.
+
+### Task 7: Select a Reproducible Adaptive Baseline Cohort
+
+**Run this task before Task 4 candidate evaluation.**
+
+**Files:**
+- Modify: `plugins/me/skills/research/scripts/evaluate.ts`
+- Modify: `tests/me/research-eval.bats`
+
+**Requirements:**
+
+- Allow `--rescore-from` to accept one or more existing `--scenario <id>`
+  selectors and write only those saved runs to the new output tree.
+- Reject an unknown selector and reject a selector with no saved run. Keep the
+  no-runtime-call and source-preservation guarantees from Task 6.
+- Add a Bats test proving a selected rescore writes exactly the requested
+  saved run, leaves the source unchanged, and does not invoke its fake Codex
+  or Claude binary.
+- Use this command after implementation to create
+  `.research-eval/baseline-representative/codex` from the five approved
+  scenario ids. Do not change the complete saved baseline.
+
+**Verification:**
+
+```bash
+bun plugins/me/skills/research/scripts/evaluate.ts \
+  --rescore-from .research-eval/baseline/codex \
+  --scenario exact-rfc-safe-methods \
+  --scenario bun-spawn-stdout \
+  --scenario node-v22-release-date \
+  --scenario npm-bun-frozen-install \
+  --scenario context7-exa-recommendation \
+  --output-dir .research-eval/baseline-representative/codex
+```
+
+The new summary contains exactly five runs and does not call a model CLI.
