@@ -1320,16 +1320,18 @@ until separately approved.
 ## 2026-07-29 Adaptive Evaluation Amendment
 
 Live baseline execution showed that a full ten-scenario first pass is not a
-useful first gate: five Codex scenarios consumed 1,792,745 input tokens while
-also exposing two evaluator-observability defects. The user approved an
-adaptive protocol in place of the fixed full matrix. This is not a token
-ceiling: it starts with a representative cohort and expands only when the
-current cohort supplies new behavioral information.
+useful first gate: the first five Codex scenarios consumed 1,792,745 input
+tokens while also exposing two evaluator-observability defects. The
+interrupted subprocess completed in the background, so all ten baseline
+artifacts are retained as immutable historical evidence. The user approved an
+adaptive protocol for candidate evaluation in place of another fixed full
+matrix. This is not a token ceiling: it starts with a representative cohort
+and expands only when the current cohort supplies new behavioral information.
 
 - Preserve the five interrupted Codex artifacts as historical raw evidence;
   never delete or overwrite them.
 - Correct event semantics before using those artifacts as a baseline.
-- Rescore the preserved cohort without new model calls.
+- Rescore all ten preserved baseline runs without new model calls.
 - Use the same five scenario ids for the first candidate cohort:
   `exact-rfc-safe-methods`, `bun-spawn-stdout`, `node-v22-release-date`,
   `npm-bun-frozen-install`, and `context7-exa-recommendation`.
@@ -1377,6 +1379,6 @@ bun plugins/me/skills/research/scripts/evaluate.ts \
   --output-dir .research-eval/baseline-rescored/codex
 ```
 
-The command must produce a summary for exactly the five preserved run files,
+The command must produce a summary for exactly the ten preserved run files,
 make no network or model call, and leave `.research-eval/baseline/codex`
 unchanged.
