@@ -207,17 +207,21 @@ function isEntrypoint(argv1) {
         return false;
     }
 }
-if (isEntrypoint(process.argv[1])) {
+const processIo = {
+    stdout: (text) => process.stdout.write(text),
+    stderr: (text) => process.stderr.write(text),
+};
+export async function main(argv = process.argv.slice(2), services = createServices(), io = processIo) {
     try {
         assertSupportedNodeVersion();
-        process.exitCode = await runCli(process.argv.slice(2), createServices(), {
-            stdout: (text) => process.stdout.write(text),
-            stderr: (text) => process.stderr.write(text),
-        });
+        return await runCli(argv, services, io);
     }
     catch (error) {
-        process.stderr.write(`${message(error)}\n`);
-        process.exitCode = 1;
+        io.stderr(`${message(error)}\n`);
+        return 1;
     }
+}
+if (isEntrypoint(process.argv[1])) {
+    process.exitCode = await main();
 }
 //# sourceMappingURL=cli.js.map

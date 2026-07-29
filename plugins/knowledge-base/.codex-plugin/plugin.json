@@ -1,6 +1,6 @@
 {
   "name": "knowledge-base",
-  "version": "17.37.2",
+  "version": "17.38.0",
   "description": "Local hybrid search over a private personal and organization knowledge base",
   "author": {
     "name": "baleen37",
@@ -16,7 +16,6 @@
   ],
   "skills": "./skills/",
   "mcpServers": "./.mcp.json",
-  "hooks": "./hooks/hooks.json",
   "interface": {
     "displayName": "Knowledge Base",
     "shortDescription": "Local hybrid search over a private personal and organization knowledge base",

@@ -119,13 +119,15 @@ run_mcp_stdio_client() {
 
 @test "knowledge-base exposes a local stdio MCP server" {
   local config="${PROJECT_ROOT}/plugins/knowledge-base/.mcp.json"
-  local expected_args='["-lc","exec node \"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-$PWD}}/dist/cli.js\" mcp"]'
+  local expected_args='["-lc","exec \"${KNOWLEDGE_BASE_BIN:-${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-$PWD}}/bin/knowledge-base.mjs}\" mcp"]'
 
   # Codex sets PLUGIN_ROOT, Claude Code sets CLAUDE_PLUGIN_ROOT, and neither
   # expands the other's variable. Only a shell can evaluate the fallback chain,
   # so this stays shell form like plugins/jira/.mcp.json.
   [ "$(jq -r '.mcpServers["knowledge-base"].command' "$config")" = "sh" ]
   [ "$(jq -c '.mcpServers["knowledge-base"].args' "$config")" = "$expected_args" ]
+  [[ "$(jq -r '.mcpServers["knowledge-base"].args[1]' "$config")" == *"/bin/knowledge-base.mjs"* ]]
+  [[ "$(jq -r '.mcpServers["knowledge-base"].args[1]' "$config")" != *":-knowledge-base}"* ]]
   [ "$(jq -r '.mcpServers["knowledge-base"].cwd' "$config")" = "." ]
   [ "$(jq -r '.mcpServers["knowledge-base"].url // empty' "$config")" = "" ]
   jq -e '
@@ -136,46 +138,20 @@ run_mcp_stdio_client() {
   ' "$config" >/dev/null
 }
 
-@test "knowledge-base ships the built CLI it points at" {
-  local plugin_dir="${PROJECT_ROOT}/plugins/knowledge-base"
+@test "knowledge-base ships a reproducible tracked dist" {
+  local package_dir="${PROJECT_ROOT}/plugins/knowledge-base"
 
-  # The marketplace copies the plugin directory verbatim, so dist/ must be
-  # tracked rather than gitignored.
   run git -C "$PROJECT_ROOT" check-ignore -q plugins/knowledge-base/dist/cli.js
   [ "$status" -ne 0 ]
-  run git -C "$PROJECT_ROOT" ls-files --error-unmatch plugins/knowledge-base/dist/cli.js
+  git -C "$PROJECT_ROOT" ls-files --error-unmatch \
+    plugins/knowledge-base/dist/cli.js >/dev/null
+  git -C "$PROJECT_ROOT" ls-files --error-unmatch \
+    plugins/knowledge-base/dist/runtime-bootstrap.js >/dev/null
+
+  run bun run --cwd "$package_dir" build
   [ "$status" -eq 0 ]
-  [ -f "${plugin_dir}/dist/cli.js" ]
-}
-
-@test "knowledge-base installs its native dependencies from a session hook" {
-  local hooks="${PROJECT_ROOT}/plugins/knowledge-base/hooks/hooks.json"
-  local script="${PROJECT_ROOT}/plugins/knowledge-base/hooks/install-deps.sh"
-  local expected='bash "${PLUGIN_ROOT:-$CLAUDE_PLUGIN_ROOT}/hooks/install-deps.sh"'
-
-  [ "$(jq -r '.hooks.SessionStart[0].hooks[0].command' "$hooks")" = "$expected" ]
-  [ -x "$script" ]
-
-  # npm 12 skips these builds unless the generated manifest allows them, which
-  # leaves the dependency tree looking complete but every search broken.
-  grep -q '"better-sqlite3": true' "$script"
-  grep -q '"node-llama-cpp": true' "$script"
-}
-
-@test "knowledge-base exposes its dependency hook to Codex too" {
-  local claude="${PROJECT_ROOT}/plugins/knowledge-base/.claude-plugin/plugin.json"
-  local codex="${PROJECT_ROOT}/plugins/knowledge-base/.codex-plugin/plugin.json"
-  local hooks="${PROJECT_ROOT}/plugins/knowledge-base/hooks/hooks.json"
-
-  # Claude discovers hooks/hooks.json on its own, but Codex needs the path
-  # spelled out, and its manifest is generated from the Claude one. Without
-  # this the MCP server starts under Codex with no dependencies installed.
-  [ "$(jq -r '.hooks' "$claude")" = "./hooks/hooks.json" ]
-  [ "$(jq -r '.hooks' "$codex")" = "./hooks/hooks.json" ]
-
-  # Codex compiles matcher as a regex and filters SessionStart on the session
-  # source, so "*" would not compile. Absent means every start.
-  [ "$(jq -r '.hooks.SessionStart[0].matcher // "absent"' "$hooks")" = "absent" ]
+  run git -C "$PROJECT_ROOT" diff --exit-code -- plugins/knowledge-base/dist
+  [ "$status" -eq 0 ]
 }
 
 @test "knowledge-base blocks qmd generation and reranking paths" {

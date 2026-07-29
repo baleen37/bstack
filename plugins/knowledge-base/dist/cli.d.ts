@@ -6,3 +6,4 @@ export interface CliIo {
 }
 export declare function runCli(argv: readonly string[], services: KnowledgeBaseServices, io: CliIo): Promise<number>;
 export declare function assertSupportedNodeVersion(version?: string): void;
+export declare function main(argv?: readonly string[], services?: KnowledgeBaseServices, io?: CliIo): Promise<number>;

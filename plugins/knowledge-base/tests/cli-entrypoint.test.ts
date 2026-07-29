@@ -5,7 +5,9 @@ import { promisify } from "node:util";
 import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
+import { main } from "../src/cli.js";
+import type { KnowledgeBaseServices } from "../src/services.js";
 
 const execFile = promisify(execFileCallback);
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -13,6 +15,18 @@ const bin = join(packageRoot, "dist", "cli.js");
 const expectedVersion = (JSON.parse(
   readFileSync(join(packageRoot, "package.json"), "utf8"),
 ) as { version: string }).version;
+
+function fakeServices(): KnowledgeBaseServices {
+  return {
+    setup: vi.fn(),
+    pull: vi.fn(),
+    index: vi.fn(),
+    search: vi.fn(),
+    get: vi.fn(),
+    status: vi.fn(),
+    startMcp: vi.fn(),
+  };
+}
 
 beforeAll(async () => {
   await execFile(process.execPath, [
@@ -23,6 +37,20 @@ beforeAll(async () => {
 });
 
 describe("knowledge-base binary entrypoint", () => {
+  it("runs the exported CLI main without requiring the file to be the entrypoint", async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const services = fakeServices();
+
+    await expect(main(["--version"], services, {
+      stdout: (text) => stdout.push(text),
+      stderr: (text) => stderr.push(text),
+    })).resolves.toBe(0);
+
+    expect(stdout).toEqual([`${expectedVersion}\n`]);
+    expect(stderr).toEqual([]);
+  });
+
   it("runs when Node executes a symlink to the binary", async () => {
     const directory = await mkdtemp(join(tmpdir(), "knowledge-base-bin-"));
     const link = join(directory, "knowledge-base");

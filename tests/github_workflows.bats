@@ -24,6 +24,52 @@ workflow_has_trigger() {
     yaml_get "$workflow_file" ".on.${trigger_type}" &>/dev/null
 }
 
+create_dist_gate_fixture() {
+    local fixture="$1"
+    local mode="$2"
+    node --input-type=module --eval '
+      import { execFileSync } from "node:child_process";
+      import { mkdir, writeFile } from "node:fs/promises";
+      import { join } from "node:path";
+
+      const [fixture, mode] = process.argv.slice(1);
+      const packageRoot = join(fixture, "package");
+      await mkdir(join(packageRoot, "dist"), { recursive: true });
+      await writeFile(join(fixture, ".gitignore"), "!package/dist/\n!package/dist/**\n");
+      await writeFile(
+        join(packageRoot, "package.json"),
+        JSON.stringify({
+          name: "dist-gate-fixture",
+          private: true,
+          scripts: { build: "node build.mjs" },
+        }, null, 2) + "\n",
+      );
+      const extraOutput = mode === "untracked"
+        ? "await writeFile(join(root, \"dist\", \"generated.js\"), \"generated\\n\");"
+        : "";
+      await writeFile(join(packageRoot, "build.mjs"), `
+        import { mkdir, writeFile } from "node:fs/promises";
+        import { dirname, join } from "node:path";
+        import { fileURLToPath } from "node:url";
+        const root = dirname(fileURLToPath(import.meta.url));
+        await mkdir(join(root, "dist"), { recursive: true });
+        await writeFile(join(root, "dist", "current.js"), "current\\n");
+        ${extraOutput}
+      `);
+      await writeFile(join(packageRoot, "dist", "current.js"), "current\n");
+      if (mode === "stale") {
+        await writeFile(join(packageRoot, "dist", "stale.js"), "stale\n");
+      }
+      execFileSync("git", ["init", "-q"], { cwd: fixture });
+      execFileSync("git", ["add", "."], { cwd: fixture });
+      execFileSync("git", [
+        "-c", "user.name=Dist Gate Test",
+        "-c", "user.email=dist-gate@example.com",
+        "commit", "-qm", "fixture",
+      ], { cwd: fixture });
+    ' "$fixture" "$mode"
+}
+
 # Helper: Check if job has 'if' condition
 job_has_if_condition() {
     local workflow_file="$1"
@@ -143,13 +189,49 @@ job_has_if_condition() {
 @test "knowledge-base package is built and tested in CI without the real-model opt-in smoke" {
     ensure_yaml_validator
     local build_command
+    local drift_command
     local test_command
+    local runtime_command
+    local runtime_opt_in
     build_command=$(yaml_get "$CI_WORKFLOW" '.jobs.test.steps[] | select(.name == "Build knowledge-base package") | .run')
+    drift_command=$(yaml_get "$CI_WORKFLOW" '.jobs.test.steps[] | select(.name == "Check knowledge-base build drift") | .run')
     test_command=$(yaml_get "$CI_WORKFLOW" '.jobs.test.steps[] | select(.name == "Test knowledge-base package") | .run')
+    runtime_command=$(yaml_get "$CI_WORKFLOW" \
+      '.jobs.test.steps[] | select(.name == "Test knowledge-base plugin runtime") | .run')
+    runtime_opt_in=$(yaml_get "$CI_WORKFLOW" \
+      '.jobs.test.steps[] | select(.name == "Test knowledge-base plugin runtime") | .env.KNOWLEDGE_BASE_REAL_PLUGIN')
 
     [[ "$build_command" == "bun run --cwd plugins/knowledge-base build" ]]
+    [[ "$drift_command" == "bun run --cwd plugins/knowledge-base check:dist" ]]
     [[ "$test_command" == "bun run --cwd plugins/knowledge-base test" ]]
+    [[ "$runtime_command" == \
+      "bun run --cwd plugins/knowledge-base test -- plugin-runtime.test.ts" ]]
+    [[ "$runtime_opt_in" == "1" ]]
     ! grep -q 'KNOWLEDGE_BASE_REAL_MODEL=1' "$CI_WORKFLOW"
+}
+
+@test "knowledge-base dist gate rejects stale tracked output after a clean rebuild" {
+    local fixture
+    fixture=$(mktemp -d)
+    create_dist_gate_fixture "$fixture" "stale"
+
+    run bash "${PROJECT_ROOT}/scripts/check-knowledge-base-dist.sh" "$fixture/package"
+
+    rm -rf "$fixture"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"dist/stale.js"* ]]
+}
+
+@test "knowledge-base dist gate rejects generated output missing from Git" {
+    local fixture
+    fixture=$(mktemp -d)
+    create_dist_gate_fixture "$fixture" "untracked"
+
+    run bash "${PROJECT_ROOT}/scripts/check-knowledge-base-dist.sh" "$fixture/package"
+
+    rm -rf "$fixture"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"dist/generated.js"* ]]
 }
 
 @test "release prepare synchronizes the nested knowledge-base package version" {
@@ -165,6 +247,20 @@ job_has_if_condition() {
       await mkdir(join(fixture, ".claude-plugin"), { recursive: true });
       await writeFile(join(fixture, "plugins", "knowledge-base", ".claude-plugin", "plugin.json"), "{\"name\":\"knowledge-base\",\"version\":\"0.0.0\"}\n");
       await writeFile(join(fixture, "plugins", "knowledge-base", "package.json"), "{\"name\":\"@baleen37/knowledge-base\",\"version\":\"0.0.0\"}\n");
+      await writeFile(
+        join(fixture, "plugins", "knowledge-base", "package-lock.json"),
+        JSON.stringify({
+          name: "@baleen37/knowledge-base",
+          version: "0.0.0",
+          lockfileVersion: 3,
+          packages: {
+            "": {
+              name: "@baleen37/knowledge-base",
+              version: "0.0.0",
+            },
+          },
+        }, null, 2) + "\n",
+      );
       await writeFile(join(fixture, ".claude-plugin", "marketplace.json"), "{\"plugins\":[{\"name\":\"knowledge-base\",\"version\":\"0.0.0\"}]}\n");
       const originalCwd = process.cwd();
       try {
@@ -174,6 +270,16 @@ job_has_if_condition() {
         await plugin.prepare({}, { nextRelease: { version: "99.0.0" } });
         const nested = JSON.parse(await readFile(join(fixture, "plugins", "knowledge-base", "package.json"), "utf8"));
         if (nested.version !== "99.0.0") throw new Error(`nested package version: ${nested.version}`);
+        const lock = JSON.parse(await readFile(
+          join(fixture, "plugins", "knowledge-base", "package-lock.json"),
+          "utf8",
+        ));
+        if (lock.version !== "99.0.0") {
+          throw new Error(`nested lock version: ${lock.version}`);
+        }
+        if (lock.packages[""].version !== "99.0.0") {
+          throw new Error(`nested lock root version: ${lock.packages[""].version}`);
+        }
       } finally {
         process.chdir(originalCwd);
         await rm(fixture, { recursive: true, force: true });
@@ -188,6 +294,9 @@ job_has_if_condition() {
       const git = config.plugins.find((entry) => Array.isArray(entry) && entry[0] === "@semantic-release/git");
       if (!git[1].assets.includes("plugins/knowledge-base/package.json")) {
         throw new Error("nested knowledge-base package is not a release asset");
+      }
+      if (!git[1].assets.includes("plugins/knowledge-base/package-lock.json")) {
+        throw new Error("nested knowledge-base package lock is not a release asset");
       }
     ' "file://${PROJECT_ROOT}/.releaserc.js"
     [ "$status" -eq 0 ]
