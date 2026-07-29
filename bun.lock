@@ -17,7 +17,7 @@
     },
     "plugins/knowledge-base": {
       "name": "@baleen37/knowledge-base",
-      "version": "17.35.0",
+      "version": "17.35.1",
       "bin": {
         "knowledge-base": "dist/cli.js",
       },
