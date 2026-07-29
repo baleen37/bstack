@@ -272,6 +272,36 @@ describe("event normalization", () => {
 });
 
 describe("quality scoring", () => {
+  test("accepts the Bun official source domain and rejects a non-Bun source", async () => {
+    const scenarios = await Bun.file(
+      "plugins/me/skills/research/evals/scenarios.json",
+    ).json();
+    const scenario = scenarios.find((value: { id: string }) =>
+      value.id === "bun-spawn-stdout"
+    );
+    const input = syntheticSummary("baseline", "pass", 50).runs[0];
+    const domainAssertionFor = (url: string) => scoreRun({
+      ...input,
+      scenario,
+      answer: {
+        ...input.answer,
+        answerMarkdown: "Bun.spawn exposes stdout through Response.text().",
+        sources: [{
+          title: "Bun.spawn",
+          url,
+          claim: "Bun.spawn exposes stdout",
+        }],
+      },
+    }).assertions.find((item) => item.name === "sources");
+
+    expect(domainAssertionFor("https://bun.sh/docs/api/spawn")).toMatchObject({
+      status: "pass",
+    });
+    expect(domainAssertionFor("https://example.com/bun-spawn")).toMatchObject({
+      status: "fail",
+    });
+  });
+
   test("accepts Korean decision criteria only when every Context7 and Exa category is covered", async () => {
     const scenarios = await Bun.file(
       "plugins/me/skills/research/evals/scenarios.json",

@@ -28,7 +28,7 @@
     "expectedRoute": "researcher",
     "expectedAnswerStates": ["supported"],
     "requiredPatterns": ["Bun\\.spawn", "stdout", "Response|text\\(\\)"],
-    "requiredDomains": ["bun.com"],
+    "requiredDomains": ["bun.sh"],
     "minSources": 1,
     "maxSources": 1,
     "requireOpen": true,
