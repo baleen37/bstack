@@ -212,6 +212,7 @@ export async function runStructured(request: RuntimeRequest): Promise<RuntimeRes
     const result = await spawn([
       process.env.RESEARCH_EVAL_CLAUDE_BIN ?? "claude",
       "-p",
+      "--verbose",
       "--safe-mode",
       "--no-session-persistence",
       "--permission-mode", "dontAsk",

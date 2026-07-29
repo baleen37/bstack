@@ -60,12 +60,27 @@ EOF
 printf '%s\n' "$@" >>"$TEST_TEMP_DIR/claude.args"
 prompt=""
 system_prompt=""
+print_mode=0
+output_format=""
+verbose=0
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    -p|--safe-mode|--no-session-persistence)
+    -p)
+      print_mode=1
       shift
       ;;
-    --permission-mode|--output-format|--json-schema)
+    --verbose)
+      verbose=1
+      shift
+      ;;
+    --safe-mode|--no-session-persistence)
+      shift
+      ;;
+    --output-format)
+      output_format="$2"
+      shift 2
+      ;;
+    --permission-mode|--json-schema)
       shift 2
       ;;
     --system-prompt)
@@ -94,6 +109,10 @@ while [ "$#" -gt 0 ]; do
 done
 if [ -z "$prompt" ]; then
   printf '%s\n' "Error: Input must be provided either through stdin or as a prompt argument when using --print" >&2
+  exit 1
+fi
+if [ "$print_mode" = "1" ] && [ "$output_format" = "stream-json" ] && [ "$verbose" != "1" ]; then
+  printf '%s\n' "Error: When using --print, --output-format=stream-json requires --verbose" >&2
   exit 1
 fi
 printf '%s\n' "prompt-present" >>"$TEST_TEMP_DIR/claude.parsed"
@@ -145,7 +164,7 @@ teardown() {
     "$TEST_TEMP_DIR/out/summary.json"
 }
 
-@test "research evaluator: runs Claude without session persistence" {
+@test "research evaluator: runs Claude verbosely without session persistence" {
   run env \
     RESEARCH_EVAL_CLAUDE_BIN="$TEST_TEMP_DIR/bin/claude" \
     bun "$EVALUATE" \
@@ -158,6 +177,7 @@ teardown() {
   grep -q -- "--no-session-persistence" "$TEST_TEMP_DIR/claude.args"
   grep -Fx -- "--output-format" "$TEST_TEMP_DIR/claude.args"
   grep -Fx -- "stream-json" "$TEST_TEMP_DIR/claude.args"
+  [ "$(grep -cFx -- "--verbose" "$TEST_TEMP_DIR/claude.args")" -eq 2 ]
   jq -e '.runs[0].runtime == "claude"' \
     "$TEST_TEMP_DIR/out/summary.json"
 }
