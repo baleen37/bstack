@@ -1,6 +1,6 @@
 {
   "name": "@baleen37/knowledge-base",
-  "version": "17.35.1",
+  "version": "17.36.0",
   "description": "Local hybrid search for a private Markdown knowledge base",
   "type": "module",
   "license": "MIT",
