@@ -282,12 +282,18 @@ async function evaluate(args: Arguments): Promise<number> {
   const instructionsFile = join(outputDir, "instructions.json");
   const existingInstructions = await Bun.file(instructionsFile).json().catch(() => undefined) as Instructions | undefined;
   if (existingInstructions && !sameIdentity(existingInstructions, instructions)) usage("output directory has different evaluation identity");
-  await writeJson(instructionsFile, instructions);
   const existingRuns: EvaluationRun[] = [];
   const runsDirectory = join(outputDir, "runs");
   for (const file of await readdir(runsDirectory).catch(() => [])) {
     if (file.endsWith(".json")) existingRuns.push(JSON.parse(await readFile(join(runsDirectory, file), "utf8")) as EvaluationRun);
   }
+  if (existingRuns.some((run) => run.runtime !== args.runtime)) usage("output directory has different runtime");
+  if (existingRuns.some((run) => run.variant !== args.variant)) usage("output directory has different variant");
+  if (existingRuns.some((run) => run.instructionHashes.skill !== instructions.skillSha256
+    || run.instructionHashes.researcher !== instructions.researcherSha256)) {
+    usage("output directory has different instruction hashes");
+  }
+  await writeJson(instructionsFile, instructions);
   const newRuns: EvaluationRun[] = [];
   for (const scenario of await selectedScenarios(args, scenarios)) {
     const previous = existingRuns.filter((run) => run.scenario.id === scenario.id);

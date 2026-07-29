@@ -102,7 +102,7 @@ export async function runStructured(request: RuntimeRequest): Promise<RuntimeRes
         "exec",
         "--ephemeral",
         "--ignore-user-config",
-        "--sandbox read-only",
+        "--sandbox", "read-only",
         "--skip-git-repo-check",
         "--json",
         "--output-schema", schemaPath,

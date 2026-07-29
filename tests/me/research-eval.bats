@@ -12,7 +12,7 @@ setup() {
 
   cat >"$TEST_TEMP_DIR/bin/codex" <<'EOF'
 #!/usr/bin/env bash
-printf '%s\n' "$*" >>"$TEST_TEMP_DIR/codex.args"
+printf '%s\n' "$@" >>"$TEST_TEMP_DIR/codex.args"
 last_message=""
 while [ "$#" -gt 0 ]; do
   if [ "$1" = "--output-last-message" ]; then
@@ -83,7 +83,8 @@ teardown() {
   [ "$status" -eq 0 ]
   grep -q -- "--ephemeral" "$TEST_TEMP_DIR/codex.args"
   grep -q -- "--ignore-user-config" "$TEST_TEMP_DIR/codex.args"
-  grep -q -- "--sandbox read-only" "$TEST_TEMP_DIR/codex.args"
+  grep -Fx -- "--sandbox" "$TEST_TEMP_DIR/codex.args"
+  grep -Fx -- "read-only" "$TEST_TEMP_DIR/codex.args"
   jq -e '.runs[0].runtime == "codex"' \
     "$TEST_TEMP_DIR/out/summary.json"
 }
@@ -102,6 +103,26 @@ teardown() {
   grep -q -- "--output-format stream-json" "$TEST_TEMP_DIR/claude.args"
   jq -e '.runs[0].runtime == "claude"' \
     "$TEST_TEMP_DIR/out/summary.json"
+}
+
+@test "research evaluator: rejects a different runtime in an existing output directory" {
+  run env \
+    RESEARCH_EVAL_CODEX_BIN="$TEST_TEMP_DIR/bin/codex" \
+    bun "$EVALUATE" \
+      --runtime codex \
+      --variant baseline \
+      --scenario exact-rfc-safe-methods \
+      --output-dir "$TEST_TEMP_DIR/out"
+  [ "$status" -eq 0 ]
+  run env \
+    RESEARCH_EVAL_CLAUDE_BIN="$TEST_TEMP_DIR/bin/claude" \
+    bun "$EVALUATE" \
+      --runtime claude \
+      --variant baseline \
+      --scenario exact-rfc-safe-methods \
+      --output-dir "$TEST_TEMP_DIR/out"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"output directory has different runtime"* ]]
 }
 
 @test "research evaluator: preserves failure and exact instruction hashes" {
