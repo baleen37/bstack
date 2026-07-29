@@ -85,6 +85,7 @@ export interface EfficiencyMedian {
 export interface EvaluationSummary {
   runtime: RuntimeName;
   variant: VariantName;
+  instructionHashes?: { skill: string; researcher: string };
   runs: EvaluationRun[];
   statusCounts: Record<RunStatus, number>;
   failedScenarios: string[];
@@ -477,11 +478,13 @@ export function scoreRun(input: ScoreInput): EvaluationRun {
     assertions.push(assertion("uncertainty", answer.uncertainty.trim() !== "", "uncertainty is required"));
   }
 
-  const status: RunStatus = assertions.some((entry) => entry.status === "fail")
-    ? "fail"
-    : assertions.some((entry) => entry.status === "incomplete")
-      ? "incomplete"
-      : "pass";
+  let status: RunStatus = "pass";
+  if (!processAvailable || assertions.some((entry) => entry.status === "incomplete")) {
+    status = "incomplete";
+  }
+  if (processAvailable && assertions.some((entry) => entry.status === "fail")) {
+    status = "fail";
+  }
   return { ...input, status, assertions };
 }
 
