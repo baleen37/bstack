@@ -1111,12 +1111,12 @@ Run:
 bun plugins/me/skills/research/scripts/evaluate.ts \
   --runtime codex \
   --variant candidate \
-  --output-dir .research-eval/candidate/codex
+  --output-dir .research-eval/candidate/pending/codex
 
 bun plugins/me/skills/research/scripts/evaluate.ts \
   --runtime claude \
   --variant candidate \
-  --output-dir .research-eval/candidate/claude
+  --output-dir .research-eval/candidate/pending/claude
 ```
 
 Use the same available runtimes as the baseline. Do not alter scenario
@@ -1130,16 +1130,16 @@ Run:
 bun plugins/me/skills/research/scripts/evaluate.ts \
   --runtime codex \
   --variant candidate \
-  --rerun-from .research-eval/candidate/codex/summary.json \
+  --rerun-from .research-eval/candidate/pending/codex/summary.json \
   --repeat 3 \
-  --output-dir .research-eval/candidate/codex
+  --output-dir .research-eval/candidate/pending/codex
 
 bun plugins/me/skills/research/scripts/evaluate.ts \
   --runtime claude \
   --variant candidate \
-  --rerun-from .research-eval/candidate/claude/summary.json \
+  --rerun-from .research-eval/candidate/pending/claude/summary.json \
   --repeat 3 \
-  --output-dir .research-eval/candidate/claude
+  --output-dir .research-eval/candidate/pending/claude
 
 bun plugins/me/skills/research/scripts/evaluate.ts \
   --runtime codex \
@@ -1147,7 +1147,7 @@ bun plugins/me/skills/research/scripts/evaluate.ts \
   --scenario exact-rfc-safe-methods \
   --scenario local-plugin-bug \
   --repeat 5 \
-  --output-dir .research-eval/pressure/candidate/codex-routing
+  --output-dir .research-eval/pressure/pending/codex-routing
 
 bun plugins/me/skills/research/scripts/evaluate.ts \
   --runtime claude \
@@ -1155,7 +1155,7 @@ bun plugins/me/skills/research/scripts/evaluate.ts \
   --scenario exact-rfc-safe-methods \
   --scenario local-plugin-bug \
   --repeat 5 \
-  --output-dir .research-eval/pressure/candidate/claude-routing
+  --output-dir .research-eval/pressure/pending/claude-routing
 ```
 
 If a critical assertion still fails, change only the clause responsible:
@@ -1167,8 +1167,31 @@ If a critical assertion still fails, change only the clause responsible:
 - excess sources or repeated searches: tighten the final stop condition;
 - invented certainty: tighten the conflict and missing-answer clauses.
 
-Rerun only the affected scenario five times after each wording change. Retain
-the first candidate artifacts so the comparison shows the failed attempt.
+Before changing wording after a failed attempt, preserve both pending trees:
+
+```bash
+research_eval_attempt=1
+while [ -e ".research-eval/candidate/attempt-${research_eval_attempt}" ]; do
+  research_eval_attempt=$((research_eval_attempt + 1))
+done
+mv .research-eval/candidate/pending \
+  ".research-eval/candidate/attempt-${research_eval_attempt}"
+mv .research-eval/pressure/pending \
+  ".research-eval/pressure/attempt-${research_eval_attempt}"
+```
+
+After the wording change, run the Step 4 and Step 5 commands again. Their
+`pending` paths are empty because the previous attempt was moved. This keeps
+every instruction hash in a separate tree.
+
+Once all critical assertions pass, promote only that pending attempt:
+
+```bash
+test ! -e .research-eval/candidate/accepted
+test ! -e .research-eval/pressure/accepted
+mv .research-eval/candidate/pending .research-eval/candidate/accepted
+mv .research-eval/pressure/pending .research-eval/pressure/accepted
+```
 
 - [ ] **Step 6: Compare before committing**
 
@@ -1176,7 +1199,7 @@ Run:
 
 ```bash
 bun plugins/me/skills/research/scripts/evaluate.ts \
-  --compare .research-eval/baseline .research-eval/candidate \
+  --compare .research-eval/baseline .research-eval/candidate/accepted \
   --report .research-eval/comparison/report.md
 ```
 
@@ -1224,7 +1247,7 @@ Run:
 ```bash
 mkdir -p docs/superpowers/evals
 bun plugins/me/skills/research/scripts/evaluate.ts \
-  --compare .research-eval/baseline .research-eval/candidate \
+  --compare .research-eval/baseline .research-eval/candidate/accepted \
   --report docs/superpowers/evals/2026-07-29-research-improvement.md
 ```
 
@@ -1264,7 +1287,7 @@ Expected:
 
 - the full suite passes;
 - `git diff --check` exits 0;
-- only the generated report is uncommitted;
+- the generated report is the only uncommitted file created by this task;
 - `.research-eval/` is ignored;
 - `.skillopt-sleep/` remains untracked and untouched.
 
