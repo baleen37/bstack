@@ -1571,3 +1571,19 @@ weaken the required decision coverage or source-quality assertions.
   the domain requirement and a non-Bun domain does not.
 - Rescore only saved artifacts after tests pass; do not run a model in this
   task. Do not alter Task 4 candidate instructions.
+
+### Task 13: Accept the Korean Node Release-Date Form
+
+**Run this task before resuming the final Codex cohort.**
+
+**Files:**
+- Modify: `plugins/me/skills/research/evals/scenarios.json`
+- Modify: `tests/me/research-evaluator.test.ts`
+
+**Requirements:**
+
+- Keep the Node v22 release-date fact strict while accepting the Korean date
+  form `2024년 4월 24일` alongside existing English/ISO forms.
+- Add positive Korean and negative wrong-date scoring tests.
+- Rescore saved artifacts only after tests pass. Do not edit candidate
+  instructions or invoke a model.
