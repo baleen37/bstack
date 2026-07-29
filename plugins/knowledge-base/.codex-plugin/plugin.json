@@ -16,7 +16,6 @@
   ],
   "skills": "./skills/",
   "mcpServers": "./.mcp.json",
-  "hooks": "./hooks/hooks.json",
   "interface": {
     "displayName": "Knowledge Base",
     "shortDescription": "Local hybrid search over a private personal and organization knowledge base",

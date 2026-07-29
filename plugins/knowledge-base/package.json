@@ -8,15 +8,17 @@
     "node": ">=22.0.0"
   },
   "bin": {
-    "knowledge-base": "dist/cli.js"
+    "knowledge-base": "bin/knowledge-base.mjs"
   },
   "files": [
+    "bin/",
     "dist/",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "check:dist": "bash ../../scripts/check-knowledge-base-dist.sh",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "prepack": "bun run build"

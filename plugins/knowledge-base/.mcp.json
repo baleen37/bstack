@@ -4,7 +4,7 @@
       "command": "sh",
       "args": [
         "-lc",
-        "exec node \"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-$PWD}}/dist/cli.js\" mcp"
+        "exec \"${KNOWLEDGE_BASE_BIN:-${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-$PWD}}/bin/knowledge-base.mjs}\" mcp"
       ],
       "cwd": "."
     }
