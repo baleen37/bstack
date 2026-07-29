@@ -143,11 +143,14 @@ job_has_if_condition() {
 @test "knowledge-base package is built and tested in CI without the real-model opt-in smoke" {
     ensure_yaml_validator
     local build_command
+    local drift_command
     local test_command
     build_command=$(yaml_get "$CI_WORKFLOW" '.jobs.test.steps[] | select(.name == "Build knowledge-base package") | .run')
+    drift_command=$(yaml_get "$CI_WORKFLOW" '.jobs.test.steps[] | select(.name == "Check knowledge-base build drift") | .run')
     test_command=$(yaml_get "$CI_WORKFLOW" '.jobs.test.steps[] | select(.name == "Test knowledge-base package") | .run')
 
     [[ "$build_command" == "bun run --cwd plugins/knowledge-base build" ]]
+    [[ "$drift_command" == "git diff --exit-code -- plugins/knowledge-base/dist" ]]
     [[ "$test_command" == "bun run --cwd plugins/knowledge-base test" ]]
     ! grep -q 'KNOWLEDGE_BASE_REAL_MODEL=1' "$CI_WORKFLOW"
 }

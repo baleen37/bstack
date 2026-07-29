@@ -119,10 +119,12 @@ run_mcp_stdio_client() {
 
 @test "knowledge-base exposes a local stdio MCP server" {
   local config="${PROJECT_ROOT}/plugins/knowledge-base/.mcp.json"
-  local expected_args='["-lc","exec \"${KNOWLEDGE_BASE_BIN:-knowledge-base}\" mcp"]'
+  local expected_args='["-lc","exec \"${KNOWLEDGE_BASE_BIN:-${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-$PWD}}/bin/knowledge-base.mjs}\" mcp"]'
 
   [ "$(jq -r '.mcpServers["knowledge-base"].command' "$config")" = "sh" ]
   [ "$(jq -c '.mcpServers["knowledge-base"].args' "$config")" = "$expected_args" ]
+  [[ "$(jq -r '.mcpServers["knowledge-base"].args[1]' "$config")" == *"/bin/knowledge-base.mjs"* ]]
+  [[ "$(jq -r '.mcpServers["knowledge-base"].args[1]' "$config")" != *":-knowledge-base}"* ]]
   [ "$(jq -r '.mcpServers["knowledge-base"].cwd' "$config")" = "." ]
   [ "$(jq -r '.mcpServers["knowledge-base"].url // empty' "$config")" = "" ]
   jq -e '
@@ -131,6 +133,20 @@ run_mcp_stdio_client() {
     | test("npx|bunx|npm[[:space:]]+install|bun[[:space:]]+install"; "i")
     | not
   ' "$config" >/dev/null
+}
+
+@test "knowledge-base ships a reproducible tracked dist" {
+  local package_dir="${PROJECT_ROOT}/plugins/knowledge-base"
+
+  git -C "$PROJECT_ROOT" ls-files --error-unmatch \
+    plugins/knowledge-base/dist/cli.js >/dev/null
+  git -C "$PROJECT_ROOT" ls-files --error-unmatch \
+    plugins/knowledge-base/dist/runtime-bootstrap.js >/dev/null
+
+  run bun run --cwd "$package_dir" build
+  [ "$status" -eq 0 ]
+  run git -C "$PROJECT_ROOT" diff --exit-code -- plugins/knowledge-base/dist
+  [ "$status" -eq 0 ]
 }
 
 @test "knowledge-base blocks qmd generation and reranking paths" {

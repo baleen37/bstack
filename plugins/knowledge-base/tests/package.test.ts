@@ -44,8 +44,13 @@ describe("published package", () => {
     ]) {
       expect(files.some((file) => file.includes(forbidden))).toBe(false);
     }
-    expect(files).toContain("dist/cli.js");
-    expect(files).toContain("README.md");
-    expect(files).toContain("LICENSE");
+    expect(files).toEqual(expect.arrayContaining([
+      "bin/knowledge-base.mjs",
+      "dist/cli.js",
+      "dist/runtime-bootstrap.js",
+      "README.md",
+      "LICENSE",
+      "package.json",
+    ]));
   });
 });

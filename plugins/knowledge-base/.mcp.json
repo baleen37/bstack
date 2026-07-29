@@ -4,7 +4,7 @@
       "command": "sh",
       "args": [
         "-lc",
-        "exec \"${KNOWLEDGE_BASE_BIN:-knowledge-base}\" mcp"
+        "exec \"${KNOWLEDGE_BASE_BIN:-${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-$PWD}}/bin/knowledge-base.mjs}\" mcp"
       ],
       "cwd": "."
     }
