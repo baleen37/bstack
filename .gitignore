@@ -17,6 +17,7 @@ develop-eggs/
 dist/
 !plugins/knowledge-base/dist/
 !plugins/knowledge-base/dist/**
+plugins/knowledge-base/.knowledge-base-runtime/
 downloads/
 eggs/
 .eggs/

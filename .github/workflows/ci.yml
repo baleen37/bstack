@@ -47,7 +47,7 @@ jobs:
         run: bun run --cwd plugins/knowledge-base build
 
       - name: Check knowledge-base build drift
-        run: git diff --exit-code -- plugins/knowledge-base/dist
+        run: bun run --cwd plugins/knowledge-base check:dist
 
       - name: Test knowledge-base package
         run: bun run --cwd plugins/knowledge-base test

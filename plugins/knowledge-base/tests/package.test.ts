@@ -9,6 +9,33 @@ import { readPackageVersion } from "../src/package-version.js";
 
 const execFileAsync = promisify(execFile);
 const packageDir = fileURLToPath(new URL("../", import.meta.url));
+const publicDistModules = [
+  "cli",
+  "config",
+  "mcp",
+  "model",
+  "model-io",
+  "model-verify",
+  "package-version",
+  "paths",
+  "process",
+  "qmd",
+  "repository",
+  "runtime-bootstrap",
+  "services",
+  "types",
+];
+const publicPackageFiles = [
+  "bin/knowledge-base.mjs",
+  "README.md",
+  "LICENSE",
+  "package.json",
+  ...publicDistModules.flatMap((module) => [
+    `dist/${module}.d.ts`,
+    `dist/${module}.js`,
+    `dist/${module}.js.map`,
+  ]),
+].sort();
 
 describe("published package", () => {
   it.each([
@@ -35,22 +62,6 @@ describe("published package", () => {
     const entry = Array.isArray(packed) ? packed[0] : Object.values(packed)[0];
     const files = entry?.files.map((file) => file.path) ?? [];
 
-    for (const forbidden of [
-      "personal/",
-      "wooto/",
-      ".sqlite",
-      ".gguf",
-      "config.json",
-    ]) {
-      expect(files.some((file) => file.includes(forbidden))).toBe(false);
-    }
-    expect(files).toEqual(expect.arrayContaining([
-      "bin/knowledge-base.mjs",
-      "dist/cli.js",
-      "dist/runtime-bootstrap.js",
-      "README.md",
-      "LICENSE",
-      "package.json",
-    ]));
+    expect(files.sort()).toEqual(publicPackageFiles);
   });
 });

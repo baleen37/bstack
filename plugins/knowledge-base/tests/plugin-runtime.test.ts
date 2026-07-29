@@ -1,6 +1,6 @@
 import { execFile as execFileCallback } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { access, cp, mkdtemp, rm } from "node:fs/promises";
+import { access, cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import type { Readable } from "node:stream";
@@ -32,24 +32,18 @@ afterEach(async () => {
 });
 
 describe("plugin-local runtime", () => {
-  pluginRuntimeTest("bootstraps dependencies and serves MCP from a fresh copy", async () => {
-    const fixture = await copyPublicPluginFixture();
+  pluginRuntimeTest("first-launches MCP inside a parent workspace and loads native dependencies", async () => {
+    const { fixture, parentRoot, externalRoot, parentPackage } = await copyWorkspacePluginFixture();
     const launcher = join(fixture, "bin", "knowledge-base.mjs");
+    const childEnvironment = isolatedEnvironment(fixture, externalRoot);
 
+    expect(await pathExists(join(parentRoot, "node_modules"))).toBe(false);
     expect(await pathExists(join(fixture, "node_modules"))).toBe(false);
-
-    const version = await execFile(process.execPath, [launcher, "--version"], {
-      env: isolatedEnvironment(fixture),
-      timeout: 10 * 60_000,
-    });
-    expect(version.stderr).toBe("");
-    expect(version.stdout).toBe(`${expectedVersion}\n`);
-    expect(await pathExists(join(fixture, "node_modules", "@tobilu", "qmd"))).toBe(true);
 
     const transport = new StdioClientTransport({
       command: process.execPath,
       args: [launcher, "mcp"],
-      env: isolatedEnvironment(fixture),
+      env: childEnvironment,
       stderr: "pipe",
     });
     const client = new Client({
@@ -75,8 +69,8 @@ describe("plugin-local runtime", () => {
     let failure: unknown;
     let cleanupFailure: unknown;
     try {
-      await withDeadline(client.connect(transport), "MCP initialize", protocolFailure);
-      const { tools } = await withDeadline(client.listTools(), "MCP tools/list", protocolFailure);
+      await withDeadline(client.connect(transport), "first-launch MCP initialize", 12 * 60_000, protocolFailure);
+      const { tools } = await withDeadline(client.listTools(), "MCP tools/list", 10_000, protocolFailure);
       expect(tools.map((tool) => tool.name).sort()).toEqual(["get", "search", "status"]);
       expect(client.getServerVersion()).toEqual({
         name: "knowledge-base",
@@ -86,12 +80,12 @@ describe("plugin-local runtime", () => {
       failure = error;
     } finally {
       try {
-        await withDeadline(client.close(), "MCP close");
+        await withDeadline(client.close(), "MCP close", 10_000);
       } catch (error) {
         cleanupFailure = error;
       }
       try {
-        await withDeadline(stderrDone, "MCP stderr drain");
+        await withDeadline(stderrDone, "MCP stderr drain", 10_000);
       } catch (error) {
         if (cleanupFailure === undefined) cleanupFailure = error;
       }
@@ -100,25 +94,95 @@ describe("plugin-local runtime", () => {
     if (failure !== undefined) throw failure;
     if (cleanupFailure !== undefined) throw cleanupFailure;
     expect(stderrOutput).toBe("");
+
+    expect(await pathExists(join(fixture, "node_modules", "@tobilu", "qmd"))).toBe(true);
+    expect(await pathExists(join(fixture, ".knowledge-base-runtime", "ready.json"))).toBe(true);
+    expect(await pathExists(join(fixture, ".knowledge-base-runtime", "cache", "npm"))).toBe(true);
+    const runtimeEntries = await readdir(join(fixture, ".knowledge-base-runtime"));
+    expect(runtimeEntries.some((entry) =>
+      /^(?:bootstrap(?:\.lock|-owner-)|install-|node_modules-backup-)/.test(entry)
+    )).toBe(false);
+    expect(await pathExists(join(parentRoot, "node_modules"))).toBe(false);
+    expect(await pathExists(join(parentRoot, "package-lock.json"))).toBe(false);
+    expect(await readFile(join(parentRoot, "package.json"), "utf8")).toBe(parentPackage);
+    expect(await pathExists(externalRoot)).toBe(false);
+
+    const nativeLoad = await execFile(process.execPath, [
+      "--input-type=module",
+      "-e",
+      `import { createRequire } from "node:module";
+import { pathToFileURL } from "node:url";
+const requireFromRoot = createRequire(pathToFileURL(process.argv[1] + "/package.json"));
+const Database = requireFromRoot("better-sqlite3");
+const database = new Database(":memory:");
+requireFromRoot("sqlite-vec").load(database);
+const llama = await import(pathToFileURL(requireFromRoot.resolve("node-llama-cpp")).href);
+database.close();
+if (typeof llama.getLlama !== "function") throw new Error("node-llama-cpp failed to load");
+console.log("native runtime loaded");`,
+      fixture,
+    ], {
+      env: childEnvironment,
+      timeout: 60_000,
+    });
+    expect(nativeLoad.stderr).toBe("");
+    expect(nativeLoad.stdout).toBe("native runtime loaded\n");
+
+    const version = await execFile(process.execPath, [launcher, "--version"], {
+      env: {
+        ...childEnvironment,
+        PATH: join(parentRoot, "npm-must-not-run"),
+      },
+      timeout: 30_000,
+    });
+    expect(version.stderr).toBe("");
+    expect(version.stdout).toBe(`${expectedVersion}\n`);
   }, 15 * 60_000);
 });
 
-async function copyPublicPluginFixture(): Promise<string> {
-  const fixture = await mkdtemp(join(tmpdir(), "knowledge-base-plugin-runtime-"));
-  temporaryRoots.push(fixture);
+async function copyWorkspacePluginFixture(): Promise<{
+  fixture: string;
+  parentRoot: string;
+  externalRoot: string;
+  parentPackage: string;
+}> {
+  const parentRoot = await mkdtemp(join(tmpdir(), "knowledge base plugin workspace-"));
+  temporaryRoots.push(parentRoot);
+  const fixture = join(parentRoot, "plugins", "knowledge-base");
+  const externalRoot = join(parentRoot, "external-writes");
+  const parentPackage = `${JSON.stringify({
+    name: "parent-workspace",
+    private: true,
+    workspaces: ["plugins/*"],
+  }, null, 2)}\n`;
+  await mkdir(fixture, { recursive: true });
+  await writeFile(join(parentRoot, "package.json"), parentPackage);
   await Promise.all(publicPluginFiles.map((file) => cp(join(packageRoot, file), join(fixture, file), {
     recursive: true,
   })));
-  return fixture;
+  return { fixture, parentRoot, externalRoot, parentPackage };
 }
 
-function isolatedEnvironment(root: string): NodeJS.ProcessEnv {
+function isolatedEnvironment(root: string, externalRoot: string): NodeJS.ProcessEnv {
   return {
     ...process.env,
-    KNOWLEDGE_BASE_CONFIG_DIR: join(root, "config"),
-    KNOWLEDGE_BASE_DATA_DIR: join(root, "data"),
-    KNOWLEDGE_BASE_CACHE_DIR: join(root, "cache"),
-    npm_config_cache: join(root, "npm-cache"),
+    KNOWLEDGE_BASE_CONFIG_DIR: join(root, ".test-data", "config"),
+    KNOWLEDGE_BASE_DATA_DIR: join(root, ".test-data", "data"),
+    KNOWLEDGE_BASE_CACHE_DIR: join(root, ".test-data", "cache"),
+    HOME: join(externalRoot, "home"),
+    USERPROFILE: join(externalRoot, "user-profile"),
+    TMPDIR: join(externalRoot, "tmpdir"),
+    TMP: join(externalRoot, "tmp"),
+    TEMP: join(externalRoot, "temp"),
+    XDG_CACHE_HOME: join(externalRoot, "xdg-cache"),
+    XDG_CONFIG_HOME: join(externalRoot, "xdg-config"),
+    XDG_DATA_HOME: join(externalRoot, "xdg-data"),
+    XDG_STATE_HOME: join(externalRoot, "xdg-state"),
+    npm_config_cache: join(externalRoot, "npm-cache"),
+    npm_config_devdir: join(externalRoot, "node-gyp"),
+    CCACHE_DIR: join(externalRoot, "ccache"),
+    NODE_LLAMA_CPP_XPACKS_STORE_FOLDER: join(externalRoot, "llama-store"),
+    NODE_LLAMA_CPP_XPACKS_CACHE_FOLDER: join(externalRoot, "llama-cache"),
   };
 }
 
@@ -134,11 +198,12 @@ async function pathExists(path: string): Promise<boolean> {
 async function withDeadline<T>(
   operation: Promise<T>,
   name: string,
+  timeoutMs: number,
   protocolFailure?: Promise<never>,
 ): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<T>((_, rejectPromise) => {
-    timer = setTimeout(() => rejectPromise(new Error(`${name} timed out`)), 2_000);
+    timer = setTimeout(() => rejectPromise(new Error(`${name} timed out`)), timeoutMs);
   });
   const contenders = protocolFailure === undefined ? [operation, timeout] : [operation, timeout, protocolFailure];
   return await Promise.race(contenders).finally(() => {
