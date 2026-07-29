@@ -24,7 +24,7 @@ AI 보조 개발을 위한 도구들을 제공하며, 반복적 자기 참조 AI
 
 | Directory | Purpose |
 | --------- | ------- |
-| `plugins/` | Plugin sources, one subdirectory per plugin (`me`, `jira`, `slack`, `notion`, `datadog`, `autoresearch`); each holds its own `agents/`, `hooks/`, `skills/`, and `.claude-plugin/plugin.json` |
+| `plugins/` | Plugin sources, one subdirectory per plugin (`me`, `slack`, `notion`, `datadog`, `autoresearch`); each holds its own `agents/`, `hooks/`, `skills/`, and `.claude-plugin/plugin.json` |
 | `scripts/` | Utility scripts (handoff, conflict checks, PR verification) |
 | `.claude-plugin/` | Marketplace configuration (`marketplace.json`) listing all plugins |
 | `.github/` | GitHub Actions workflows and custom actions (see `.github/AGENTS.md`) |
