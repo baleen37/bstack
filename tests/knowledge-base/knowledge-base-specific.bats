@@ -119,8 +119,11 @@ run_mcp_stdio_client() {
 
 @test "knowledge-base exposes a local stdio MCP server" {
   local config="${PROJECT_ROOT}/plugins/knowledge-base/.mcp.json"
-  local expected_args='["-lc","exec \"${KNOWLEDGE_BASE_BIN:-knowledge-base}\" mcp"]'
+  local expected_args='["-lc","exec node \"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-$PWD}}/dist/cli.js\" mcp"]'
 
+  # Codex sets PLUGIN_ROOT, Claude Code sets CLAUDE_PLUGIN_ROOT, and neither
+  # expands the other's variable. Only a shell can evaluate the fallback chain,
+  # so this stays shell form like plugins/jira/.mcp.json.
   [ "$(jq -r '.mcpServers["knowledge-base"].command' "$config")" = "sh" ]
   [ "$(jq -c '.mcpServers["knowledge-base"].args' "$config")" = "$expected_args" ]
   [ "$(jq -r '.mcpServers["knowledge-base"].cwd' "$config")" = "." ]
@@ -131,6 +134,32 @@ run_mcp_stdio_client() {
     | test("npx|bunx|npm[[:space:]]+install|bun[[:space:]]+install"; "i")
     | not
   ' "$config" >/dev/null
+}
+
+@test "knowledge-base ships the built CLI it points at" {
+  local plugin_dir="${PROJECT_ROOT}/plugins/knowledge-base"
+
+  # The marketplace copies the plugin directory verbatim, so dist/ must be
+  # tracked rather than gitignored.
+  run git -C "$PROJECT_ROOT" check-ignore -q plugins/knowledge-base/dist/cli.js
+  [ "$status" -ne 0 ]
+  run git -C "$PROJECT_ROOT" ls-files --error-unmatch plugins/knowledge-base/dist/cli.js
+  [ "$status" -eq 0 ]
+  [ -f "${plugin_dir}/dist/cli.js" ]
+}
+
+@test "knowledge-base installs its native dependencies from a session hook" {
+  local hooks="${PROJECT_ROOT}/plugins/knowledge-base/hooks/hooks.json"
+  local script="${PROJECT_ROOT}/plugins/knowledge-base/hooks/install-deps.sh"
+  local expected='bash "${PLUGIN_ROOT:-$CLAUDE_PLUGIN_ROOT}/hooks/install-deps.sh"'
+
+  [ "$(jq -r '.hooks.SessionStart[0].hooks[0].command' "$hooks")" = "$expected" ]
+  [ -x "$script" ]
+
+  # npm 12 skips these builds unless the generated manifest allows them, which
+  # leaves the dependency tree looking complete but every search broken.
+  grep -q '"better-sqlite3": true' "$script"
+  grep -q '"node-llama-cpp": true' "$script"
 }
 
 @test "knowledge-base blocks qmd generation and reranking paths" {
