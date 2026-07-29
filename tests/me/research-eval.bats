@@ -58,7 +58,46 @@ EOF
   cat >"$TEST_TEMP_DIR/bin/claude" <<'EOF'
 #!/usr/bin/env bash
 printf '%s\n' "$@" >>"$TEST_TEMP_DIR/claude.args"
-if [[ "$*" == *ROUTE_ONLY* ]]; then
+prompt=""
+system_prompt=""
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -p|--safe-mode|--no-session-persistence)
+      shift
+      ;;
+    --permission-mode|--output-format|--json-schema)
+      shift 2
+      ;;
+    --system-prompt)
+      system_prompt="$2"
+      shift 2
+      ;;
+    --tools)
+      shift
+      while [ "$#" -gt 0 ] && [[ "$1" != -* ]]; do
+        shift
+      done
+      ;;
+    -*)
+      printf '%s\n' "unexpected option: $1" >&2
+      exit 2
+      ;;
+    *)
+      if [ -n "$prompt" ]; then
+        printf '%s\n' "unexpected positional argument" >&2
+        exit 2
+      fi
+      prompt="$1"
+      shift
+      ;;
+  esac
+done
+if [ -z "$prompt" ]; then
+  printf '%s\n' "Error: Input must be provided either through stdin or as a prompt argument when using --print" >&2
+  exit 1
+fi
+printf '%s\n' "prompt-present" >>"$TEST_TEMP_DIR/claude.parsed"
+if [[ "$system_prompt" == *ROUTE_ONLY* ]]; then
   printf '%s\n' '{"type":"result","result":"{\"route\":\"direct\",\"brief\":\"Read the supplied RFC section and answer the question.\",\"answer\":\"\"}"}'
   exit 0
 fi
@@ -121,6 +160,18 @@ teardown() {
   grep -Fx -- "stream-json" "$TEST_TEMP_DIR/claude.args"
   jq -e '.runs[0].runtime == "claude"' \
     "$TEST_TEMP_DIR/out/summary.json"
+}
+
+@test "research evaluator: passes both Claude prompts before variadic tools" {
+  run env \
+    RESEARCH_EVAL_CLAUDE_BIN="$TEST_TEMP_DIR/bin/claude" \
+    bun "$EVALUATE" \
+      --runtime claude \
+      --variant candidate \
+      --scenario exact-rfc-safe-methods \
+      --output-dir "$TEST_TEMP_DIR/out"
+  [ "$status" -eq 0 ]
+  [ "$(grep -c '^prompt-present$' "$TEST_TEMP_DIR/claude.parsed")" -eq 2 ]
 }
 
 @test "research evaluator: sanitizes the Codex transport schema" {

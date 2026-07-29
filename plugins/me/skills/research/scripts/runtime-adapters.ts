@@ -218,8 +218,8 @@ export async function runStructured(request: RuntimeRequest): Promise<RuntimeRes
       "--output-format", "stream-json",
       "--json-schema", JSON.stringify(request.schema),
       "--system-prompt", request.systemPrompt,
-      "--tools", isRoute ? "" : "WebSearch,WebFetch",
       request.userPrompt,
+      "--tools", isRoute ? "" : "WebSearch,WebFetch",
     ], undefined, request.workingDirectory);
     let finalJson: unknown;
     if (result.exitCode === 0) {
