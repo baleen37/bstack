@@ -272,6 +272,38 @@ describe("event normalization", () => {
 });
 
 describe("quality scoring", () => {
+  test("accepts Korean decision criteria only when every Context7 and Exa category is covered", async () => {
+    const scenarios = await Bun.file(
+      "plugins/me/skills/research/evals/scenarios.json",
+    ).json();
+    const scenario = scenarios.find((value: { id: string }) =>
+      value.id === "context7-exa-recommendation"
+    );
+    const input = syntheticSummary("baseline", "pass", 50).runs[0];
+    const answerFor = (answerMarkdown: string) => scoreRun({
+      ...input,
+      scenario,
+      answer: {
+        ...input.answer,
+        answerMarkdown,
+      },
+    }).assertions.find((item) => item.name === "required_patterns");
+
+    expect(answerFor(
+      "인증 방식, 요청 제한, 요금, 개인정보와 데이터 사용, 데이터 보존 기간을 확인해야 합니다.",
+    )).toMatchObject({ status: "pass" });
+
+    for (const answerMarkdown of [
+      "요청 제한, 요금, 개인정보와 데이터 사용, 데이터 보존 기간을 확인해야 합니다.",
+      "인증 방식, 요금, 개인정보와 데이터 사용, 데이터 보존 기간을 확인해야 합니다.",
+      "인증 방식, 요청 제한, 개인정보와 데이터 사용, 데이터 보존 기간을 확인해야 합니다.",
+      "인증 방식, 요청 제한, 요금, 보존 기간을 확인해야 합니다.",
+      "인증 방식, 요청 제한, 요금, 개인정보와 데이터 사용을 확인해야 합니다.",
+    ]) {
+      expect(answerFor(answerMarkdown)).toMatchObject({ status: "fail" });
+    }
+  });
+
   test("marks missing Codex open evidence incomplete even when search events are visible", () => {
     const run = scoreOpenEvidence("codex", [{
       action: "search",

@@ -87,7 +87,7 @@
     "staleReason": null,
     "expectedRoute": "researcher",
     "expectedAnswerStates": ["supported"],
-    "requiredPatterns": ["auth", "rate|limit", "bill|price|cost", "privacy|data", "retention"],
+    "requiredPatterns": ["auth|인증", "rate|limit|속도 제한|요청 제한", "bill|price|cost|요금|과금|결제", "privacy|data|개인정보|데이터", "retention|보존"],
     "requiredDomains": ["context7.com", "exa.ai"],
     "minSources": 2,
     "maxSources": 5,
