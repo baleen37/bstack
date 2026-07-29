@@ -1455,3 +1455,29 @@ bun plugins/me/skills/research/scripts/evaluate.ts \
 ```
 
 The new summary contains exactly five runs and does not call a model CLI.
+
+### Task 8: Model Direct-URL Observability Explicitly
+
+**Run this task before resuming Task 4.**
+
+**Files:**
+- Modify: `plugins/me/skills/research/scripts/evaluator.ts`
+- Modify: `tests/me/research-evaluator.test.ts`
+
+**Requirements:**
+
+- For Codex only, treat search-count and forbidden-search assertions for a
+  `direct` route as `incomplete`, not failed. Codex CLI 0.146.0 exposes no
+  direct-URL open tool and reports both direct retrieval and discovery through
+  generic `web_search` events.
+- Preserve strict search-count and forbidden-search failures for Claude and
+  for Codex researcher routes. Preserve every unrelated forbidden action.
+- Add unit coverage that proves the Codex-direct ambiguity is incomplete while
+  the identical Claude and Codex-researcher events still fail.
+- Run focused TypeScript tests, the full evaluator tests, Task 2 Bats, and
+  `git diff --check`. Do not edit candidate instructions or evaluation
+  artifacts in this task.
+
+After this task, rescore the saved Codex representative cohort into a new
+artifact tree and resume Task 4 from its preserved candidate attempt. The
+candidate is not adopted until the cross-runtime quality gate is met.
