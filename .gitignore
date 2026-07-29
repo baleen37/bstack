@@ -68,3 +68,6 @@ htmlcov/
 
 # Cache directory
 .cache/
+
+# Local research-skill evaluation traces
+.research-eval/
