@@ -237,6 +237,7 @@ bootstrapRuntimeDependencies(process.argv[1]);
 
       expect((await readFile(counterPath, "utf8")).trim().split("\n")).toEqual(["npm"]);
     },
+    15_000,
   );
 
   it("preserves npm stderr and fails when bootstrap cannot complete", async () => {

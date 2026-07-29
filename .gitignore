@@ -15,6 +15,8 @@ build/
 !plugins/*/skills/build/SKILL.md
 develop-eggs/
 dist/
+# Exception: knowledge-base ships its built CLI. The marketplace copies the
+# plugin directory verbatim, so there is no build step to produce it later.
 !plugins/knowledge-base/dist/
 !plugins/knowledge-base/dist/**
 plugins/knowledge-base/.knowledge-base-runtime/

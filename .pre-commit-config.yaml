@@ -4,10 +4,12 @@ repos:
     hooks:
       - id: check-yaml
       - id: check-json
+      # knowledge-base/dist is tsc output committed for the marketplace. Fixing
+      # it here would rewrite the artifact after every build.
       - id: end-of-file-fixer
-        exclude: ^tests/
+        exclude: ^(tests/|plugins/knowledge-base/dist/)
       - id: trailing-whitespace
-        exclude: ^tests/
+        exclude: ^(tests/|plugins/knowledge-base/dist/)
 
   - repo: local
     hooks:

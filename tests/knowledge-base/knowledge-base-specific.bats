@@ -121,6 +121,9 @@ run_mcp_stdio_client() {
   local config="${PROJECT_ROOT}/plugins/knowledge-base/.mcp.json"
   local expected_args='["-lc","exec \"${KNOWLEDGE_BASE_BIN:-${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-$PWD}}/bin/knowledge-base.mjs}\" mcp"]'
 
+  # Codex sets PLUGIN_ROOT, Claude Code sets CLAUDE_PLUGIN_ROOT, and neither
+  # expands the other's variable. Only a shell can evaluate the fallback chain,
+  # so this stays shell form like plugins/jira/.mcp.json.
   [ "$(jq -r '.mcpServers["knowledge-base"].command' "$config")" = "sh" ]
   [ "$(jq -c '.mcpServers["knowledge-base"].args' "$config")" = "$expected_args" ]
   [[ "$(jq -r '.mcpServers["knowledge-base"].args[1]' "$config")" == *"/bin/knowledge-base.mjs"* ]]
@@ -138,6 +141,8 @@ run_mcp_stdio_client() {
 @test "knowledge-base ships a reproducible tracked dist" {
   local package_dir="${PROJECT_ROOT}/plugins/knowledge-base"
 
+  run git -C "$PROJECT_ROOT" check-ignore -q plugins/knowledge-base/dist/cli.js
+  [ "$status" -ne 0 ]
   git -C "$PROJECT_ROOT" ls-files --error-unmatch \
     plugins/knowledge-base/dist/cli.js >/dev/null
   git -C "$PROJECT_ROOT" ls-files --error-unmatch \
