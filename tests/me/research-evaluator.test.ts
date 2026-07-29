@@ -302,6 +302,46 @@ describe("quality scoring", () => {
     });
   });
 
+  test("accepts the Korean Node v22 release date", async () => {
+    const scenarios = await Bun.file(
+      "plugins/me/skills/research/evals/scenarios.json",
+    ).json();
+    const scenario = scenarios.find((value: { id: string }) =>
+      value.id === "node-v22-release-date"
+    );
+    const input = syntheticSummary("baseline", "pass", 50).runs[0];
+    const requiredPatterns = scoreRun({
+      ...input,
+      scenario,
+      answer: {
+        ...input.answer,
+        answerMarkdown: "Node.js v22.0.0의 출시일은 2024년 4월 24일입니다.",
+      },
+    }).assertions.find((item) => item.name === "required_patterns");
+
+    expect(requiredPatterns).toMatchObject({ status: "pass" });
+  });
+
+  test("rejects a wrong Korean Node v22 release date", async () => {
+    const scenarios = await Bun.file(
+      "plugins/me/skills/research/evals/scenarios.json",
+    ).json();
+    const scenario = scenarios.find((value: { id: string }) =>
+      value.id === "node-v22-release-date"
+    );
+    const input = syntheticSummary("baseline", "pass", 50).runs[0];
+    const requiredPatterns = scoreRun({
+      ...input,
+      scenario,
+      answer: {
+        ...input.answer,
+        answerMarkdown: "Node.js v22.0.0의 출시일은 2024년 4월 25일입니다.",
+      },
+    }).assertions.find((item) => item.name === "required_patterns");
+
+    expect(requiredPatterns).toMatchObject({ status: "fail" });
+  });
+
   test("accepts Korean decision criteria only when every Context7 and Exa category is covered", async () => {
     const scenarios = await Bun.file(
       "plugins/me/skills/research/evals/scenarios.json",

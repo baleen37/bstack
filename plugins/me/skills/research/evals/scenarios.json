@@ -47,7 +47,7 @@
     "staleReason": null,
     "expectedRoute": "researcher",
     "expectedAnswerStates": ["supported"],
-    "requiredPatterns": ["2024-04-24|24 April 2024|April 24, 2024"],
+    "requiredPatterns": ["2024-04-24|24 April 2024|April 24, 2024|2024년 4월 24일"],
     "requiredDomains": ["nodejs.org"],
     "minSources": 1,
     "maxSources": 1,
