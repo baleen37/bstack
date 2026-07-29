@@ -1225,6 +1225,43 @@ git commit -m "feat(research): tighten adaptive evidence workflow"
 
 Do not stage `.research-eval/` or `.skillopt-sleep/`.
 
+#### Adaptive override for Steps 4 through 6
+
+Task 7 produces the matching Codex baseline cohort before this task starts.
+Replace the fixed full-suite candidate and pressure commands above with this
+staged protocol:
+
+1. Run each runtime only for the approved five scenario ids into its own
+   `.research-eval/candidate/pending/<runtime>` directory. Run one canary
+   (`exact-rfc-safe-methods`) before the remaining four, and stop on runtime or
+   harness incompatibility.
+2. Compare each accepted runtime directory against its matching baseline
+   cohort, not the full ten-run Codex baseline. The commands are:
+
+   ```bash
+   bun plugins/me/skills/research/scripts/evaluate.ts \
+     --compare .research-eval/baseline-representative/codex \
+     .research-eval/candidate/accepted/codex \
+     --report .research-eval/comparison/codex.md
+   bun plugins/me/skills/research/scripts/evaluate.ts \
+     --compare .research-eval/baseline/claude-representative \
+     .research-eval/candidate/accepted/claude \
+     --report .research-eval/comparison/claude.md
+   ```
+
+3. If a candidate critical assertion fails, preserve the pending attempt and
+   tighten only the responsible instruction clause as specified above. Rerun
+   only the failed scenario plus any efficiency probe needed to measure the
+   change. Do not launch a whole ten-scenario replacement run.
+4. After the first all-quality-pass candidate cohort, repeat only selected
+   failed scenarios and efficiency probes. Expand to the remaining scenarios
+   only if the representative comparison is `adopt` or `review` and expansion
+   would test a materially different behavior.
+
+The adaptive protocol has no token, response-length, or latency cap. It saves
+work by stopping when additional scenarios would only repeat an already known
+failure signature.
+
 ---
 
 ### Task 5: Verify the Repository and Publish the Evidence Report
