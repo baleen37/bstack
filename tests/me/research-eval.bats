@@ -177,6 +177,69 @@ EOF
     "$TEST_TEMP_DIR/codex.schema.json"
 }
 
+@test "research evaluator: preserves dependent property-name maps while sanitizing schema values" {
+  cat >"$TEST_TEMP_DIR/dependent-schema.ts" <<EOF
+import { runStructured } from "${PROJECT_ROOT}/plugins/me/skills/research/scripts/runtime-adapters";
+
+await runStructured({
+  runtime: "codex",
+  systemPrompt: "execution",
+  userPrompt: "answer",
+  schema: {
+    type: "object",
+    properties: {
+      format: { type: "string", format: "uri" },
+      minLength: { type: "string", minLength: 1 },
+      "\$schema": { type: "string", "\$schema": "https://example.test/schema" },
+    },
+    required: ["format", "minLength", "\$schema"],
+    dependentRequired: {
+      "\$schema": ["format", "minLength"],
+      format: ["\$schema"],
+      minLength: ["format"],
+    },
+    dependencies: {
+      "\$schema": ["format", "minLength"],
+      format: {
+        type: "object",
+        format: "uri",
+        properties: {
+          minLength: { type: "string", minLength: 2 },
+        },
+        required: ["minLength"],
+      },
+      minLength: {
+        type: "string",
+        minLength: 3,
+        "\$schema": "https://example.test/dependency",
+      },
+    },
+  },
+  workingDirectory: process.cwd(),
+});
+EOF
+  run env RESEARCH_EVAL_CODEX_BIN="$TEST_TEMP_DIR/bin/codex" bun "$TEST_TEMP_DIR/dependent-schema.ts"
+  [ "$status" -eq 0 ]
+  jq -e '
+    (.properties | has("format") and has("minLength") and has("$schema"))
+    and (.required == ["format", "minLength", "$schema"])
+    and (.dependentRequired == {
+      "$schema": ["format", "minLength"],
+      "format": ["$schema"],
+      "minLength": ["format"]
+    })
+    and (.dependencies["$schema"] == ["format", "minLength"])
+    and (.dependencies | has("format") and has("minLength"))
+    and (.dependencies.format.required == ["minLength"])
+    and (.dependencies.format | has("format") | not)
+    and (.dependencies.format.properties | has("minLength"))
+    and (.dependencies.format.properties.minLength | has("minLength") | not)
+    and (.dependencies.minLength.type == "string")
+    and (.dependencies.minLength | has("minLength") | not)
+    and (.dependencies.minLength | has("$schema") | not)' \
+    "$TEST_TEMP_DIR/codex.schema.json"
+}
+
 @test "research evaluator: preserves Codex JSONL failures without stderr" {
   run env \
     RESEARCH_EVAL_CODEX_BIN="$TEST_TEMP_DIR/bin/codex" \

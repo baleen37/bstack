@@ -32,14 +32,65 @@ function availabilityFor(exitCode: number, stderr: string): RuntimeResult["avail
   return "available";
 }
 
-const schemaNameMaps = new Set(["properties", "$defs", "definitions", "patternProperties", "dependentSchemas"]);
+const schemaMapKeywords = new Set([
+  "properties",
+  "$defs",
+  "definitions",
+  "patternProperties",
+  "dependentSchemas",
+]);
+const schemaArrayKeywords = new Set(["allOf", "anyOf", "oneOf", "prefixItems"]);
+const schemaValueKeywords = new Set([
+  "additionalItems",
+  "additionalProperties",
+  "contains",
+  "contentSchema",
+  "else",
+  "if",
+  "not",
+  "propertyNames",
+  "then",
+  "unevaluatedItems",
+  "unevaluatedProperties",
+]);
 
-function sanitizeCodexSchema(value: unknown, isNameMap = false): unknown {
-  if (Array.isArray(value)) return value.map((entry) => sanitizeCodexSchema(entry));
+function sanitizeSchemaMap(value: unknown): unknown {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return value;
+  return Object.fromEntries(
+    Object.entries(value).map(([name, schema]) => [name, sanitizeCodexSchema(schema)]),
+  );
+}
+
+function sanitizeDependencies(value: unknown): unknown {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return value;
+  return Object.fromEntries(Object.entries(value).map(([name, dependency]) => [
+    name,
+    Array.isArray(dependency) ? dependency : sanitizeCodexSchema(dependency),
+  ]));
+}
+
+function sanitizeCodexSchema(value: unknown): unknown {
+  if (Array.isArray(value)) return value;
   if (typeof value !== "object" || value === null) return value;
   return Object.fromEntries(Object.entries(value)
-    .filter(([key]) => isNameMap || (key !== "$schema" && key !== "format" && key !== "minLength"))
-    .map(([key, entry]) => [key, sanitizeCodexSchema(entry, schemaNameMaps.has(key))]));
+    .filter(([key]) => key !== "$schema" && key !== "format" && key !== "minLength")
+    .map(([key, entry]) => {
+      if (schemaMapKeywords.has(key)) return [key, sanitizeSchemaMap(entry)];
+      if (schemaArrayKeywords.has(key) && Array.isArray(entry)) {
+        return [key, entry.map((schema) => sanitizeCodexSchema(schema))];
+      }
+      if (key === "items") {
+        const items = Array.isArray(entry)
+          ? entry.map((schema) => sanitizeCodexSchema(schema))
+          : sanitizeCodexSchema(entry);
+        return [key, items];
+      }
+      if (key === "dependencies") return [key, sanitizeDependencies(entry)];
+      if (schemaValueKeywords.has(key)) {
+        return [key, sanitizeCodexSchema(entry)];
+      }
+      return [key, entry];
+    }));
 }
 
 function runtimeErrorMessage(stdoutLines: string[]): string {
