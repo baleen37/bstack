@@ -38,4 +38,20 @@ describe("config", () => {
     expect(await loadConfig(file)).toEqual(config);
     expect(JSON.parse(await readFile(file, "utf8"))).toEqual(config);
   });
+
+  it("rejects repository traversal through the shared config schema", async () => {
+    const root = await mkdtemp(join(tmpdir(), "knowledge-base-save-"));
+    const file = join(root, "config.json");
+
+    await expect(saveConfig(file, {
+      repository: "owner/..",
+      checkoutPath: "/tmp/knowledge-base",
+      defaultScope: "all",
+    })).rejects.toThrow();
+  });
+
+  it("rejects repository traversal before resolving paths", () => {
+    expect(() => resolvePaths({}, "linux", "/home/user", "../.."))
+      .toThrow("repository must use owner/name form");
+  });
 });

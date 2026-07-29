@@ -8,7 +8,7 @@ knowledge-base setup --repo <repository>
 knowledge-base sync
 knowledge-base index
 knowledge-base search <query>
-knowledge-base get <path>
+knowledge-base get qmd://personal/<path>
 knowledge-base status
 ```
 

@@ -1,10 +1,10 @@
 import { mkdir, open, readFile, rename, rm } from "node:fs/promises";
 import { dirname } from "node:path";
 import { z } from "zod";
-import type { AppConfig } from "./types.js";
+import { isRepository, type AppConfig } from "./types.js";
 
 const configSchema = z.object({
-  repository: z.string().regex(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/),
+  repository: z.string().refine(isRepository),
   checkoutPath: z.string().min(1),
   defaultScope: z.enum(["personal", "wooto", "all"]),
 }).strict();

@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -69,6 +69,25 @@ describe("repository", () => {
       setupRepository("baleen37/knowledge-base", checkoutPath, runner),
     ).rejects.toThrow("origin does not match repository");
     expect(await readFile(sentinel, "utf8")).toBe("preserve me");
+  });
+
+  it("rejects a collection root symlink", async () => {
+    const root = await mkdtemp(join(tmpdir(), "knowledge-base-repository-"));
+    const checkoutPath = join(root, "checkout");
+    const personalTarget = join(root, "personal-target");
+    await mkdir(personalTarget, { recursive: true });
+    await mkdir(join(checkoutPath, "wooto"), { recursive: true });
+    await symlink(personalTarget, join(checkoutPath, "personal"));
+    const runner = new RecordingRunner(async (command, args) => {
+      if (command === "git" && args[0] === "remote") {
+        return success("git@github.com:baleen37/knowledge-base.git\n");
+      }
+      return success("true\n");
+    });
+
+    await expect(
+      setupRepository("baleen37/knowledge-base", checkoutPath, runner),
+    ).rejects.toThrow("required path is not a directory");
   });
 
   it("syncs only with a fast-forward pull", async () => {

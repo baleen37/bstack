@@ -1,12 +1,30 @@
 import { execFile } from "node:child_process";
+import { mkdtemp, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
+import { readPackageVersion } from "../src/package-version.js";
 
 const execFileAsync = promisify(execFile);
 const packageDir = fileURLToPath(new URL("../", import.meta.url));
 
 describe("published package", () => {
+  it.each([
+    ["a missing package file", undefined],
+    ["malformed package JSON", "{"],
+  ])("fails clearly for %s", async (_case, contents) => {
+    const root = await mkdtemp(join(tmpdir(), "knowledge-base-package-"));
+    const file = join(root, "package.json");
+    if (contents !== undefined) {
+      await writeFile(file, contents);
+    }
+
+    expect(() => readPackageVersion(file))
+      .toThrow("package version is unavailable");
+  });
+
   it("contains only the public CLI artifact and package documents", async () => {
     const { stdout } = await execFileAsync("npm", ["pack", "--dry-run", "--json"], {
       cwd: packageDir,

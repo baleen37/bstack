@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import type { ResolvedPaths } from "./types.js";
+import { isRepository, type ResolvedPaths } from "./types.js";
 
 export function resolvePaths(
   env: NodeJS.ProcessEnv,
@@ -7,10 +7,10 @@ export function resolvePaths(
   home: string,
   repository: string,
 ): ResolvedPaths {
-  const [owner, name] = repository.split("/");
-  if (!owner || !name || repository.split("/").length !== 2) {
+  if (!isRepository(repository)) {
     throw new Error("repository must use owner/name form");
   }
+  const [owner, name] = repository.split("/") as [string, string];
 
   const configBase = platform === "darwin"
     ? join(home, "Library", "Application Support")

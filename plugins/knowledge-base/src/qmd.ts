@@ -10,6 +10,7 @@ import {
   type UpdateResult,
 } from "@tobilu/qmd";
 import { MODEL_SPEC, verifyModelFile } from "./model.js";
+import { assertRepositoryLayout } from "./repository.js";
 import type { ResolvedPaths, Scope } from "./types.js";
 
 type KnowledgeCollection = "personal" | "wooto";
@@ -35,6 +36,7 @@ export async function openIndexStore(
   paths: ResolvedPaths,
 ): Promise<QMDStore> {
   await prepareStore(paths);
+  await assertRepositoryLayout(checkoutPath);
   return createStore({
     dbPath: paths.indexFile,
     config: {
@@ -190,7 +192,13 @@ function normalizeReference(ref: string): CanonicalReference | undefined {
   for (const segment of segments) {
     try {
       const value = decodeURIComponent(segment);
-      if (value === "" || value === "." || value === ".." || value.includes("/")) {
+      if (
+        value === ""
+        || value === "."
+        || value === ".."
+        || value.includes("/")
+        || value.includes("\\")
+      ) {
         return undefined;
       }
       decoded.push(value);

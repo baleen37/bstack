@@ -1,4 +1,4 @@
-import { access, mkdtemp } from "node:fs/promises";
+import { access, mkdir, mkdtemp, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -259,6 +259,8 @@ describe("qmd adapter", () => {
     "qmd://personal/%2E%2E",
     "qmd://personal/bad%",
     "qmd://personal/a//b",
+    "qmd://personal/..\\secret.md",
+    "qmd://personal/%2E%2E%5Csecret.md",
   ])("rejects unsafe canonical escape %s", async (ref) => {
     const store = fakeStore();
 
@@ -281,6 +283,8 @@ describe("qmd adapter", () => {
     const resolved = paths(root);
     const store = fakeStore();
     createStore.mockResolvedValue(store);
+    await mkdir(join(root, "checkout", "personal"), { recursive: true });
+    await mkdir(join(root, "checkout", "wooto"), { recursive: true });
 
     await expect(openIndexStore(join(root, "checkout"), resolved)).resolves.toBe(store);
 
@@ -311,6 +315,19 @@ describe("qmd adapter", () => {
     expect(process.env.QMD_EMBED_MODEL).toBe(resolved.modelFile);
     expect(process.env.QMD_GENERATE_MODEL).toBe(resolved.disabledGenerateModel);
     expect(process.env.QMD_RERANK_MODEL).toBe(resolved.disabledRerankModel);
+  });
+
+  it("rejects a collection root symlink before opening the index store", async () => {
+    const root = await mkdtemp(join(tmpdir(), "knowledge-qmd-"));
+    const checkoutPath = join(root, "checkout");
+    const personalTarget = join(root, "personal-target");
+    await mkdir(personalTarget, { recursive: true });
+    await mkdir(join(checkoutPath, "wooto"), { recursive: true });
+    await symlink(personalTarget, join(checkoutPath, "personal"));
+
+    await expect(openIndexStore(checkoutPath, paths(root)))
+      .rejects.toThrow("required path is not a directory");
+    expect(createStore).not.toHaveBeenCalled();
   });
 
   it("opens search stores without a config file", async () => {

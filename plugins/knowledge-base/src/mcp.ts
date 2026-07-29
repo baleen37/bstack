@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { PACKAGE_VERSION } from "./package-version.js";
 import type { KnowledgeBaseServices } from "./services.js";
 
 const searchInput = z.object({
@@ -29,7 +30,7 @@ type ReadServices = Pick<KnowledgeBaseServices, "search" | "get" | "status">;
 export function createKnowledgeBaseMcpServer(services: ReadServices): McpServer {
   const server = new McpServer({
     name: "knowledge-base",
-    version: "17.35.0",
+    version: PACKAGE_VERSION,
   });
 
   server.registerTool("get", {

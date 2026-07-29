@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 import { realpathSync } from "node:fs";
-import { readFile } from "node:fs/promises";
 import {
   parseArgs,
   type ParseArgsOptionsConfig,
 } from "node:util";
 import { fileURLToPath } from "node:url";
 import { isAbsolute, resolve } from "node:path";
+import { PACKAGE_VERSION } from "./package-version.js";
 import { createServices, type KnowledgeBaseServices } from "./services.js";
-import { isScope, type Scope } from "./types.js";
+import { isRepository, isScope, type Scope } from "./types.js";
 
 const HELP = `Usage: knowledge-base <command> [options]
 
@@ -43,7 +43,7 @@ export async function runCli(
 ): Promise<number> {
   try {
     if (argv.length === 1 && argv[0] === "--version") {
-      io.stdout(`${await packageVersion()}\n`);
+      io.stdout(`${PACKAGE_VERSION}\n`);
       return 0;
     }
     if (argv.length === 1 && argv[0] === "--help") {
@@ -94,7 +94,7 @@ async function runSetup(
   if (repository === undefined) {
     throw new UsageError("--repo <owner/repo> is required");
   }
-  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) {
+  if (!isRepository(repository)) {
     throw new UsageError("--repo must use owner/repo form");
   }
   if (parsed.values.path !== undefined && !isAbsolute(parsed.values.path)) {
@@ -259,16 +259,6 @@ function formatGetResult(result: unknown): string {
 
 function json(value: unknown): string {
   return `${JSON.stringify(value)}\n`;
-}
-
-async function packageVersion(): Promise<string> {
-  const packageJson = JSON.parse(
-    await readFile(new URL("../package.json", import.meta.url), "utf8"),
-  ) as { version?: unknown };
-  if (typeof packageJson.version !== "string") {
-    throw new Error("package version is unavailable");
-  }
-  return packageJson.version;
 }
 
 function message(error: unknown): string {

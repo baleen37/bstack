@@ -1,4 +1,5 @@
 import { execFile as execFileCallback, spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
@@ -11,6 +12,9 @@ import type { KnowledgeBaseServices } from "../src/services.js";
 const execFile = promisify(execFileCallback);
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const bin = join(packageRoot, "dist", "cli.js");
+const expectedVersion = (JSON.parse(
+  readFileSync(join(packageRoot, "package.json"), "utf8"),
+) as { version: string }).version;
 
 type ReadServices = Pick<KnowledgeBaseServices, "search" | "get" | "status">;
 
@@ -333,7 +337,10 @@ describe("knowledge-base mcp CLI", () => {
       expect.objectContaining({
         jsonrpc: "2.0",
         id: 1,
-        result: expect.objectContaining({ protocolVersion: "2025-11-25" }),
+        result: expect.objectContaining({
+          protocolVersion: "2025-11-25",
+          serverInfo: { name: "knowledge-base", version: expectedVersion },
+        }),
       }),
       expect.objectContaining({
         jsonrpc: "2.0",

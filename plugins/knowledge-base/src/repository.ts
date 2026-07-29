@@ -1,4 +1,4 @@
-import { stat } from "node:fs/promises";
+import { lstat, stat } from "node:fs/promises";
 import { join } from "node:path";
 import type { CommandRunner, RunResult } from "./types.js";
 
@@ -38,7 +38,7 @@ function assertMatchingOrigin(origin: string, repository: string): void {
 async function assertDirectory(path: string): Promise<void> {
   let details;
   try {
-    details = await stat(path);
+    details = await lstat(path);
   } catch (error: unknown) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       throw new Error(`required directory is missing: ${path}`);
@@ -48,6 +48,11 @@ async function assertDirectory(path: string): Promise<void> {
   if (!details.isDirectory()) {
     throw new Error(`required path is not a directory: ${path}`);
   }
+}
+
+export async function assertRepositoryLayout(checkoutPath: string): Promise<void> {
+  await assertDirectory(join(checkoutPath, "personal"));
+  await assertDirectory(join(checkoutPath, "wooto"));
 }
 
 export async function setupRepository(
@@ -71,8 +76,7 @@ export async function setupRepository(
     assertMatchingOrigin(origin.stdout.trim(), repository);
   }
 
-  await assertDirectory(join(checkoutPath, "personal"));
-  await assertDirectory(join(checkoutPath, "wooto"));
+  await assertRepositoryLayout(checkoutPath);
 }
 
 export async function syncRepository(

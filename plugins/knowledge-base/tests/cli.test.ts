@@ -1,6 +1,11 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { runCli } from "../src/cli.js";
 import type { KnowledgeBaseServices } from "../src/services.js";
+
+const expectedVersion = (JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+) as { version: string }).version;
 
 function memoryIo() {
   const stdout: string[] = [];
@@ -59,6 +64,21 @@ describe("knowledge-base CLI", () => {
     });
     expect(output.stdout()).toContain("owner/repo");
   });
+
+  it.each(["../..", "owner/..", "./repo", "owner\\repo"])
+    ("rejects unsafe setup repository %s", async (repository) => {
+      const services = fakeServices();
+      const output = memoryIo();
+
+      await expect(runCli(
+        ["setup", "--repo", repository],
+        services,
+        output.io,
+      )).resolves.toBe(2);
+
+      expect(output.stderr()).toContain("--repo must use owner/repo form");
+      expect(services.setup).not.toHaveBeenCalled();
+    });
 
   it("defaults search scope to all and limit to 10", async () => {
     const services = fakeServices();
@@ -170,7 +190,7 @@ describe("knowledge-base CLI", () => {
 
     await expect(runCli(["--version"], fakeServices(), output.io)).resolves.toBe(0);
 
-    expect(output.stdout()).toMatch(/^17\.35\.0\n$/);
+    expect(output.stdout()).toBe(`${expectedVersion}\n`);
   });
 
   it("returns usage error for an unknown command", async () => {
