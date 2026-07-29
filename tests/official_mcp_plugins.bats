@@ -8,7 +8,7 @@ setup() {
 
 @test "official mcp plugins expose claude and codex manifests" {
     local plugin
-    for plugin in slack notion jira knowledge-base; do
+    for plugin in slack notion knowledge-base; do
         assert_file_exists "${PROJECT_ROOT}/plugins/${plugin}/.claude-plugin/plugin.json"
         assert_file_exists "${PROJECT_ROOT}/plugins/${plugin}/.codex-plugin/plugin.json"
         assert_file_exists "${PROJECT_ROOT}/plugins/${plugin}/.mcp.json"
@@ -21,8 +21,7 @@ setup() {
 @test "official mcp plugins use expected server endpoints" {
     [ "$(jq -r '.mcpServers.slack.url' "${PROJECT_ROOT}/plugins/slack/.mcp.json")" = "https://mcp.slack.com/mcp" ]
     [ "$(jq -r '.mcpServers.notion.url' "${PROJECT_ROOT}/plugins/notion/.mcp.json")" = "https://mcp.notion.com/mcp" ]
-    [ "$(jq -r '.mcpServers.jira.command' "${PROJECT_ROOT}/plugins/jira/.mcp.json")" = "sh" ]
-    [ "$(jq -r '.mcpServers.atlassian // empty' "${PROJECT_ROOT}/plugins/jira/.mcp.json")" = "" ]
+    [ "$(jq -r '.mcpServers["knowledge-base"].command' "${PROJECT_ROOT}/plugins/knowledge-base/.mcp.json")" = "sh" ]
 }
 
 @test "datadog stays cli based without an mcp server" {

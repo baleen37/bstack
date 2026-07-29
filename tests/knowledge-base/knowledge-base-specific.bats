@@ -123,7 +123,7 @@ run_mcp_stdio_client() {
 
   # Codex sets PLUGIN_ROOT, Claude Code sets CLAUDE_PLUGIN_ROOT, and neither
   # expands the other's variable. Only a shell can evaluate the fallback chain,
-  # so this stays shell form like plugins/jira/.mcp.json.
+  # so this stays shell form rather than exec form.
   [ "$(jq -r '.mcpServers["knowledge-base"].command' "$config")" = "sh" ]
   [ "$(jq -c '.mcpServers["knowledge-base"].args' "$config")" = "$expected_args" ]
   [[ "$(jq -r '.mcpServers["knowledge-base"].args[1]' "$config")" == *"/bin/knowledge-base.mjs"* ]]
