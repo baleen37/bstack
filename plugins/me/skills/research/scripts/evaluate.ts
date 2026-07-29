@@ -218,7 +218,7 @@ async function evaluateScenario(
     route = parseRoute(routeResult.finalJson);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    return aggregate([routeResult], unavailableAnswer(detail), scenario.expectedRoute, scenario, instructions, runtime, variant);
+    return aggregate([routeResult], unavailableAnswer(routeResult.stderr || detail), scenario.expectedRoute, scenario, instructions, runtime, variant);
   }
   if (route.route === "out_of_scope") {
     return aggregate([routeResult], {
@@ -243,7 +243,7 @@ async function evaluateScenario(
     answer = parseAnswer(execution.finalJson);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    return aggregate([routeResult, execution], unavailableAnswer(detail), route.route, scenario, instructions, runtime, variant);
+    return aggregate([routeResult, execution], unavailableAnswer(execution.stderr || detail), route.route, scenario, instructions, runtime, variant);
   }
   const run = aggregate([routeResult, execution], answer, route.route, scenario, instructions, runtime, variant);
   if (route.route === "researcher") run.events.push({ action: "delegate", tool: "harness", rawType: "harness" });

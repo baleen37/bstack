@@ -14,7 +14,13 @@ setup() {
 #!/usr/bin/env bash
 printf '%s\n' "$@" >>"$TEST_TEMP_DIR/codex.args"
 last_message=""
+schema_path=""
 while [ "$#" -gt 0 ]; do
+  if [ "$1" = "--output-schema" ]; then
+    schema_path="$2"
+    shift 2
+    continue
+  fi
   if [ "$1" = "--output-last-message" ]; then
     last_message="$2"
     shift 2
@@ -23,9 +29,20 @@ while [ "$#" -gt 0 ]; do
   shift
 done
 prompt=$(cat)
+cp "$schema_path" "$TEST_TEMP_DIR/codex.schema.json"
 if [[ "$prompt" == *ROUTE_ONLY* ]]; then
   printf '%s\n' '{"route":"direct","brief":"Read the supplied RFC section and answer the question.","answer":""}' >"$last_message"
   exit 0
+fi
+if [ "${RESEARCH_EVAL_FAKE_REJECT_TRANSPORT_SCHEMA:-}" = "1" ] && jq -e '.. | objects | keys[]? | select(. == "$schema" or . == "format" or . == "minLength")' "$schema_path" >/dev/null; then
+  printf '%s\n' '{"type":"error","message":"invalid_json_schema: uri is not a valid format"}'
+  printf '%s\n' '{"type":"turn.failed","error":{"message":"invalid_json_schema: uri is not a valid format"}}'
+  exit 1
+fi
+if [ "${RESEARCH_EVAL_FAKE_JSONL_FAILURE:-}" = "1" ]; then
+  printf '%s\n' '{"type":"error","message":"invalid_json_schema: uri is not a valid format"}'
+  printf '%s\n' '{"type":"turn.failed","error":{"message":"invalid_json_schema: uri is not a valid format"}}'
+  exit 1
 fi
 if [ "${RESEARCH_EVAL_FAKE_AUTH_UNAVAILABLE:-}" = "1" ]; then
   printf '%s\n' 'OAuth login required' >&2
@@ -40,7 +57,7 @@ EOF
 
   cat >"$TEST_TEMP_DIR/bin/claude" <<'EOF'
 #!/usr/bin/env bash
-printf '%s\n' "$*" >>"$TEST_TEMP_DIR/claude.args"
+printf '%s\n' "$@" >>"$TEST_TEMP_DIR/claude.args"
 if [[ "$*" == *ROUTE_ONLY* ]]; then
   printf '%s\n' '{"type":"result","result":"{\"route\":\"direct\",\"brief\":\"Read the supplied RFC section and answer the question.\",\"answer\":\"\"}"}'
   exit 0
@@ -100,8 +117,48 @@ teardown() {
   [ "$status" -eq 0 ]
   grep -q -- "--safe-mode" "$TEST_TEMP_DIR/claude.args"
   grep -q -- "--no-session-persistence" "$TEST_TEMP_DIR/claude.args"
-  grep -q -- "--output-format stream-json" "$TEST_TEMP_DIR/claude.args"
+  grep -Fx -- "--output-format" "$TEST_TEMP_DIR/claude.args"
+  grep -Fx -- "stream-json" "$TEST_TEMP_DIR/claude.args"
   jq -e '.runs[0].runtime == "claude"' \
+    "$TEST_TEMP_DIR/out/summary.json"
+}
+
+@test "research evaluator: sanitizes the Codex transport schema" {
+  run env \
+    RESEARCH_EVAL_CODEX_BIN="$TEST_TEMP_DIR/bin/codex" \
+    RESEARCH_EVAL_FAKE_REJECT_TRANSPORT_SCHEMA=1 \
+    bun "$EVALUATE" \
+      --runtime codex \
+      --variant baseline \
+      --scenario exact-rfc-safe-methods \
+      --output-dir "$TEST_TEMP_DIR/out"
+  [ "$status" -eq 0 ]
+  jq -e '
+    ([.. | objects | keys[] | select(. == "$schema" or . == "format" or . == "minLength")] | length == 0)
+    and (.properties | type == "object")
+    and (.required == ["answerState", "answerMarkdown", "sources", "uncertainty"])
+    and (.additionalProperties == false)
+    and (.properties.answerState.enum == ["supported", "unavailable", "out_of_scope"])
+    and (.properties.sources.items.properties.url.type == "string")
+    and (.properties.sources.items.required == ["title", "url", "claim"])
+    and (.properties.sources.items.additionalProperties == false)' \
+    "$TEST_TEMP_DIR/codex.schema.json"
+}
+
+@test "research evaluator: preserves Codex JSONL failures without stderr" {
+  run env \
+    RESEARCH_EVAL_CODEX_BIN="$TEST_TEMP_DIR/bin/codex" \
+    RESEARCH_EVAL_FAKE_JSONL_FAILURE=1 \
+    bun "$EVALUATE" \
+      --runtime codex \
+      --variant baseline \
+      --scenario exact-rfc-safe-methods \
+      --output-dir "$TEST_TEMP_DIR/out"
+  [ "$status" -eq 1 ]
+  jq -e '
+    .runs[0].process.failureDetail == "invalid_json_schema: uri is not a valid format"
+    and .runs[0].answer.answerState == "unavailable"
+    and .runs[0].answer.answerMarkdown == "invalid_json_schema: uri is not a valid format"' \
     "$TEST_TEMP_DIR/out/summary.json"
 }
 

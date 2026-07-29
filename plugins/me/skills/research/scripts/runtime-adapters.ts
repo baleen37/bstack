@@ -32,6 +32,32 @@ function availabilityFor(exitCode: number, stderr: string): RuntimeResult["avail
   return "available";
 }
 
+function sanitizeCodexSchema(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sanitizeCodexSchema);
+  if (typeof value !== "object" || value === null) return value;
+  return Object.fromEntries(Object.entries(value)
+    .filter(([key]) => key !== "$schema" && key !== "format" && key !== "minLength")
+    .map(([key, entry]) => [key, sanitizeCodexSchema(entry)]));
+}
+
+function runtimeErrorMessage(stdoutLines: string[]): string {
+  for (const line of stdoutLines) {
+    try {
+      const value = JSON.parse(line) as Record<string, unknown>;
+      if (value.type !== "error" && value.type !== "turn.failed") continue;
+      if (typeof value.message === "string") return value.message;
+      if (typeof value.error === "string") return value.error;
+      if (typeof value.error === "object" && value.error !== null
+        && typeof (value.error as Record<string, unknown>).message === "string") {
+        return (value.error as Record<string, string>).message;
+      }
+    } catch {
+      continue;
+    }
+  }
+  return "";
+}
+
 async function spawn(
   command: string[],
   input: string | undefined,
@@ -53,11 +79,13 @@ async function spawn(
       new Response(child.stderr).text(),
       child.exited,
     ]);
+    const stdoutLines = lines(stdout);
+    const failureDetail = stderr.trim() === "" && exitCode !== 0 ? runtimeErrorMessage(stdoutLines) : stderr;
     return {
       exitCode,
-      stdoutLines: lines(stdout),
-      stderr,
-      availability: availabilityFor(exitCode, stderr),
+      stdoutLines,
+      stderr: failureDetail,
+      availability: availabilityFor(exitCode, failureDetail),
     };
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
@@ -94,7 +122,7 @@ export async function runStructured(request: RuntimeRequest): Promise<RuntimeRes
       const answerPath = join(temporaryDirectory, "answer.json");
       const emptyDirectory = join(temporaryDirectory, "workspace");
       await Promise.all([
-        writeFile(schemaPath, JSON.stringify(request.schema)),
+        writeFile(schemaPath, JSON.stringify(sanitizeCodexSchema(request.schema))),
         mkdir(emptyDirectory),
       ]);
       const result = await spawn([
@@ -134,7 +162,7 @@ export async function runStructured(request: RuntimeRequest): Promise<RuntimeRes
       "--safe-mode",
       "--no-session-persistence",
       "--permission-mode", "dontAsk",
-      "--output-format stream-json",
+      "--output-format", "stream-json",
       "--json-schema", JSON.stringify(request.schema),
       "--system-prompt", request.systemPrompt,
       "--tools", isRoute ? "" : "WebSearch,WebFetch",
