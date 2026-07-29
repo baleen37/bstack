@@ -1,6 +1,6 @@
 {
   "name": "slack",
-  "version": "17.38.3",
+  "version": "17.38.4",
   "description": "Slack workflow guidance backed by the official Slack MCP server",
   "author": {
     "name": "baleen37",
