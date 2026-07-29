@@ -77,20 +77,6 @@
         "research"
       ],
       "version": "17.38.3"
-    },
-    {
-      "name": "knowledge-base",
-      "description": "Local hybrid search over a private personal and organization knowledge base",
-      "source": "./plugins/knowledge-base",
-      "category": "development",
-      "tags": [
-        "knowledge-base",
-        "search",
-        "rag",
-        "mcp",
-        "qmd"
-      ],
-      "version": "17.38.3"
     }
   ]
 }

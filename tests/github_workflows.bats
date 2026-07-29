@@ -102,6 +102,15 @@ job_has_if_condition() {
     workflow_has_trigger "$CI_WORKFLOW" "pull_request"
 }
 
+@test "CI workflow does not trigger on pull_request_target" {
+    ensure_yaml_validator
+    [ "$(yaml_get "$CI_WORKFLOW" ".on.pull_request_target")" = "null" ]
+}
+
+@test "CI workflow reports pull request results on the head SHA" {
+    grep -q 'context.payload.pull_request.head.sha' "$CI_WORKFLOW"
+}
+
 @test "CI workflow has only test job (no release job)" {
     ensure_yaml_validator
     # CI workflow should only have test job, release is handled by separate release.yml
@@ -184,120 +193,4 @@ job_has_if_condition() {
     fetch_depth=$(yaml_get "${WORKFLOW_DIR}/release.yml" ".jobs.release.steps[] | select(.uses == \"actions/checkout@v4\") | .with.\"fetch-depth\"")
 
     [[ "$fetch_depth" == "0" ]]
-}
-
-@test "knowledge-base package is built and tested in CI without the real-model opt-in smoke" {
-    ensure_yaml_validator
-    local build_command
-    local drift_command
-    local test_command
-    local runtime_command
-    local runtime_opt_in
-    build_command=$(yaml_get "$CI_WORKFLOW" '.jobs.test.steps[] | select(.name == "Build knowledge-base package") | .run')
-    drift_command=$(yaml_get "$CI_WORKFLOW" '.jobs.test.steps[] | select(.name == "Check knowledge-base build drift") | .run')
-    test_command=$(yaml_get "$CI_WORKFLOW" '.jobs.test.steps[] | select(.name == "Test knowledge-base package") | .run')
-    runtime_command=$(yaml_get "$CI_WORKFLOW" \
-      '.jobs.test.steps[] | select(.name == "Test knowledge-base plugin runtime") | .run')
-    runtime_opt_in=$(yaml_get "$CI_WORKFLOW" \
-      '.jobs.test.steps[] | select(.name == "Test knowledge-base plugin runtime") | .env.KNOWLEDGE_BASE_REAL_PLUGIN')
-
-    [[ "$build_command" == "bun run --cwd plugins/knowledge-base build" ]]
-    [[ "$drift_command" == "bun run --cwd plugins/knowledge-base check:dist" ]]
-    [[ "$test_command" == "bun run --cwd plugins/knowledge-base test" ]]
-    [[ "$runtime_command" == \
-      "bun run --cwd plugins/knowledge-base test -- plugin-runtime.test.ts" ]]
-    [[ "$runtime_opt_in" == "1" ]]
-    ! grep -q 'KNOWLEDGE_BASE_REAL_MODEL=1' "$CI_WORKFLOW"
-}
-
-@test "knowledge-base dist gate rejects stale tracked output after a clean rebuild" {
-    local fixture
-    fixture=$(mktemp -d)
-    create_dist_gate_fixture "$fixture" "stale"
-
-    run bash "${PROJECT_ROOT}/scripts/check-knowledge-base-dist.sh" "$fixture/package"
-
-    rm -rf "$fixture"
-    [ "$status" -ne 0 ]
-    [[ "$output" == *"dist/stale.js"* ]]
-}
-
-@test "knowledge-base dist gate rejects generated output missing from Git" {
-    local fixture
-    fixture=$(mktemp -d)
-    create_dist_gate_fixture "$fixture" "untracked"
-
-    run bash "${PROJECT_ROOT}/scripts/check-knowledge-base-dist.sh" "$fixture/package"
-
-    rm -rf "$fixture"
-    [ "$status" -ne 0 ]
-    [[ "$output" == *"dist/generated.js"* ]]
-}
-
-@test "release prepare synchronizes the nested knowledge-base package version" {
-    run node --input-type=module --eval '
-      import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-      import { tmpdir } from "node:os";
-      import { join } from "node:path";
-      import { pathToFileURL } from "node:url";
-
-      const releaseConfig = process.argv[1];
-      const fixture = await mkdtemp(join(tmpdir(), "knowledge-base-release-"));
-      await mkdir(join(fixture, "plugins", "knowledge-base", ".claude-plugin"), { recursive: true });
-      await mkdir(join(fixture, ".claude-plugin"), { recursive: true });
-      await writeFile(join(fixture, "plugins", "knowledge-base", ".claude-plugin", "plugin.json"), "{\"name\":\"knowledge-base\",\"version\":\"0.0.0\"}\n");
-      await writeFile(join(fixture, "plugins", "knowledge-base", "package.json"), "{\"name\":\"@baleen37/knowledge-base\",\"version\":\"0.0.0\"}\n");
-      await writeFile(
-        join(fixture, "plugins", "knowledge-base", "package-lock.json"),
-        JSON.stringify({
-          name: "@baleen37/knowledge-base",
-          version: "0.0.0",
-          lockfileVersion: 3,
-          packages: {
-            "": {
-              name: "@baleen37/knowledge-base",
-              version: "0.0.0",
-            },
-          },
-        }, null, 2) + "\n",
-      );
-      await writeFile(join(fixture, ".claude-plugin", "marketplace.json"), "{\"plugins\":[{\"name\":\"knowledge-base\",\"version\":\"0.0.0\"}]}\n");
-      const originalCwd = process.cwd();
-      try {
-        process.chdir(fixture);
-        const { default: config } = await import(`${pathToFileURL(releaseConfig).href}?fixture=${Date.now()}`);
-        const plugin = config.plugins.find((entry) => !Array.isArray(entry) && typeof entry.prepare === "function");
-        await plugin.prepare({}, { nextRelease: { version: "99.0.0" } });
-        const nested = JSON.parse(await readFile(join(fixture, "plugins", "knowledge-base", "package.json"), "utf8"));
-        if (nested.version !== "99.0.0") throw new Error(`nested package version: ${nested.version}`);
-        const lock = JSON.parse(await readFile(
-          join(fixture, "plugins", "knowledge-base", "package-lock.json"),
-          "utf8",
-        ));
-        if (lock.version !== "99.0.0") {
-          throw new Error(`nested lock version: ${lock.version}`);
-        }
-        if (lock.packages[""].version !== "99.0.0") {
-          throw new Error(`nested lock root version: ${lock.packages[""].version}`);
-        }
-      } finally {
-        process.chdir(originalCwd);
-        await rm(fixture, { recursive: true, force: true });
-      }
-    ' "${PROJECT_ROOT}/.releaserc.js"
-    [ "$status" -eq 0 ]
-}
-
-@test "release git assets include the nested knowledge-base package" {
-    run node --input-type=module --eval '
-      const { default: config } = await import(process.argv[1]);
-      const git = config.plugins.find((entry) => Array.isArray(entry) && entry[0] === "@semantic-release/git");
-      if (!git[1].assets.includes("plugins/knowledge-base/package.json")) {
-        throw new Error("nested knowledge-base package is not a release asset");
-      }
-      if (!git[1].assets.includes("plugins/knowledge-base/package-lock.json")) {
-        throw new Error("nested knowledge-base package lock is not a release asset");
-      }
-    ' "file://${PROJECT_ROOT}/.releaserc.js"
-    [ "$status" -eq 0 ]
 }

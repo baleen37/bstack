@@ -4,9 +4,6 @@
   "description": "bstack - AI coding assistant toolkit (Claude Code, OpenCode, and more)",
   "private": true,
   "type": "module",
-  "workspaces": [
-    "plugins/knowledge-base"
-  ],
   "scripts": {
     "prepare": "husky",
     "commit": "git-cz",
