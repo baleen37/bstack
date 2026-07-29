@@ -480,7 +480,11 @@ export function scoreRun(input: ScoreInput): EvaluationRun {
   const actionCount = (action: ActionName) => events.filter((event) =>
     action === "delegate" ? explicitDelegation(event) : event.action === action
   ).length;
-  const codexDirectSearchAmbiguity = input.runtime === "codex" && input.route === "direct";
+  const searchEvents = events.filter((event) => event.action === "search");
+  const codexDirectSearchAmbiguity = input.runtime === "codex"
+    && input.route === "direct"
+    && searchEvents.length > 0
+    && searchEvents.every((event) => event.tool === "web_search");
   const delegations = actionCount("delegate");
   assertions.push(assertion(
     "delegations",

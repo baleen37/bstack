@@ -361,6 +361,24 @@ describe("quality scoring", () => {
     }));
   });
 
+  test("keeps explicit non-generic Codex direct searches strict", () => {
+    const input = syntheticSummary("baseline", "pass", 50).runs[0];
+    input.scenario.maxSearches = 0;
+    input.scenario.forbiddenActions = ["search"];
+    input.events = [{ action: "search", tool: "custom_search", rawType: "tool_use" }];
+
+    const run = scoreRun(input);
+    expect(run.status).toBe("fail");
+    expect(run.assertions).toContainEqual(expect.objectContaining({
+      name: "searches",
+      status: "fail",
+    }));
+    expect(run.assertions).toContainEqual(expect.objectContaining({
+      name: "forbidden_actions",
+      status: "fail",
+    }));
+  });
+
   test("counts only explicit saved delegation events", () => {
     const savedRun = syntheticSummary("baseline", "pass", 50).runs[0];
     savedRun.route = "researcher";
