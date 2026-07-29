@@ -26,6 +26,11 @@ export function bootstrapRuntimeDependencies(
     {
       cwd: pluginRoot,
       encoding: "utf8",
+      env: {
+        ...process.env,
+        npm_config_dangerously_allow_all_scripts: "true",
+        npm_config_ignore_scripts: "false",
+      },
       stdio: ["ignore", "ignore", "pipe"],
     },
   );

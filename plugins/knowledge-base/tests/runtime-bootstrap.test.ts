@@ -1,7 +1,10 @@
+import { execFile as execFileCallback } from "node:child_process";
 import { mkdirSync } from "node:fs";
-import { mkdtemp, mkdir, rm } from "node:fs/promises";
+import { copyFile, mkdtemp, mkdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { bootstrapRuntimeDependencies } from "../src/runtime-bootstrap.js";
 
@@ -11,6 +14,9 @@ const runtimeDependencies = [
   "zod",
 ];
 const roots: string[] = [];
+const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const execFile = promisify(execFileCallback);
+const nativeRuntimeTest = process.env.KNOWLEDGE_BASE_RUNTIME_INTEGRATION === "1" ? it : it.skip;
 
 async function runtimeRoot(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "knowledge-base-runtime-"));
@@ -61,9 +67,42 @@ describe("knowledge-base runtime bootstrap", () => {
         cwd: root,
         encoding: "utf8",
         stdio: ["ignore", "ignore", "pipe"],
+        env: expect.objectContaining({
+          npm_config_dangerously_allow_all_scripts: "true",
+          npm_config_ignore_scripts: "false",
+        }),
       }),
     );
   });
+
+  nativeRuntimeTest("installs native qmd dependencies that load in a clean runtime root", async () => {
+    const root = await runtimeRoot();
+    await Promise.all([
+      copyFile(join(packageRoot, "package.json"), join(root, "package.json")),
+      copyFile(join(packageRoot, "package-lock.json"), join(root, "package-lock.json")),
+    ]);
+
+    bootstrapRuntimeDependencies(root);
+
+    const { stdout, stderr } = await execFile(process.execPath, [
+      "--input-type=module",
+      "-e",
+      `import { createRequire } from "node:module";
+import { pathToFileURL } from "node:url";
+const requireFromRoot = createRequire(pathToFileURL(process.argv[1] + "/package.json"));
+const Database = requireFromRoot("better-sqlite3");
+const database = new Database(":memory:");
+requireFromRoot("sqlite-vec").load(database);
+const llama = await import(pathToFileURL(requireFromRoot.resolve("node-llama-cpp")).href);
+database.close();
+if (typeof llama.getLlama !== "function") throw new Error("node-llama-cpp failed to load");
+console.log("native runtime loaded");`,
+      root,
+    ]);
+
+    expect(stderr).toBe("");
+    expect(stdout).toBe("native runtime loaded\n");
+  }, 10 * 60_000);
 
   it("preserves npm stderr and fails when bootstrap cannot complete", async () => {
     const root = await runtimeRoot();
