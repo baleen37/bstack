@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
 import {
@@ -53,6 +53,7 @@ interface Arguments {
   scenarios: string[];
   repeat: number;
   rerunFrom?: string;
+  rescoreFrom?: string;
   outputDir?: string;
   compare?: [string, string];
   report?: string;
@@ -85,6 +86,7 @@ function parseArguments(values: string[]): Arguments {
       if (!Number.isInteger(repeat) || repeat <= 0) usage("--repeat must be a positive integer");
       args.repeat = repeat;
     } else if (value === "--rerun-from") args.rerunFrom = values[++index] || usage("--rerun-from requires a summary path");
+    else if (value === "--rescore-from") args.rescoreFrom = values[++index] || usage("--rescore-from requires an artifact directory");
     else if (value === "--output-dir") args.outputDir = values[++index] || usage("--output-dir requires a directory");
     else if (value === "--compare") {
       const baseline = values[++index];
@@ -316,6 +318,77 @@ async function evaluate(args: Arguments): Promise<number> {
   return summary.statusCounts.fail > 0 || summary.statusCounts.incomplete > 0 ? 1 : 0;
 }
 
+function validateInstructions(value: unknown): Instructions {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    usage("source instructions must be an object");
+  }
+  const instructions = value as Record<string, unknown>;
+  if ((instructions.variant !== "baseline" && instructions.variant !== "candidate")
+    || typeof instructions.gitCommit !== "string"
+    || typeof instructions.skillPath !== "string"
+    || typeof instructions.researcherPath !== "string"
+    || typeof instructions.skillSha256 !== "string"
+    || typeof instructions.researcherSha256 !== "string"
+    || typeof instructions.skillText !== "string"
+    || typeof instructions.researcherText !== "string") {
+    usage("source instructions have an invalid evaluation identity");
+  }
+  if (sha256(instructions.skillText) !== instructions.skillSha256
+    || sha256(instructions.researcherText) !== instructions.researcherSha256) {
+    usage("source instructions do not match their hashes");
+  }
+  return value as Instructions;
+}
+
+async function rescore(args: Arguments): Promise<number> {
+  if (!args.rescoreFrom) usage("--rescore-from is required");
+  if (!args.outputDir) usage("--output-dir is required");
+  const sourceDir = resolve(args.rescoreFrom);
+  const outputDir = resolve(args.outputDir);
+  if (sourceDir === outputDir) usage("--output-dir must differ from --rescore-from");
+  if (await stat(outputDir).then(() => true).catch(() => false)) {
+    usage("--output-dir must be a new directory");
+  }
+
+  const instructions = validateInstructions(JSON.parse(await readFile(join(sourceDir, "instructions.json"), "utf8")));
+  const runsDirectory = join(sourceDir, "runs");
+  const runFiles = (await readdir(runsDirectory)).filter((file) => file.endsWith(".json")).sort();
+  if (runFiles.length === 0) usage("--rescore-from contains no run artifacts");
+
+  const sourceRuns = await Promise.all(runFiles.map(async (file) =>
+    JSON.parse(await readFile(join(runsDirectory, file), "utf8")) as EvaluationRun
+  ));
+  const first = sourceRuns[0];
+  if ((first.runtime !== "codex" && first.runtime !== "claude")
+    || first.variant !== instructions.variant) {
+    usage("source run has different runtime or variant identity");
+  }
+  if (sourceRuns.some((run) =>
+    run.runtime !== first.runtime
+    || run.variant !== first.variant
+    || run.instructionHashes.skill !== instructions.skillSha256
+    || run.instructionHashes.researcher !== instructions.researcherSha256
+  )) {
+    usage("source run has different instruction hashes or evaluation identity");
+  }
+
+  const rescoredRuns = sourceRuns.map((run) => scoreRun(run));
+  const summary: EvaluationSummary = {
+    ...summarize(rescoredRuns),
+    instructionHashes: {
+      skill: instructions.skillSha256,
+      researcher: instructions.researcherSha256,
+    },
+  };
+  await writeJson(join(outputDir, "instructions.json"), instructions);
+  await Promise.all(runFiles.map((file, index) =>
+    writeJson(join(outputDir, "runs", file), rescoredRuns[index])
+  ));
+  await writeJson(join(outputDir, "summary.json"), summary);
+  await writeFile(join(outputDir, "report.md"), `# Research evaluation\n\n- Runtime: ${summary.runtime}\n- Variant: ${summary.variant}\n- Pass: ${summary.statusCounts.pass}\n- Fail: ${summary.statusCounts.fail}\n- Incomplete: ${summary.statusCounts.incomplete}\n`);
+  return summary.statusCounts.fail > 0 || summary.statusCounts.incomplete > 0 ? 1 : 0;
+}
+
 async function summariesBelow(directory: string): Promise<EvaluationSummary[]> {
   const summaries: EvaluationSummary[] = [];
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -351,7 +424,11 @@ async function main(): Promise<void> {
     console.log(`${scenarios.length} scenarios valid`);
     return;
   }
-  process.exitCode = args.compare ? await compare(args) : await evaluate(args);
+  if (args.compare) {
+    process.exitCode = await compare(args);
+    return;
+  }
+  process.exitCode = args.rescoreFrom ? await rescore(args) : await evaluate(args);
 }
 
 main().catch((error) => {

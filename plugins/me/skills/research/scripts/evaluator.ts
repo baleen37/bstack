@@ -330,7 +330,7 @@ function tokenValue(value: JsonObject, snake: string, camel: string): number | u
   return typeof token === "number" ? token : undefined;
 }
 
-export function normalizeEvents(_runtime: RuntimeName, lines: string[]): NormalizedEvent[] {
+export function normalizeEvents(runtime: RuntimeName, lines: string[]): NormalizedEvent[] {
   const events: NormalizedEvent[] = [];
 
   const visit = (value: unknown, inheritedType: string): void => {
@@ -350,8 +350,9 @@ export function normalizeEvents(_runtime: RuntimeName, lines: string[]): Normali
           ? value.type
           : "";
     const commandOpensUrl = /\b(curl|wget)\b/i.test(command) && Boolean(firstUrl(command));
-    const action = commandOpensUrl ? "open" : actionFor(namedTool);
-    if (action !== "other") {
+    const assistantOutput = runtime === "codex" && rawType === "agent_message";
+    const action = assistantOutput ? "other" : commandOpensUrl ? "open" : actionFor(namedTool);
+    if (action !== "other" || assistantOutput) {
       events.push({ action, tool: namedTool || undefined, url: firstUrl(value), rawType });
     }
 
@@ -448,17 +449,25 @@ export function scoreRun(input: ScoreInput): EvaluationRun {
   ));
 
   if (scenario.requireOpen) {
-    const inspectable = events.some((event) => event.action !== "other");
     const opened = new Set(events.filter((event) => event.action === "open" && event.url).map((event) => normalizeUrl(event.url!)));
+    const everySourceOpened = answer.sources.every((source) => opened.has(normalizeUrl(source.url)));
+    const openEvidenceIncomplete = input.runtime === "codex" && !everySourceOpened;
     assertions.push(assertion(
       "sources_opened",
-      answer.sources.every((source) => opened.has(normalizeUrl(source.url))),
-      "every cited source must have matching open evidence",
-      !inspectable,
+      everySourceOpened,
+      openEvidenceIncomplete
+        ? "Codex captured events cannot prove whether every cited source was opened"
+        : "every cited source must have matching open evidence",
+      openEvidenceIncomplete,
     ));
   }
 
-  const actionCount = (action: ActionName) => events.filter((event) => event.action === action).length;
+  const explicitDelegation = (event: NormalizedEvent): boolean =>
+    event.action === "delegate"
+    && (event.rawType === "harness" || /(?:tool_use|tool_call|function_call)$/.test(event.rawType));
+  const actionCount = (action: ActionName) => events.filter((event) =>
+    action === "delegate" ? explicitDelegation(event) : event.action === action
+  ).length;
   const delegations = actionCount("delegate");
   assertions.push(assertion(
     "delegations",

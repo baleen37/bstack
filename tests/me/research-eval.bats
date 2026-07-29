@@ -416,3 +416,63 @@ EOF
      and (.runs[0].process.failureDetail | contains("OAuth login required"))' \
     "$TEST_TEMP_DIR/out/summary.json"
 }
+
+@test "research evaluator: rescores saved artifacts without invoking a runtime" {
+  run env \
+    RESEARCH_EVAL_CODEX_BIN="$TEST_TEMP_DIR/bin/codex" \
+    bun "$EVALUATE" \
+      --runtime codex \
+      --variant baseline \
+      --scenario exact-rfc-safe-methods \
+      --output-dir "$TEST_TEMP_DIR/source"
+  [ "$status" -eq 0 ]
+  find "$TEST_TEMP_DIR/source" -type f -exec shasum -a 256 {} \; | sort \
+    >"$TEST_TEMP_DIR/source.before"
+  rm -f "$TEST_TEMP_DIR/codex.args"
+  cat >"$TEST_TEMP_DIR/bin/must-not-run" <<'EOF'
+#!/usr/bin/env bash
+touch "$TEST_TEMP_DIR/runtime-called"
+exit 99
+EOF
+  chmod +x "$TEST_TEMP_DIR/bin/must-not-run"
+
+  run env \
+    RESEARCH_EVAL_CODEX_BIN="$TEST_TEMP_DIR/bin/must-not-run" \
+    RESEARCH_EVAL_CLAUDE_BIN="$TEST_TEMP_DIR/bin/must-not-run" \
+    bun "$EVALUATE" \
+      --rescore-from "$TEST_TEMP_DIR/source" \
+      --output-dir "$TEST_TEMP_DIR/rescored"
+  [ "$status" -eq 0 ]
+  [ ! -e "$TEST_TEMP_DIR/runtime-called" ]
+  find "$TEST_TEMP_DIR/source" -type f -exec shasum -a 256 {} \; | sort \
+    >"$TEST_TEMP_DIR/source.after"
+  cmp "$TEST_TEMP_DIR/source.before" "$TEST_TEMP_DIR/source.after"
+  [ "$(find "$TEST_TEMP_DIR/rescored/runs" -type f -name '*.json' | wc -l | tr -d ' ')" -eq 1 ]
+  jq -e '
+    (.runs | length) == 1
+    and .runs[0].scenario.id == "exact-rfc-safe-methods"
+    and .instructionHashes == .runs[0].instructionHashes' \
+    "$TEST_TEMP_DIR/rescored/summary.json"
+}
+
+@test "research evaluator: rejects inconsistent saved artifact identity" {
+  run env \
+    RESEARCH_EVAL_CODEX_BIN="$TEST_TEMP_DIR/bin/codex" \
+    bun "$EVALUATE" \
+      --runtime codex \
+      --variant baseline \
+      --scenario exact-rfc-safe-methods \
+      --output-dir "$TEST_TEMP_DIR/source"
+  [ "$status" -eq 0 ]
+  run_file=$(find "$TEST_TEMP_DIR/source/runs" -type f -name '*.json')
+  jq '.instructionHashes.skill = "mismatch"' "$run_file" \
+    >"$TEST_TEMP_DIR/mismatched.json"
+  mv "$TEST_TEMP_DIR/mismatched.json" "$run_file"
+
+  run bun "$EVALUATE" \
+    --rescore-from "$TEST_TEMP_DIR/source" \
+    --output-dir "$TEST_TEMP_DIR/rescored"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"source run has different instruction hashes"* ]]
+  [ ! -e "$TEST_TEMP_DIR/rescored" ]
+}

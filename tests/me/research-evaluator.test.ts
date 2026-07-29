@@ -86,6 +86,60 @@ function syntheticSummary(
   };
 }
 
+function scoreOpenEvidence(
+  runtime: "codex" | "claude",
+  events: EvaluationRun["events"],
+): EvaluationRun {
+  return scoreRun({
+    runtime,
+    variant: "baseline",
+    scenario: {
+      id: "exact-rfc-safe-methods",
+      prompt: "question",
+      asOf: null,
+      status: "active",
+      staleReason: null,
+      expectedRoute: "direct",
+      expectedAnswerStates: ["supported"],
+      requiredPatterns: ["GET"],
+      requiredDomains: ["rfc-editor.org"],
+      minSources: 1,
+      maxSources: 1,
+      requireOpen: true,
+      maxSearches: null,
+      minDelegations: 0,
+      maxDelegations: 0,
+      forbiddenActions: [],
+      requireUncertainty: false,
+      efficiencyProbe: true,
+    },
+    route: "direct",
+    answer: {
+      answerState: "supported",
+      answerMarkdown:
+        "GET is safe ([RFC 9110](https://www.rfc-editor.org/rfc/rfc9110)).",
+      sources: [{
+        title: "RFC 9110",
+        url: "https://www.rfc-editor.org/rfc/rfc9110",
+        claim: "GET is safe",
+      }],
+      uncertainty: "",
+    },
+    events,
+    process: {
+      exitCode: 0,
+      availability: "available",
+      failureDetail: "",
+      elapsedMs: 10,
+      modelCalls: 2,
+      inputTokens: 100,
+      outputTokens: 30,
+      responseChars: 79,
+    },
+    instructionHashes: { skill: "a", researcher: "b" },
+  });
+}
+
 describe("scenario validation", () => {
   test("accepts the public scenario contract", async () => {
     const value = await Bun.file(
@@ -172,63 +226,92 @@ describe("event normalization", () => {
       url: "https://www.rfc-editor.org/rfc/rfc9110",
     });
   });
+
+  test("does not treat Codex assistant output as delegation", () => {
+    const events = normalizeEvents("codex", [
+      JSON.stringify({
+        type: "item.completed",
+        item: { type: "agent_message", text: "I will answer directly." },
+      }),
+      JSON.stringify({
+        type: "item.completed",
+        item: {
+          type: "mcp_tool_call",
+          tool: "spawn_agent",
+          arguments: { task_name: "researcher" },
+        },
+      }),
+    ]);
+    expect(events.filter((event) => event.action === "delegate")).toEqual([
+      expect.objectContaining({
+        tool: "spawn_agent",
+        rawType: "mcp_tool_call",
+      }),
+    ]);
+  });
 });
 
 describe("quality scoring", () => {
-  test("fails a cited source that was never opened", () => {
-    const run = scoreRun({
-      runtime: "codex",
-      variant: "baseline",
-      scenario: {
-        id: "exact-rfc-safe-methods",
-        prompt: "question",
-        asOf: null,
-        status: "active",
-        staleReason: null,
-        expectedRoute: "direct",
-        expectedAnswerStates: ["supported"],
-        requiredPatterns: ["GET"],
-        requiredDomains: ["rfc-editor.org"],
-        minSources: 1,
-        maxSources: 1,
-        requireOpen: true,
-        maxSearches: 0,
-        minDelegations: 0,
-        maxDelegations: 0,
-        forbiddenActions: ["search", "delegate"],
-        requireUncertainty: false,
-        efficiencyProbe: true,
-      },
-      route: "direct",
-      answer: {
-        answerState: "supported",
-        answerMarkdown:
-          "GET is safe ([RFC 9110](https://www.rfc-editor.org/rfc/rfc9110)).",
-        sources: [{
-          title: "RFC 9110",
-          url: "https://www.rfc-editor.org/rfc/rfc9110",
-          claim: "GET is safe",
-        }],
-        uncertainty: "",
-      },
-      events: [],
-      process: {
-        exitCode: 0,
-        availability: "available",
-        failureDetail: "",
-        elapsedMs: 10,
-        modelCalls: 2,
-        inputTokens: 100,
-        outputTokens: 30,
-        responseChars: 79,
-      },
-      instructionHashes: { skill: "a", researcher: "b" },
-    });
+  test("marks missing Codex open evidence incomplete even when search events are visible", () => {
+    const run = scoreOpenEvidence("codex", [{
+      action: "search",
+      tool: "web_search",
+      rawType: "web_search",
+    }]);
     expect(run.status).toBe("incomplete");
     expect(run.assertions).toContainEqual(expect.objectContaining({
       name: "sources_opened",
       status: "incomplete",
+      detail: "Codex captured events cannot prove whether every cited source was opened",
     }));
+  });
+
+  test("fails missing open evidence when the runtime protocol can prove opens", () => {
+    const run = scoreOpenEvidence("claude", [{
+      action: "search",
+      tool: "WebSearch",
+      rawType: "tool_use",
+    }]);
+    expect(run.status).toBe("fail");
+    expect(run.assertions).toContainEqual(expect.objectContaining({
+      name: "sources_opened",
+      status: "fail",
+    }));
+  });
+
+  test("counts only explicit saved delegation events", () => {
+    const savedRun = syntheticSummary("baseline", "pass", 50).runs[0];
+    savedRun.route = "researcher";
+    savedRun.scenario.expectedRoute = "researcher";
+    savedRun.scenario.minDelegations = 1;
+    savedRun.scenario.maxDelegations = 1;
+    savedRun.events = [
+      { action: "delegate", tool: "agent_message", rawType: "agent_message" },
+      { action: "delegate", tool: "agent_message", rawType: "agent_message" },
+      { action: "delegate", tool: "harness", rawType: "harness" },
+    ];
+
+    const rescored = scoreRun(savedRun);
+    expect(rescored.assertions).toContainEqual({
+      name: "delegations",
+      status: "pass",
+      detail: "expected 1-1 delegations, received 1",
+    });
+  });
+
+  test("does not report saved assistant output as a forbidden delegation", () => {
+    const savedRun = syntheticSummary("baseline", "pass", 50).runs[0];
+    savedRun.scenario.forbiddenActions = ["delegate"];
+    savedRun.events = [
+      { action: "delegate", tool: "agent_message", rawType: "agent_message" },
+    ];
+
+    const rescored = scoreRun(savedRun);
+    expect(rescored.assertions).toContainEqual({
+      name: "forbidden_actions",
+      status: "pass",
+      detail: "forbidden actions must not occur",
+    });
   });
 
   test("keeps efficiency separate from critical quality", () => {
