@@ -233,21 +233,41 @@ describe("event normalization", () => {
         type: "item.completed",
         item: { type: "agent_message", text: "I will answer directly." },
       }),
+    ]);
+    expect(events.filter((event) => event.action === "delegate")).toEqual([]);
+  });
+
+  test("does not treat an agent-browser invocation as delegation", () => {
+    const events = normalizeEvents("codex", [
+      JSON.stringify({
+        type: "item.completed",
+        item: {
+          type: "mcp_tool_call",
+          tool: "agent-browser",
+          arguments: { url: "https://example.com" },
+        },
+      }),
+    ]);
+    expect(events.filter((event) => event.action === "delegate")).toEqual([]);
+  });
+
+  test("counts one explicit dispatch without traversing its payload as another", () => {
+    const events = normalizeEvents("codex", [
       JSON.stringify({
         type: "item.completed",
         item: {
           type: "mcp_tool_call",
           tool: "spawn_agent",
-          arguments: { task_name: "researcher" },
+          arguments: { name: "agent_worker" },
         },
       }),
     ]);
-    expect(events.filter((event) => event.action === "delegate")).toEqual([
-      expect.objectContaining({
-        tool: "spawn_agent",
-        rawType: "mcp_tool_call",
-      }),
-    ]);
+    expect(events.filter((event) => event.action === "delegate")).toEqual([{
+      action: "delegate",
+      tool: "spawn_agent",
+      url: undefined,
+      rawType: "mcp_tool_call",
+    }]);
   });
 });
 

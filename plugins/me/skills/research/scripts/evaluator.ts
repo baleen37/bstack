@@ -297,11 +297,20 @@ export function validateResultSchema(value: unknown): asserts value is object {
   });
 }
 
-function actionFor(tool: string): ActionName {
+function isInvocationRecord(rawType: string): boolean {
+  return /(?:tool_use|tool_call|function_call)$/.test(rawType);
+}
+
+function isDelegationTool(tool: string): boolean {
+  const name = tool.toLowerCase().split(/__|[.:/]/).at(-1);
+  return name === "spawn_agent" || name === "agent" || name === "task" || name === "delegate";
+}
+
+function actionFor(tool: string, invocationRecord: boolean): ActionName {
   const name = tool.toLowerCase();
   if (name.includes("search")) return "search";
   if (name.includes("open") || name.includes("fetch") || name.includes("read_url")) return "open";
-  if (name.includes("agent") || name.includes("task") || name.includes("delegate") || name.includes("spawn")) return "delegate";
+  if (invocationRecord && isDelegationTool(tool)) return "delegate";
   return "other";
 }
 
@@ -340,7 +349,8 @@ export function normalizeEvents(runtime: RuntimeName, lines: string[]): Normaliz
     }
     if (!isObject(value)) return;
 
-    const rawType = typeof value.type === "string" ? value.type : inheritedType;
+    const ownType = typeof value.type === "string" ? value.type : undefined;
+    const rawType = ownType ?? inheritedType;
     const command = typeof value.command === "string" ? value.command : typeof value.cmd === "string" ? value.cmd : "";
     const namedTool = typeof value.tool === "string"
       ? value.tool
@@ -351,7 +361,8 @@ export function normalizeEvents(runtime: RuntimeName, lines: string[]): Normaliz
           : "";
     const commandOpensUrl = /\b(curl|wget)\b/i.test(command) && Boolean(firstUrl(command));
     const assistantOutput = runtime === "codex" && rawType === "agent_message";
-    const action = assistantOutput ? "other" : commandOpensUrl ? "open" : actionFor(namedTool);
+    const invocationRecord = ownType !== undefined && isInvocationRecord(ownType);
+    const action = assistantOutput ? "other" : commandOpensUrl ? "open" : actionFor(namedTool, invocationRecord);
     if (action !== "other" || assistantOutput) {
       events.push({ action, tool: namedTool || undefined, url: firstUrl(value), rawType });
     }
@@ -464,7 +475,8 @@ export function scoreRun(input: ScoreInput): EvaluationRun {
 
   const explicitDelegation = (event: NormalizedEvent): boolean =>
     event.action === "delegate"
-    && (event.rawType === "harness" || /(?:tool_use|tool_call|function_call)$/.test(event.rawType));
+    && (event.rawType === "harness"
+      || (isInvocationRecord(event.rawType) && event.tool !== undefined && isDelegationTool(event.tool)));
   const actionCount = (action: ActionName) => events.filter((event) =>
     action === "delegate" ? explicitDelegation(event) : event.action === action
   ).length;

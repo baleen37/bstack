@@ -455,6 +455,51 @@ EOF
     "$TEST_TEMP_DIR/rescored/summary.json"
 }
 
+@test "research evaluator: rejects a rescore output nested under its source" {
+  run env \
+    RESEARCH_EVAL_CODEX_BIN="$TEST_TEMP_DIR/bin/codex" \
+    bun "$EVALUATE" \
+      --runtime codex \
+      --variant baseline \
+      --scenario exact-rfc-safe-methods \
+      --output-dir "$TEST_TEMP_DIR/source"
+  [ "$status" -eq 0 ]
+  find "$TEST_TEMP_DIR/source" -type f -exec shasum -a 256 {} \; | sort \
+    >"$TEST_TEMP_DIR/source.before"
+
+  run bun "$EVALUATE" \
+    --rescore-from "$TEST_TEMP_DIR/source" \
+    --output-dir "$TEST_TEMP_DIR/source/rescored"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"--output-dir must not be inside --rescore-from"* ]]
+  find "$TEST_TEMP_DIR/source" -type f -exec shasum -a 256 {} \; | sort \
+    >"$TEST_TEMP_DIR/source.after"
+  cmp "$TEST_TEMP_DIR/source.before" "$TEST_TEMP_DIR/source.after"
+}
+
+@test "research evaluator: rejects source containment through a symlinked parent" {
+  run env \
+    RESEARCH_EVAL_CODEX_BIN="$TEST_TEMP_DIR/bin/codex" \
+    bun "$EVALUATE" \
+      --runtime codex \
+      --variant baseline \
+      --scenario exact-rfc-safe-methods \
+      --output-dir "$TEST_TEMP_DIR/source"
+  [ "$status" -eq 0 ]
+  ln -s "$TEST_TEMP_DIR/source" "$TEST_TEMP_DIR/source-link"
+  find "$TEST_TEMP_DIR/source" -type f -exec shasum -a 256 {} \; | sort \
+    >"$TEST_TEMP_DIR/source.before"
+
+  run bun "$EVALUATE" \
+    --rescore-from "$TEST_TEMP_DIR/source" \
+    --output-dir "$TEST_TEMP_DIR/source-link/rescored"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"--output-dir must not be inside --rescore-from"* ]]
+  find "$TEST_TEMP_DIR/source" -type f -exec shasum -a 256 {} \; | sort \
+    >"$TEST_TEMP_DIR/source.after"
+  cmp "$TEST_TEMP_DIR/source.before" "$TEST_TEMP_DIR/source.after"
+}
+
 @test "research evaluator: rejects inconsistent saved artifact identity" {
   run env \
     RESEARCH_EVAL_CODEX_BIN="$TEST_TEMP_DIR/bin/codex" \

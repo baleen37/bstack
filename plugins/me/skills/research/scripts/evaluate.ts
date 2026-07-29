@@ -1,5 +1,5 @@
-import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { mkdir, readdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
+import { basename, dirname, join, relative, resolve, sep } from "node:path";
 
 import {
   compareSummaries,
@@ -340,12 +340,39 @@ function validateInstructions(value: unknown): Instructions {
   return value as Instructions;
 }
 
+function isNotFound(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
+}
+
+async function canonicalPath(path: string): Promise<string> {
+  const missing: string[] = [];
+  let existing = path;
+  while (true) {
+    try {
+      return resolve(await realpath(existing), ...missing.reverse());
+    } catch (error) {
+      if (!isNotFound(error)) throw error;
+      const parent = dirname(existing);
+      if (parent === existing) throw error;
+      missing.push(basename(existing));
+      existing = parent;
+    }
+  }
+}
+
+function isAtOrInside(parent: string, candidate: string): boolean {
+  const path = relative(parent, candidate);
+  return path === "" || (path !== ".." && !path.startsWith(`..${sep}`));
+}
+
 async function rescore(args: Arguments): Promise<number> {
   if (!args.rescoreFrom) usage("--rescore-from is required");
   if (!args.outputDir) usage("--output-dir is required");
-  const sourceDir = resolve(args.rescoreFrom);
+  const sourceDir = await realpath(resolve(args.rescoreFrom));
   const outputDir = resolve(args.outputDir);
-  if (sourceDir === outputDir) usage("--output-dir must differ from --rescore-from");
+  if (isAtOrInside(sourceDir, await canonicalPath(outputDir))) {
+    usage("--output-dir must not be inside --rescore-from");
+  }
   if (await stat(outputDir).then(() => true).catch(() => false)) {
     usage("--output-dir must be a new directory");
   }
