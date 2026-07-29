@@ -299,6 +299,68 @@ describe("quality scoring", () => {
     }));
   });
 
+  test("marks Codex direct search ambiguity incomplete but keeps Claude and researcher routes strict", () => {
+    const input = syntheticSummary("baseline", "pass", 50).runs[0];
+    input.scenario.maxSearches = 0;
+    input.scenario.forbiddenActions = ["search"];
+    input.events = [{ action: "search", tool: "web_search", rawType: "web_search" }];
+
+    const codexDirect = scoreRun(input);
+    expect(codexDirect.status).toBe("incomplete");
+    expect(codexDirect.assertions).toContainEqual({
+      name: "searches",
+      status: "incomplete",
+      detail: "Codex direct-route search events cannot distinguish discovery from direct retrieval",
+    });
+    expect(codexDirect.assertions).toContainEqual({
+      name: "forbidden_actions",
+      status: "incomplete",
+      detail: "Codex direct-route search events cannot prove forbidden discovery did not occur",
+    });
+
+    const claudeDirect = scoreRun({ ...input, runtime: "claude" });
+    expect(claudeDirect.status).toBe("fail");
+    expect(claudeDirect.assertions).toContainEqual(expect.objectContaining({
+      name: "searches",
+      status: "fail",
+    }));
+    expect(claudeDirect.assertions).toContainEqual(expect.objectContaining({
+      name: "forbidden_actions",
+      status: "fail",
+    }));
+
+    const codexResearcher = scoreRun({
+      ...input,
+      route: "researcher",
+      scenario: { ...input.scenario, expectedRoute: "researcher" },
+    });
+    expect(codexResearcher.status).toBe("fail");
+    expect(codexResearcher.assertions).toContainEqual(expect.objectContaining({
+      name: "searches",
+      status: "fail",
+    }));
+    expect(codexResearcher.assertions).toContainEqual(expect.objectContaining({
+      name: "forbidden_actions",
+      status: "fail",
+    }));
+  });
+
+  test("keeps non-search forbidden actions strict for Codex direct routes", () => {
+    const input = syntheticSummary("baseline", "pass", 50).runs[0];
+    input.scenario.forbiddenActions = ["search", "open"];
+    input.events = [
+      { action: "search", tool: "web_search", rawType: "web_search" },
+      { action: "open", tool: "open", rawType: "tool_use" },
+    ];
+
+    const run = scoreRun(input);
+    expect(run.status).toBe("fail");
+    expect(run.assertions).toContainEqual(expect.objectContaining({
+      name: "forbidden_actions",
+      status: "fail",
+    }));
+  });
+
   test("counts only explicit saved delegation events", () => {
     const savedRun = syntheticSummary("baseline", "pass", 50).runs[0];
     savedRun.route = "researcher";

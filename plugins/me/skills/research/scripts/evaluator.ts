@@ -480,6 +480,7 @@ export function scoreRun(input: ScoreInput): EvaluationRun {
   const actionCount = (action: ActionName) => events.filter((event) =>
     action === "delegate" ? explicitDelegation(event) : event.action === action
   ).length;
+  const codexDirectSearchAmbiguity = input.runtime === "codex" && input.route === "direct";
   const delegations = actionCount("delegate");
   assertions.push(assertion(
     "delegations",
@@ -488,12 +489,25 @@ export function scoreRun(input: ScoreInput): EvaluationRun {
   ));
   if (scenario.maxSearches !== null) {
     const searches = actionCount("search");
-    assertions.push(assertion("searches", searches <= scenario.maxSearches, `maximum ${scenario.maxSearches} searches, received ${searches}`));
+    const tooManySearches = searches > scenario.maxSearches;
+    assertions.push(assertion(
+      "searches",
+      !tooManySearches,
+      tooManySearches && codexDirectSearchAmbiguity
+        ? "Codex direct-route search events cannot distinguish discovery from direct retrieval"
+        : `maximum ${scenario.maxSearches} searches, received ${searches}`,
+      tooManySearches && codexDirectSearchAmbiguity,
+    ));
   }
+  const forbiddenNonSearchAction = scenario.forbiddenActions.find((action) => action !== "search" && actionCount(action) > 0);
+  const forbiddenSearchObserved = scenario.forbiddenActions.includes("search") && actionCount("search") > 0;
   assertions.push(assertion(
     "forbidden_actions",
-    scenario.forbiddenActions.every((action) => actionCount(action) === 0),
-    "forbidden actions must not occur",
+    !forbiddenNonSearchAction && !forbiddenSearchObserved,
+    forbiddenSearchObserved && !forbiddenNonSearchAction && codexDirectSearchAmbiguity
+      ? "Codex direct-route search events cannot prove forbidden discovery did not occur"
+      : "forbidden actions must not occur",
+    forbiddenSearchObserved && !forbiddenNonSearchAction && codexDirectSearchAmbiguity,
   ));
   if (scenario.requireUncertainty) {
     assertions.push(assertion("uncertainty", answer.uncertainty.trim() !== "", "uncertainty is required"));
