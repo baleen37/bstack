@@ -1554,3 +1554,20 @@ weaken the required decision coverage or source-quality assertions.
   old snapshot.
 - Do not alter Task 4 dirty instructions or raw artifacts. Run the required
   tests and `git diff --check`, then commit.
+
+### Task 12: Correct the Bun Official-Domain Fixture
+
+**Run this task before judging the final narrow-fact candidate.**
+
+**Files:**
+- Modify: `plugins/me/skills/research/evals/scenarios.json`
+- Modify: `tests/me/research-evaluator.test.ts`
+
+**Requirements:**
+
+- Change the Bun narrow-fact required domain from `bun.com` to the actual
+  official documentation domain `bun.sh`.
+- Add a focused scoring test that a supported Bun answer from `bun.sh` meets
+  the domain requirement and a non-Bun domain does not.
+- Rescore only saved artifacts after tests pass; do not run a model in this
+  task. Do not alter Task 4 candidate instructions.
