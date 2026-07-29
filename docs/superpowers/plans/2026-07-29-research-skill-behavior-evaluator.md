@@ -1533,3 +1533,24 @@ This is a harness-fidelity fix, not a relaxation of quality assertions.
 This corrects a language-equivalence defect in a public English scenario when
 the host runtime is explicitly instructed to answer in Korean. It does not
 weaken the required decision coverage or source-quality assertions.
+
+### Task 11: Rescore Saved Runs Against Current Scenario Definitions
+
+**Run this task before accepting the existing Task 4 candidate attempt.**
+
+**Files:**
+- Modify: `plugins/me/skills/research/scripts/evaluate.ts`
+- Modify: `tests/me/research-eval.bats`
+
+**Requirements:**
+
+- `--rescore-from` must retain saved model output, events, process metrics, and
+  instruction identity, but look up each run id in the current
+  `scenarios.json` before calling `scoreRun`.
+- Reject a saved run whose id is absent from current scenarios. Preserve
+  source-tree isolation and no-runtime-call behavior.
+- Add Bats coverage that changes a scenario expectation in a copied fixture or
+  otherwise proves selected rescore applies current criteria rather than the
+  old snapshot.
+- Do not alter Task 4 dirty instructions or raw artifacts. Run the required
+  tests and `git diff --check`, then commit.
