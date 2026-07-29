@@ -35,6 +35,18 @@ const routeSchema = {
   required: ["route", "brief", "answer"],
 } as const;
 
+export function deriveExecutionSchema(
+  resultSchema: object,
+  sourceBudget: Pick<Scenario, "minSources" | "maxSources">,
+): object {
+  const executionSchema = structuredClone(resultSchema) as {
+    properties: { sources: Record<string, unknown> };
+  };
+  executionSchema.properties.sources.minItems = sourceBudget.minSources;
+  executionSchema.properties.sources.maxItems = sourceBudget.maxSources;
+  return executionSchema;
+}
+
 interface Instructions {
   variant: VariantName;
   gitCommit: string;
@@ -237,7 +249,7 @@ async function evaluateScenario(
     userPrompt: isDirect
       ? `${route.brief}\n\nQuestion: ${scenario.prompt}\n\nOpen the supplied source directly without discovery search.`
       : `Research brief:\n${route.brief}\n\nOriginal user question:\n${scenario.prompt}`,
-    schema: resultSchema,
+    schema: deriveExecutionSchema(resultSchema, scenario),
     workingDirectory: root,
   });
   let answer: StructuredAnswer;
@@ -475,7 +487,9 @@ async function main(): Promise<void> {
   process.exitCode = args.rescoreFrom ? await rescore(args) : await evaluate(args);
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
-  process.exitCode = 2;
-});
+if (import.meta.main) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exitCode = 2;
+  });
+}

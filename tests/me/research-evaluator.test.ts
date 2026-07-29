@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { deriveExecutionSchema } from "../../plugins/me/skills/research/scripts/evaluate";
 import {
   compareSummaries,
   normalizeEvents,
@@ -154,6 +155,29 @@ describe("scenario validation", () => {
       "plugins/me/skills/research/evals/result.schema.json",
     ).json();
     expect(() => validateResultSchema(value)).not.toThrow();
+  });
+
+  test("derives a source-budgeted execution copy without weakening item validation", async () => {
+    const repositorySchema = await Bun.file(
+      "plugins/me/skills/research/evals/result.schema.json",
+    ).json();
+    const originalSchema = structuredClone(repositorySchema);
+
+    const executionSchema = deriveExecutionSchema(repositorySchema, {
+      minSources: 2,
+      maxSources: 3,
+    }) as typeof repositorySchema;
+
+    expect(executionSchema.properties.sources.minItems).toBe(2);
+    expect(executionSchema.properties.sources.maxItems).toBe(3);
+    expect(executionSchema.properties.sources.items).toEqual(
+      originalSchema.properties.sources.items,
+    );
+    expect(repositorySchema).toEqual(originalSchema);
+    expect(executionSchema).not.toBe(repositorySchema);
+    expect(executionSchema.properties.sources).not.toBe(
+      repositorySchema.properties.sources,
+    );
   });
 
   test("rejects an empty id with an exact path", () => {

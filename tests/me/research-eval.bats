@@ -31,6 +31,7 @@ done
 prompt=$(cat)
 cp "$schema_path" "$TEST_TEMP_DIR/codex.schema.json"
 if [[ "$prompt" == *ROUTE_ONLY* ]]; then
+  cp "$schema_path" "$TEST_TEMP_DIR/codex.route.schema.json"
   printf '%s' "$prompt" >"$TEST_TEMP_DIR/codex.route.prompt"
   route="${RESEARCH_EVAL_FAKE_ROUTE:-direct}"
   printf '{"route":"%s","brief":"Read the supplied RFC section and answer the question.","answer":""}\n' "$route" >"$last_message"
@@ -287,6 +288,79 @@ Using current official Bun documentation, explain how Bun.spawn captures a child
     and (.properties.sources.items.required == ["title", "url", "claim"])
     and (.properties.sources.items.additionalProperties == false)' \
     "$TEST_TEMP_DIR/codex.schema.json"
+}
+
+@test "research evaluator: passes narrow and comparison source budgets only to Codex execution" {
+  run env \
+    RESEARCH_EVAL_CODEX_BIN="$TEST_TEMP_DIR/bin/codex" \
+    bun "$EVALUATE" \
+      --runtime codex \
+      --variant baseline \
+      --scenario exact-rfc-safe-methods \
+      --output-dir "$TEST_TEMP_DIR/codex-narrow"
+  [ "$status" -eq 0 ]
+  jq -e '
+    .properties.sources.minItems == 1
+    and .properties.sources.maxItems == 1
+    and .properties.sources.items.required == ["title", "url", "claim"]' \
+    "$TEST_TEMP_DIR/codex.schema.json"
+  jq -e '
+    (.properties | has("sources") | not)
+    and .required == ["route", "brief", "answer"]' \
+    "$TEST_TEMP_DIR/codex.route.schema.json"
+
+  run env \
+    RESEARCH_EVAL_CODEX_BIN="$TEST_TEMP_DIR/bin/codex" \
+    RESEARCH_EVAL_FAKE_ROUTE=researcher \
+    bun "$EVALUATE" \
+      --runtime codex \
+      --variant baseline \
+      --scenario npm-bun-frozen-install \
+      --output-dir "$TEST_TEMP_DIR/codex-comparison"
+  [ "$status" -eq 1 ]
+  jq -e '
+    .properties.sources.minItems == 2
+    and .properties.sources.maxItems == 3
+    and .properties.sources.items.required == ["title", "url", "claim"]' \
+    "$TEST_TEMP_DIR/codex.schema.json"
+  jq -e '
+    (.properties | has("sources") | not)
+    and .required == ["route", "brief", "answer"]' \
+    "$TEST_TEMP_DIR/codex.route.schema.json"
+}
+
+@test "research evaluator: passes narrow and comparison source budgets only to Claude execution" {
+  run env \
+    RESEARCH_EVAL_CLAUDE_BIN="$TEST_TEMP_DIR/bin/claude" \
+    bun "$EVALUATE" \
+      --runtime claude \
+      --variant baseline \
+      --scenario exact-rfc-safe-methods \
+      --output-dir "$TEST_TEMP_DIR/claude-narrow"
+  [ "$status" -eq 0 ]
+
+  run env \
+    RESEARCH_EVAL_CLAUDE_BIN="$TEST_TEMP_DIR/bin/claude" \
+    RESEARCH_EVAL_FAKE_ROUTE=researcher \
+    bun "$EVALUATE" \
+      --runtime claude \
+      --variant baseline \
+      --scenario npm-bun-frozen-install \
+      --output-dir "$TEST_TEMP_DIR/claude-comparison"
+  [ "$status" -eq 1 ]
+  jq -s -e '
+    length == 4
+    and (.[0].properties | has("sources") | not)
+    and .[0].required == ["route", "brief", "answer"]
+    and .[1].properties.sources.minItems == 1
+    and .[1].properties.sources.maxItems == 1
+    and .[1].properties.sources.items.required == ["title", "url", "claim"]
+    and (.[2].properties | has("sources") | not)
+    and .[2].required == ["route", "brief", "answer"]
+    and .[3].properties.sources.minItems == 2
+    and .[3].properties.sources.maxItems == 3
+    and .[3].properties.sources.items.required == ["title", "url", "claim"]' \
+    "$TEST_TEMP_DIR/claude.schemas.jsonl"
 }
 
 @test "research evaluator: preserves schema property names while sanitizing their schemas" {
