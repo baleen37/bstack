@@ -63,6 +63,7 @@ system_prompt=""
 print_mode=0
 output_format=""
 verbose=0
+json_schema=""
 while [ "$#" -gt 0 ]; do
   case "$1" in
     -p)
@@ -80,7 +81,11 @@ while [ "$#" -gt 0 ]; do
       output_format="$2"
       shift 2
       ;;
-    --permission-mode|--json-schema)
+    --json-schema)
+      json_schema="$2"
+      shift 2
+      ;;
+    --permission-mode)
       shift 2
       ;;
     --system-prompt)
@@ -113,6 +118,11 @@ if [ -z "$prompt" ]; then
 fi
 if [ "$print_mode" = "1" ] && [ "$output_format" = "stream-json" ] && [ "$verbose" != "1" ]; then
   printf '%s\n' "Error: When using --print, --output-format=stream-json requires --verbose" >&2
+  exit 1
+fi
+printf '%s\n' "$json_schema" >>"$TEST_TEMP_DIR/claude.schemas.jsonl"
+if jq -e 'has("$schema")' <<<"$json_schema" >/dev/null; then
+  printf '%s\n' 'Error: --json-schema is not a valid JSON Schema: no schema with key or ref "https://json-schema.org/draft/2020-12/schema"' >&2
   exit 1
 fi
 printf '%s\n' "prompt-present" >>"$TEST_TEMP_DIR/claude.parsed"
@@ -192,6 +202,31 @@ teardown() {
       --output-dir "$TEST_TEMP_DIR/out"
   [ "$status" -eq 0 ]
   [ "$(grep -c '^prompt-present$' "$TEST_TEMP_DIR/claude.parsed")" -eq 2 ]
+}
+
+@test "research evaluator: removes only Claude transport schema dialect metadata" {
+  run env \
+    RESEARCH_EVAL_CLAUDE_BIN="$TEST_TEMP_DIR/bin/claude" \
+    bun "$EVALUATE" \
+      --runtime claude \
+      --variant candidate \
+      --scenario exact-rfc-safe-methods \
+      --output-dir "$TEST_TEMP_DIR/out"
+  [ "$status" -eq 0 ]
+  jq -s -e '
+    length == 2
+    and all(.[]; has("$schema") | not)
+    and .[0].required == ["route", "brief", "answer"]
+    and .[0].properties.route.enum == ["out_of_scope", "direct", "researcher"]
+    and .[1].required == ["answerState", "answerMarkdown", "sources", "uncertainty"]
+    and .[1].additionalProperties == false
+    and .[1].properties.answerState.enum == ["supported", "unavailable", "out_of_scope"]
+    and .[1].properties.sources.items.required == ["title", "url", "claim"]' \
+    "$TEST_TEMP_DIR/claude.schemas.jsonl"
+  jq -e \
+    '."$schema" == "https://json-schema.org/draft/2020-12/schema"
+     and .required == ["answerState", "answerMarkdown", "sources", "uncertainty"]' \
+    "${PROJECT_ROOT}/plugins/me/skills/research/evals/result.schema.json"
 }
 
 @test "research evaluator: sanitizes the Codex transport schema" {

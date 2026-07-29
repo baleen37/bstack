@@ -93,6 +93,10 @@ function sanitizeCodexSchema(value: unknown): unknown {
     }));
 }
 
+function sanitizeClaudeSchema(schema: object): object {
+  return Object.fromEntries(Object.entries(schema).filter(([key]) => key !== "$schema"));
+}
+
 function runtimeErrorMessage(stdoutLines: string[]): string {
   for (const line of stdoutLines) {
     try {
@@ -217,7 +221,7 @@ export async function runStructured(request: RuntimeRequest): Promise<RuntimeRes
       "--no-session-persistence",
       "--permission-mode", "dontAsk",
       "--output-format", "stream-json",
-      "--json-schema", JSON.stringify(request.schema),
+      "--json-schema", JSON.stringify(sanitizeClaudeSchema(request.schema)),
       "--system-prompt", request.systemPrompt,
       request.userPrompt,
       "--tools", isRoute ? "" : "WebSearch,WebFetch",
