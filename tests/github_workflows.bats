@@ -145,13 +145,22 @@ job_has_if_condition() {
     local build_command
     local drift_command
     local test_command
+    local runtime_command
+    local runtime_opt_in
     build_command=$(yaml_get "$CI_WORKFLOW" '.jobs.test.steps[] | select(.name == "Build knowledge-base package") | .run')
     drift_command=$(yaml_get "$CI_WORKFLOW" '.jobs.test.steps[] | select(.name == "Check knowledge-base build drift") | .run')
     test_command=$(yaml_get "$CI_WORKFLOW" '.jobs.test.steps[] | select(.name == "Test knowledge-base package") | .run')
+    runtime_command=$(yaml_get "$CI_WORKFLOW" \
+      '.jobs.test.steps[] | select(.name == "Test knowledge-base plugin runtime") | .run')
+    runtime_opt_in=$(yaml_get "$CI_WORKFLOW" \
+      '.jobs.test.steps[] | select(.name == "Test knowledge-base plugin runtime") | .env.KNOWLEDGE_BASE_REAL_PLUGIN')
 
     [[ "$build_command" == "bun run --cwd plugins/knowledge-base build" ]]
     [[ "$drift_command" == "git diff --exit-code -- plugins/knowledge-base/dist" ]]
     [[ "$test_command" == "bun run --cwd plugins/knowledge-base test" ]]
+    [[ "$runtime_command" == \
+      "bun run --cwd plugins/knowledge-base test -- plugin-runtime.test.ts" ]]
+    [[ "$runtime_opt_in" == "1" ]]
     ! grep -q 'KNOWLEDGE_BASE_REAL_MODEL=1' "$CI_WORKFLOW"
 }
 

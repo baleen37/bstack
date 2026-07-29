@@ -52,6 +52,11 @@ jobs:
       - name: Test knowledge-base package
         run: bun run --cwd plugins/knowledge-base test
 
+      - name: Test knowledge-base plugin runtime
+        env:
+          KNOWLEDGE_BASE_REAL_PLUGIN: "1"
+        run: bun run --cwd plugins/knowledge-base test -- plugin-runtime.test.ts
+
       - name: Run all tests
         id: run_tests
         shell: bash
