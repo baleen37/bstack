@@ -236,7 +236,7 @@ async function evaluateScenario(
     systemPrompt: isDirect ? `${instructions.skillText}\n\n${instructions.researcherText}` : instructions.researcherText,
     userPrompt: isDirect
       ? `${route.brief}\n\nQuestion: ${scenario.prompt}\n\nOpen the supplied source directly without discovery search.`
-      : route.brief,
+      : `Research brief:\n${route.brief}\n\nOriginal user question:\n${scenario.prompt}`,
     schema: resultSchema,
     workingDirectory: root,
   });

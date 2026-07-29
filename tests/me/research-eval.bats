@@ -31,9 +31,12 @@ done
 prompt=$(cat)
 cp "$schema_path" "$TEST_TEMP_DIR/codex.schema.json"
 if [[ "$prompt" == *ROUTE_ONLY* ]]; then
-  printf '%s\n' '{"route":"direct","brief":"Read the supplied RFC section and answer the question.","answer":""}' >"$last_message"
+  printf '%s' "$prompt" >"$TEST_TEMP_DIR/codex.route.prompt"
+  route="${RESEARCH_EVAL_FAKE_ROUTE:-direct}"
+  printf '{"route":"%s","brief":"Read the supplied RFC section and answer the question.","answer":""}\n' "$route" >"$last_message"
   exit 0
 fi
+printf '%s' "$prompt" >"$TEST_TEMP_DIR/codex.execution.prompt"
 if [ "${RESEARCH_EVAL_FAKE_REJECT_TRANSPORT_SCHEMA:-}" = "1" ] && jq -e '.. | objects | keys[]? | select(. == "$schema" or . == "format" or . == "minLength")' "$schema_path" >/dev/null; then
   printf '%s\n' '{"type":"error","message":"invalid_json_schema: uri is not a valid format"}'
   printf '%s\n' '{"type":"turn.failed","error":{"message":"invalid_json_schema: uri is not a valid format"}}'
@@ -172,6 +175,41 @@ teardown() {
   grep -Fx -- "read-only" "$TEST_TEMP_DIR/codex.args"
   jq -e '.runs[0].runtime == "codex"' \
     "$TEST_TEMP_DIR/out/summary.json"
+}
+
+@test "research evaluator: keeps the direct execution prompt unchanged" {
+  run env \
+    RESEARCH_EVAL_CODEX_BIN="$TEST_TEMP_DIR/bin/codex" \
+    bun "$EVALUATE" \
+      --runtime codex \
+      --variant baseline \
+      --scenario exact-rfc-safe-methods \
+      --output-dir "$TEST_TEMP_DIR/out"
+  [ "$status" -eq 0 ]
+  expected="Read the supplied RFC section and answer the question.
+
+Question: Given https://www.rfc-editor.org/rfc/rfc9110.html#name-safe-methods, list the safe HTTP methods.
+
+Open the supplied source directly without discovery search."
+  [[ "$(cat "$TEST_TEMP_DIR/codex.execution.prompt")" == *"$expected" ]]
+}
+
+@test "research evaluator: passes the research brief and original question to researcher execution" {
+  run env \
+    RESEARCH_EVAL_CODEX_BIN="$TEST_TEMP_DIR/bin/codex" \
+    RESEARCH_EVAL_FAKE_ROUTE=researcher \
+    bun "$EVALUATE" \
+      --runtime codex \
+      --variant baseline \
+      --scenario bun-spawn-stdout \
+      --output-dir "$TEST_TEMP_DIR/out"
+  [ "$status" -eq 1 ]
+  expected="Research brief:
+Read the supplied RFC section and answer the question.
+
+Original user question:
+Using current official Bun documentation, explain how Bun.spawn captures a child process's stdout."
+  [[ "$(cat "$TEST_TEMP_DIR/codex.execution.prompt")" == *"$expected" ]]
 }
 
 @test "research evaluator: runs Claude verbosely without session persistence" {
