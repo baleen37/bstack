@@ -74,6 +74,20 @@ function updatePluginJsons() {
         JSON.stringify(knowledgeBasePackage, null, 2) + '\n',
       );
 
+      const knowledgeBaseLockPath = resolve(
+        process.cwd(),
+        'plugins',
+        'knowledge-base',
+        'package-lock.json',
+      );
+      const knowledgeBaseLock = JSON.parse(readFileSync(knowledgeBaseLockPath, 'utf8'));
+      knowledgeBaseLock.version = version;
+      knowledgeBaseLock.packages[''].version = version;
+      writeFileSync(
+        knowledgeBaseLockPath,
+        JSON.stringify(knowledgeBaseLock, null, 2) + '\n',
+      );
+
       const syncScript = resolve(process.cwd(), 'scripts/sync-codex-artifacts.sh');
       if (existsSync(syncScript)) {
         execSync(`bash ${syncScript}`, { stdio: 'inherit' });
@@ -124,6 +138,7 @@ const plugins = [
       assets: [
         ...pluginAssets,
         'plugins/knowledge-base/package.json',
+        'plugins/knowledge-base/package-lock.json',
         '.claude-plugin/marketplace.json',
         ...codexPluginAssets,
         ...codexMarketplaceAsset,

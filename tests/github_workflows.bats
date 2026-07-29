@@ -168,6 +168,20 @@ job_has_if_condition() {
       await mkdir(join(fixture, ".claude-plugin"), { recursive: true });
       await writeFile(join(fixture, "plugins", "knowledge-base", ".claude-plugin", "plugin.json"), "{\"name\":\"knowledge-base\",\"version\":\"0.0.0\"}\n");
       await writeFile(join(fixture, "plugins", "knowledge-base", "package.json"), "{\"name\":\"@baleen37/knowledge-base\",\"version\":\"0.0.0\"}\n");
+      await writeFile(
+        join(fixture, "plugins", "knowledge-base", "package-lock.json"),
+        JSON.stringify({
+          name: "@baleen37/knowledge-base",
+          version: "0.0.0",
+          lockfileVersion: 3,
+          packages: {
+            "": {
+              name: "@baleen37/knowledge-base",
+              version: "0.0.0",
+            },
+          },
+        }, null, 2) + "\n",
+      );
       await writeFile(join(fixture, ".claude-plugin", "marketplace.json"), "{\"plugins\":[{\"name\":\"knowledge-base\",\"version\":\"0.0.0\"}]}\n");
       const originalCwd = process.cwd();
       try {
@@ -177,6 +191,16 @@ job_has_if_condition() {
         await plugin.prepare({}, { nextRelease: { version: "99.0.0" } });
         const nested = JSON.parse(await readFile(join(fixture, "plugins", "knowledge-base", "package.json"), "utf8"));
         if (nested.version !== "99.0.0") throw new Error(`nested package version: ${nested.version}`);
+        const lock = JSON.parse(await readFile(
+          join(fixture, "plugins", "knowledge-base", "package-lock.json"),
+          "utf8",
+        ));
+        if (lock.version !== "99.0.0") {
+          throw new Error(`nested lock version: ${lock.version}`);
+        }
+        if (lock.packages[""].version !== "99.0.0") {
+          throw new Error(`nested lock root version: ${lock.packages[""].version}`);
+        }
       } finally {
         process.chdir(originalCwd);
         await rm(fixture, { recursive: true, force: true });
@@ -191,6 +215,9 @@ job_has_if_condition() {
       const git = config.plugins.find((entry) => Array.isArray(entry) && entry[0] === "@semantic-release/git");
       if (!git[1].assets.includes("plugins/knowledge-base/package.json")) {
         throw new Error("nested knowledge-base package is not a release asset");
+      }
+      if (!git[1].assets.includes("plugins/knowledge-base/package-lock.json")) {
+        throw new Error("nested knowledge-base package lock is not a release asset");
       }
     ' "file://${PROJECT_ROOT}/.releaserc.js"
     [ "$status" -eq 0 ]
