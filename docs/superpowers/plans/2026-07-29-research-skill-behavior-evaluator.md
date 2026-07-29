@@ -1486,3 +1486,26 @@ The new summary contains exactly five runs and does not call a model CLI.
 After this task, rescore the saved Codex representative cohort into a new
 artifact tree and resume Task 4 from its preserved candidate attempt. The
 candidate is not adopted until the cross-runtime quality gate is met.
+
+### Task 9: Preserve the Original Request Through Researcher Execution
+
+**Run this task before the next Task 4 candidate attempt.**
+
+**Files:**
+- Modify: `plugins/me/skills/research/scripts/evaluate.ts`
+- Modify: `tests/me/research-evaluator.test.ts`
+- Modify: `tests/me/research-eval.bats`
+
+**Requirements:**
+
+- When routing to `researcher`, pass both the route brief and the untouched
+  original user question to the execution stage in clearly labeled fields.
+  The brief remains planning context; it must not replace the question.
+- Keep direct and out-of-scope prompt behavior unchanged.
+- Add behavior tests using the fake runtime that prove a researcher execution
+  receives both fields, while direct execution retains its existing prompt.
+- Run focused TypeScript and Bats tests, full evaluator tests, Task 2 Bats,
+  and `git diff --check`. Do not touch the dirty Task 4 candidate instructions
+  or prior evaluation artifacts.
+
+This is a harness-fidelity fix, not a relaxation of quality assertions.
