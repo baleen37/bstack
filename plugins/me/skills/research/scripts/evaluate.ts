@@ -400,6 +400,10 @@ async function rescore(args: Arguments): Promise<number> {
   }
 
   const scenarios = await loadScenarios(scenariosPath);
+  const scenariosById = new Map(scenarios.map((scenario) => [scenario.id, scenario]));
+  if (sourceRuns.some((run) => !scenariosById.has(run.scenario.id))) {
+    usage("source run has an unknown scenario id");
+  }
   const selected = await selectedScenarios(args, scenarios);
   if (args.scenarios.length > 0 && selected.some((scenario) =>
     !sourceRuns.some((run) => run.scenario.id === scenario.id)
@@ -409,7 +413,10 @@ async function rescore(args: Arguments): Promise<number> {
   const selectedIds = new Set(selected.map((scenario) => scenario.id));
   const selectedArtifacts = runFiles.map((file, index) => ({ file, run: sourceRuns[index] }))
     .filter(({ run }) => selectedIds.has(run.scenario.id));
-  const rescoredRuns = selectedArtifacts.map(({ run }) => scoreRun(run));
+  const rescoredRuns = selectedArtifacts.map(({ run }) => scoreRun({
+    ...run,
+    scenario: scenariosById.get(run.scenario.id)!,
+  }));
   const summary: EvaluationSummary = {
     ...summarize(rescoredRuns),
     instructionHashes: {

@@ -493,6 +493,67 @@ EOF
     "$TEST_TEMP_DIR/rescored/summary.json"
 }
 
+@test "research evaluator: rescores saved artifacts against current scenario expectations" {
+  fixture_root="$TEST_TEMP_DIR/project"
+  mkdir -p "$fixture_root"
+  cp -R "$PROJECT_ROOT/plugins" "$fixture_root"
+  fixture_evaluate="$fixture_root/plugins/me/skills/research/scripts/evaluate.ts"
+
+  run env \
+    RESEARCH_EVAL_CODEX_BIN="$TEST_TEMP_DIR/bin/codex" \
+    bun "$fixture_evaluate" \
+      --runtime codex \
+      --variant baseline \
+      --scenario exact-rfc-safe-methods \
+      --output-dir "$TEST_TEMP_DIR/source"
+  [ "$status" -eq 0 ]
+  source_run=$(find "$TEST_TEMP_DIR/source/runs" -type f -name '*.json')
+  jq 'map(if .id == "exact-rfc-safe-methods" then .requiredPatterns = ["MUST-NOT-MATCH"] else . end)' \
+    "$fixture_root/plugins/me/skills/research/evals/scenarios.json" \
+    >"$TEST_TEMP_DIR/scenarios.json"
+  mv "$TEST_TEMP_DIR/scenarios.json" \
+    "$fixture_root/plugins/me/skills/research/evals/scenarios.json"
+
+  run env \
+    RESEARCH_EVAL_CODEX_BIN="$TEST_TEMP_DIR/bin/must-not-run" \
+    RESEARCH_EVAL_CLAUDE_BIN="$TEST_TEMP_DIR/bin/must-not-run" \
+    bun "$fixture_evaluate" \
+      --rescore-from "$TEST_TEMP_DIR/source" \
+      --output-dir "$TEST_TEMP_DIR/rescored"
+  [ "$status" -eq 1 ]
+  rescored_run=$(find "$TEST_TEMP_DIR/rescored/runs" -type f -name '*.json')
+  jq -e '
+    .status == "fail"
+    and .scenario.requiredPatterns == ["MUST-NOT-MATCH"]
+    and .answer == $source[0].answer
+    and .events == $source[0].events
+    and .process == $source[0].process
+    and .instructionHashes == $source[0].instructionHashes' \
+    --slurpfile source "$source_run" \
+    "$rescored_run"
+}
+
+@test "research evaluator: rejects saved artifacts with an unknown current scenario" {
+  run env \
+    RESEARCH_EVAL_CODEX_BIN="$TEST_TEMP_DIR/bin/codex" \
+    bun "$EVALUATE" \
+      --runtime codex \
+      --variant baseline \
+      --scenario exact-rfc-safe-methods \
+      --output-dir "$TEST_TEMP_DIR/source"
+  [ "$status" -eq 0 ]
+  source_run=$(find "$TEST_TEMP_DIR/source/runs" -type f -name '*.json')
+  jq '.scenario.id = "unknown-current-scenario"' "$source_run" >"$TEST_TEMP_DIR/run.json"
+  mv "$TEST_TEMP_DIR/run.json" "$source_run"
+
+  run bun "$EVALUATE" \
+    --rescore-from "$TEST_TEMP_DIR/source" \
+    --output-dir "$TEST_TEMP_DIR/rescored"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"source run has an unknown scenario id"* ]]
+  [ ! -e "$TEST_TEMP_DIR/rescored" ]
+}
+
 @test "research evaluator: rescores only selected saved scenarios without invoking a runtime" {
   run env \
     RESEARCH_EVAL_CODEX_BIN="$TEST_TEMP_DIR/bin/codex" \
