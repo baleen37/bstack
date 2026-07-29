@@ -18,7 +18,7 @@ export interface RuntimeResult {
   stderr: string;
   finalJson: unknown;
   elapsedMs: number;
-  availability: "available" | "missing_cli" | "auth_unavailable";
+  availability: "available" | "missing_cli" | "auth_unavailable" | "rate_limited";
 }
 
 function lines(text: string): string[] {
@@ -28,6 +28,9 @@ function lines(text: string): string[] {
 function availabilityFor(exitCode: number, stderr: string): RuntimeResult["availability"] {
   if (exitCode !== 0 && /authentication|unauthorized|login|API key|OAuth/i.test(stderr)) {
     return "auth_unavailable";
+  }
+  if (exitCode !== 0 && /rate.?limit|too many requests|session limit|\b429\b/i.test(stderr)) {
+    return "rate_limited";
   }
   return "available";
 }
@@ -101,6 +104,9 @@ function runtimeErrorMessage(stdoutLines: string[]): string {
   for (const line of stdoutLines) {
     try {
       const value = JSON.parse(line) as Record<string, unknown>;
+      if (value.type === "result" && value.is_error === true && typeof value.result === "string") {
+        return value.result;
+      }
       if (value.type !== "error" && value.type !== "turn.failed") continue;
       if (typeof value.message === "string") return value.message;
       if (typeof value.error === "string") return value.error;

@@ -49,7 +49,7 @@ export interface Assertion {
 
 export interface ProcessMetrics {
   exitCode: number;
-  availability: "available" | "missing_cli" | "auth_unavailable";
+  availability: "available" | "missing_cli" | "auth_unavailable" | "rate_limited";
   failureDetail: string;
   elapsedMs: number;
   modelCalls: number;
@@ -306,10 +306,10 @@ function isDelegationTool(tool: string): boolean {
   return name === "spawn_agent" || name === "agent" || name === "task" || name === "delegate";
 }
 
-function actionFor(tool: string, invocationRecord: boolean): ActionName {
+function actionFor(tool: string, invocationRecord: boolean, actionRecord: boolean): ActionName {
   const name = tool.toLowerCase();
-  if (name.includes("search")) return "search";
-  if (name.includes("open") || name.includes("fetch") || name.includes("read_url")) return "open";
+  if (actionRecord && name.includes("search")) return "search";
+  if (actionRecord && (name.includes("open") || name.includes("fetch") || name.includes("read_url"))) return "open";
   if (invocationRecord && isDelegationTool(tool)) return "delegate";
   return "other";
 }
@@ -362,7 +362,8 @@ export function normalizeEvents(runtime: RuntimeName, lines: string[]): Normaliz
     const commandOpensUrl = /\b(curl|wget)\b/i.test(command) && Boolean(firstUrl(command));
     const assistantOutput = runtime === "codex" && rawType === "agent_message";
     const invocationRecord = ownType !== undefined && isInvocationRecord(ownType);
-    const action = assistantOutput ? "other" : commandOpensUrl ? "open" : actionFor(namedTool, invocationRecord);
+    const actionRecord = invocationRecord || ownType === "web_search" || ownType === "mcp_tool_call";
+    const action = assistantOutput ? "other" : commandOpensUrl ? "open" : actionFor(namedTool, invocationRecord, actionRecord);
     if (action !== "other" || assistantOutput) {
       events.push({ action, tool: namedTool || undefined, url: firstUrl(value), rawType });
     }
@@ -402,7 +403,8 @@ function normalizeUrl(value: string): string {
 
 function hostFor(url: string): string | undefined {
   try {
-    return new URL(url).hostname.replace(/^www\./i, "").toLowerCase();
+    const host = new URL(url).hostname.replace(/^www\./i, "").toLowerCase();
+    return host === "bun.com" ? "bun.sh" : host;
   } catch {
     return undefined;
   }
@@ -444,7 +446,7 @@ export function scoreRun(input: ScoreInput): EvaluationRun {
 
   const hosts = answer.sources.map((source) => hostFor(source.url));
   const uniqueHosts = new Set(hosts.filter((host): host is string => Boolean(host)));
-  const requiredHosts = scenario.requiredDomains.map((domain) => domain.replace(/^www\./, "").toLowerCase());
+  const requiredHosts = scenario.requiredDomains.map((domain) => hostFor(`https://${domain}`) ?? domain.replace(/^www\./, "").toLowerCase());
   const validSourceCount = answer.sources.length >= scenario.minSources && answer.sources.length <= scenario.maxSources;
   const coversDomains = requiredHosts.every((domain) => uniqueHosts.has(domain));
   const enoughIndependentHosts = uniqueHosts.size >= requiredHosts.length;

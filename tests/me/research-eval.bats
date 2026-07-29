@@ -30,6 +30,14 @@ while [ "$#" -gt 0 ]; do
 done
 prompt=$(cat)
 cp "$schema_path" "$TEST_TEMP_DIR/codex.schema.json"
+if [ "${RESEARCH_EVAL_FAKE_RATE_LIMITED:-}" = "1" ]; then
+  printf '%s\n' 'You have hit your session limit' >&2
+  exit 1
+fi
+if [ "${RESEARCH_EVAL_FAKE_RATE_LIMIT_RESULT:-}" = "1" ]; then
+  printf '%s\n' '{"type":"result","is_error":true,"api_error_status":429,"result":"You have hit your session limit"}'
+  exit 1
+fi
 if [[ "$prompt" == *ROUTE_ONLY* ]]; then
   cp "$schema_path" "$TEST_TEMP_DIR/codex.route.schema.json"
   printf '%s' "$prompt" >"$TEST_TEMP_DIR/codex.route.prompt"
@@ -526,6 +534,40 @@ EOF
     '.runs[0].status == "incomplete"
      and .runs[0].process.availability == "auth_unavailable"
      and (.runs[0].process.failureDetail | contains("OAuth login required"))' \
+    "$TEST_TEMP_DIR/out/summary.json"
+}
+
+@test "research evaluator: preserves rate-limit failures as incomplete" {
+  run env \
+    RESEARCH_EVAL_CODEX_BIN="$TEST_TEMP_DIR/bin/codex" \
+    RESEARCH_EVAL_FAKE_RATE_LIMITED=1 \
+    bun "$EVALUATE" \
+      --runtime codex \
+      --variant baseline \
+      --scenario exact-rfc-safe-methods \
+      --output-dir "$TEST_TEMP_DIR/out"
+  [ "$status" -eq 1 ]
+  jq -e \
+    '.runs[0].status == "incomplete"
+     and .runs[0].process.availability == "rate_limited"
+     and (.runs[0].process.failureDetail | contains("session limit"))' \
+    "$TEST_TEMP_DIR/out/summary.json"
+}
+
+@test "research evaluator: preserves stream rate-limit failures as incomplete" {
+  run env \
+    RESEARCH_EVAL_CODEX_BIN="$TEST_TEMP_DIR/bin/codex" \
+    RESEARCH_EVAL_FAKE_RATE_LIMIT_RESULT=1 \
+    bun "$EVALUATE" \
+      --runtime codex \
+      --variant baseline \
+      --scenario exact-rfc-safe-methods \
+      --output-dir "$TEST_TEMP_DIR/out"
+  [ "$status" -eq 1 ]
+  jq -e \
+    '.runs[0].status == "incomplete"
+     and .runs[0].process.availability == "rate_limited"
+     and (.runs[0].process.failureDetail | contains("session limit"))' \
     "$TEST_TEMP_DIR/out/summary.json"
 }
 

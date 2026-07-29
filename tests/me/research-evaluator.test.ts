@@ -251,6 +251,16 @@ describe("event normalization", () => {
     });
   });
 
+  test("does not treat a configured plugin name as a search invocation", () => {
+    const events = normalizeEvents("claude", [
+      JSON.stringify({
+        type: "system",
+        plugins: [{ name: "autoresearch" }],
+      }),
+    ]);
+    expect(events.filter((event) => event.action === "search")).toEqual([]);
+  });
+
   test("does not treat Codex assistant output as delegation", () => {
     const events = normalizeEvents("codex", [
       JSON.stringify({
@@ -321,6 +331,22 @@ describe("quality scoring", () => {
     expect(domainAssertionFor("https://bun.sh/docs/api/spawn")).toMatchObject({
       status: "pass",
     });
+    expect(domainAssertionFor("https://bun.com/docs/api/spawn")).toMatchObject({
+      status: "pass",
+    });
+    expect(scoreRun({
+      ...input,
+      scenario: { ...scenario, requiredDomains: ["bun.com"] },
+      answer: {
+        ...input.answer,
+        answerMarkdown: "Bun.spawn exposes stdout through Response.text().",
+        sources: [{
+          title: "Bun.spawn",
+          url: "https://bun.sh/docs/api/spawn",
+          claim: "Bun.spawn exposes stdout",
+        }],
+      },
+    }).assertions.find((item) => item.name === "sources")).toMatchObject({ status: "pass" });
     expect(domainAssertionFor("https://example.com/bun-spawn")).toMatchObject({
       status: "fail",
     });
