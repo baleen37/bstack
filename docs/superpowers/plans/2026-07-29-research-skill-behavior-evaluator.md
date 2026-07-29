@@ -1314,3 +1314,69 @@ Present the exact report path, commits, failed/incomplete scenarios, quality
 gate, and efficiency deltas. Stop for explicit review. A later SkillOpt run is
 optional and remains staging-only; it is outside this implementation plan
 until separately approved.
+
+---
+
+## 2026-07-29 Adaptive Evaluation Amendment
+
+Live baseline execution showed that a full ten-scenario first pass is not a
+useful first gate: five Codex scenarios consumed 1,792,745 input tokens while
+also exposing two evaluator-observability defects. The user approved an
+adaptive protocol in place of the fixed full matrix. This is not a token
+ceiling: it starts with a representative cohort and expands only when the
+current cohort supplies new behavioral information.
+
+- Preserve the five interrupted Codex artifacts as historical raw evidence;
+  never delete or overwrite them.
+- Correct event semantics before using those artifacts as a baseline.
+- Rescore the preserved cohort without new model calls.
+- Use the same five scenario ids for the first candidate cohort:
+  `exact-rfc-safe-methods`, `bun-spawn-stdout`, `node-v22-release-date`,
+  `npm-bun-frozen-install`, and `context7-exa-recommendation`.
+- Expand to the remaining scenarios only after the candidate cohort has no
+  harness incompatibility and provides a quality improvement or a materially
+  different failure signature. Repeat only the selected failed scenarios and
+  efficiency probes.
+- A runtime that cannot expose a cited-source open operation produces an
+  `incomplete` open-evidence assertion, never a false behavioral failure.
+
+### Task 6: Correct Runtime Observability and Rescore Existing Evidence
+
+**Run this task before resuming Task 3.**
+
+**Files:**
+- Modify: `plugins/me/skills/research/scripts/evaluator.ts`
+- Modify: `plugins/me/skills/research/scripts/evaluate.ts`
+- Modify: `tests/me/research-evaluator.test.ts`
+- Modify: `tests/me/research-eval.bats`
+
+**Requirements:**
+
+- Treat Codex `agent_message` records as assistant output, not delegation.
+  Delegation is counted only from explicit tool invocation records; the
+  harness's one synthetic researcher delegation remains the deterministic
+  representation of dispatch.
+- Preserve explicit `open` events. When a runtime's captured event protocol
+  cannot prove source opens, `sources_opened` is `incomplete`; when it can,
+  unmatched cited sources remain a failure.
+- Add a no-network `--rescore-from <artifact-dir> --output-dir <dir>` CLI
+  mode. It reads saved run JSON artifacts, validates identity, applies current
+  scoring semantics, and writes a fresh summary plus rescored runs. It must
+  never invoke either model CLI.
+- Tests must first prove the old failure modes: `agent_message` inflates
+  delegations, Codex open evidence is incomplete rather than false-failed,
+  and rescore does not call a fake runtime binary. Then make those tests pass.
+- Run focused TypeScript and Bats tests, the Task 2 evaluator tests, and
+  `git diff --check`. Commit the fix before Task 3 resumes.
+
+**Verification:**
+
+```bash
+bun plugins/me/skills/research/scripts/evaluate.ts \
+  --rescore-from .research-eval/baseline/codex \
+  --output-dir .research-eval/baseline-rescored/codex
+```
+
+The command must produce a summary for exactly the five preserved run files,
+make no network or model call, and leave `.research-eval/baseline/codex`
+unchanged.
