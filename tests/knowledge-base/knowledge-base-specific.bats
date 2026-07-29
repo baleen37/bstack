@@ -45,10 +45,14 @@ run_mcp_stdio_client() {
       const stderr = transport.stderr;
       if (stderr === null) throw new Error("MCP child stderr was not captured");
       let stderrOutput = "";
+      let stderrEnded = false;
       const stderrDone = new Promise((resolve, reject) => {
         stderr.setEncoding("utf8");
         stderr.on("data", (chunk) => { stderrOutput += chunk; });
-        stderr.once("end", resolve);
+        stderr.once("end", () => {
+          stderrEnded = true;
+          resolve();
+        });
         stderr.once("error", reject);
       });
       let rejectProtocol;
@@ -98,6 +102,8 @@ run_mcp_stdio_client() {
         if (protocolError === undefined || failure === undefined) {
           throw new Error("non-JSON stdout banner did not fail the MCP protocol");
         }
+        if (cleanupFailure !== undefined) throw cleanupFailure;
+        if (!stderrEnded) throw new Error("MCP stderr did not end");
         if (stderrOutput !== "stdio cleanup sentinel\n") {
           throw new Error(`stderr was not fully drained: ${stderrOutput}`);
         }
