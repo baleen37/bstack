@@ -24,8 +24,12 @@
       "Task",
       "mcp__context7__*"
     ],
-    "deny": ["Workflow"],
-    "additionalDirectories": ["~/.local/share/bstack/handoff/"],
+    "deny": [
+      "Workflow"
+    ],
+    "additionalDirectories": [
+      "~/.local/share/bstack/handoff/"
+    ],
     "defaultMode": "auto"
   },
   "enableAllProjectMcpServers": true,
@@ -45,7 +49,6 @@
     "slack@claude-plugins-official": true,
     "bstack@bstack": true,
     "core@bstack": true,
-    "jira@bstack": true,
     "ks-amplitude@search-claude-code-plugins": true,
     "ks-databricks@search-claude-code-plugins": true,
     "ks-git-guard@search-claude-code-plugins": true,

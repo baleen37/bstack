@@ -1,6 +1,6 @@
 {
   "name": "slack",
-  "version": "17.35.0",
+  "version": "17.38.4",
   "description": "Slack workflow guidance backed by the official Slack MCP server",
   "author": {
     "name": "baleen37",
@@ -15,5 +15,19 @@
     "mcp"
   ],
   "skills": "./skills/",
-  "mcpServers": "./.mcp.json"
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Slack",
+    "shortDescription": "Slack workflow guidance backed by the official Slack MCP server",
+    "longDescription": "Slack workflow guidance backed by the official Slack MCP server",
+    "developerName": "baleen37",
+    "category": "Productivity",
+    "capabilities": [
+      "Skills",
+      "MCP"
+    ],
+    "defaultPrompt": [
+      "Use Slack for this task."
+    ]
+  }
 }

@@ -22,20 +22,7 @@
         "memory",
         "context"
       ],
-      "version": "17.35.0"
-    },
-    {
-      "name": "jira",
-      "description": "Jira workflow guidance backed by a slim Atlassian MCP facade",
-      "source": "./plugins/jira",
-      "category": "development",
-      "tags": [
-        "jira",
-        "atlassian",
-        "mcp",
-        "project-management"
-      ],
-      "version": "17.35.0"
+      "version": "17.38.4"
     },
     {
       "name": "slack",
@@ -48,7 +35,7 @@
         "messaging",
         "mcp"
       ],
-      "version": "17.35.0"
+      "version": "17.38.4"
     },
     {
       "name": "notion",
@@ -61,7 +48,7 @@
         "documentation",
         "mcp"
       ],
-      "version": "17.35.0"
+      "version": "17.38.4"
     },
     {
       "name": "datadog",
@@ -76,7 +63,7 @@
         "apm",
         "pup"
       ],
-      "version": "17.35.0"
+      "version": "17.38.4"
     },
     {
       "name": "autoresearch",
@@ -89,7 +76,7 @@
         "autonomous",
         "research"
       ],
-      "version": "17.35.0"
+      "version": "17.38.4"
     }
   ]
 }

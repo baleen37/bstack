@@ -1,6 +1,6 @@
 {
   "name": "notion",
-  "version": "17.35.0",
+  "version": "17.38.4",
   "description": "Notion workspace guidance backed by the official Notion MCP server",
   "author": {
     "name": "baleen37",
@@ -15,5 +15,19 @@
     "mcp"
   ],
   "skills": "./skills/",
-  "mcpServers": "./.mcp.json"
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Notion",
+    "shortDescription": "Notion workspace guidance backed by the official Notion MCP server",
+    "longDescription": "Notion workspace guidance backed by the official Notion MCP server",
+    "developerName": "baleen37",
+    "category": "Productivity",
+    "capabilities": [
+      "Skills",
+      "MCP"
+    ],
+    "defaultPrompt": [
+      "Use Notion for this task."
+    ]
+  }
 }
