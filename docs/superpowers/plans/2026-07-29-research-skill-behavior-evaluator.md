@@ -1509,3 +1509,27 @@ candidate is not adopted until the cross-runtime quality gate is met.
   or prior evaluation artifacts.
 
 This is a harness-fidelity fix, not a relaxation of quality assertions.
+
+### Task 10: Make Public Scenario Criteria Language-Equivalent
+
+**Run this task before the final Task 4 acceptance decision.**
+
+**Files:**
+- Modify: `plugins/me/skills/research/evals/scenarios.json`
+- Modify: `tests/me/research-evaluator.test.ts`
+
+**Requirements:**
+
+- Keep the Context7/Exa decision criteria strict while accepting Korean terms
+  that mean the same public prompt terms: `authentication`/`인증`,
+  `billing|price|cost`/`요금|과금|결제`, `rate|limit`/`속도 제한|요청 제한`,
+  `privacy|data`/`개인정보|데이터`, and `retention`/`보존`.
+- Add a unit test that scores a Korean answer containing every required
+  decision category and proves `required_patterns` passes. An answer omitting
+  any category must still fail.
+- Rescore saved baseline and candidate artifact trees only after the test is
+  green; do not run a model during this task.
+
+This corrects a language-equivalence defect in a public English scenario when
+the host runtime is explicitly instructed to answer in Korean. It does not
+weaken the required decision coverage or source-quality assertions.
