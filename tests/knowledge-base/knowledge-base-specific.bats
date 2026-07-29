@@ -162,6 +162,22 @@ run_mcp_stdio_client() {
   grep -q '"node-llama-cpp": true' "$script"
 }
 
+@test "knowledge-base exposes its dependency hook to Codex too" {
+  local claude="${PROJECT_ROOT}/plugins/knowledge-base/.claude-plugin/plugin.json"
+  local codex="${PROJECT_ROOT}/plugins/knowledge-base/.codex-plugin/plugin.json"
+  local hooks="${PROJECT_ROOT}/plugins/knowledge-base/hooks/hooks.json"
+
+  # Claude discovers hooks/hooks.json on its own, but Codex needs the path
+  # spelled out, and its manifest is generated from the Claude one. Without
+  # this the MCP server starts under Codex with no dependencies installed.
+  [ "$(jq -r '.hooks' "$claude")" = "./hooks/hooks.json" ]
+  [ "$(jq -r '.hooks' "$codex")" = "./hooks/hooks.json" ]
+
+  # Codex compiles matcher as a regex and filters SessionStart on the session
+  # source, so "*" would not compile. Absent means every start.
+  [ "$(jq -r '.hooks.SessionStart[0].matcher // "absent"' "$hooks")" = "absent" ]
+}
+
 @test "knowledge-base blocks qmd generation and reranking paths" {
   run grep -R -q '\.expandQuery(' "${PROJECT_ROOT}/plugins/knowledge-base/src"
   [ "$status" -eq 1 ]

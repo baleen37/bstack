@@ -9,7 +9,7 @@
 set -euo pipefail
 
 root="${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-$PWD}}"
-deps="${CLAUDE_PLUGIN_DATA:-${XDG_DATA_HOME:-${HOME}/.local/share}/knowledge-base}/runtime"
+deps="${PLUGIN_DATA:-${CLAUDE_PLUGIN_DATA:-${XDG_DATA_HOME:-${HOME}/.local/share}/knowledge-base}}/runtime"
 
 manifest="${root}/package.json"
 stamp="${deps}/.installed.json"
