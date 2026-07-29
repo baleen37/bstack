@@ -1,6 +1,6 @@
 {
   "name": "datadog",
-  "version": "17.38.2",
+  "version": "17.38.3",
   "description": "Datadog observability guidance via the pup CLI",
   "author": {
     "name": "baleen37",
