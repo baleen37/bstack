@@ -1,6 +1,6 @@
 import { execFile as execFileCallback } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, open, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, open, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { promisify } from "node:util";
@@ -147,18 +147,32 @@ async function snapshotCheckout(checkout: string): Promise<{
   git?: { head: string; status: string };
 }> {
   const markdown = await snapshotMarkdown(checkout, ["personal", "wooto"]);
-  try {
-    const [head, status] = await Promise.all([
-      execFile("git", ["rev-parse", "HEAD"], { cwd: checkout }),
-      execFile("git", ["status", "--porcelain"], { cwd: checkout }),
-    ]);
-    return {
-      markdown,
-      git: { head: head.stdout, status: status.stdout },
-    };
-  } catch {
+  if (!(await isGitWorktree(checkout))) {
     return { markdown };
   }
+  const [head, status] = await Promise.all([
+    execFile("git", ["rev-parse", "HEAD"], { cwd: checkout }),
+    execFile("git", ["status", "--porcelain"], { cwd: checkout }),
+  ]);
+  return {
+    markdown,
+    git: { head: head.stdout, status: status.stdout },
+  };
+}
+
+async function isGitWorktree(checkout: string): Promise<boolean> {
+  try {
+    await lstat(join(checkout, ".git"));
+    return true;
+  } catch (error) {
+    if (isMissingPath(error)) return false;
+    throw error;
+  }
+}
+
+function isMissingPath(error: unknown): boolean {
+  return typeof error === "object" && error !== null
+    && "code" in error && (error as { code?: unknown }).code === "ENOENT";
 }
 
 async function snapshotMarkdown(checkout: string, collections: readonly string[]): Promise<
