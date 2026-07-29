@@ -1587,3 +1587,28 @@ weaken the required decision coverage or source-quality assertions.
 - Add positive Korean and negative wrong-date scoring tests.
 - Rescore saved artifacts only after tests pass. Do not edit candidate
   instructions or invoke a model.
+
+### Task 14: Bind Source Budgets Into the Structured Answer Contract
+
+**Run this task before the final candidate cohort retry.**
+
+**Files:**
+- Modify: `plugins/me/skills/research/scripts/evaluate.ts`
+- Modify: `tests/me/research-evaluator.test.ts`
+- Modify: `tests/me/research-eval.bats`
+
+**Requirements:**
+
+- Derive an execution-only copy of the answer schema for each scenario with
+  `sources.minItems` and `sources.maxItems` set to that scenario's existing
+  source budget. Keep the repository schema unchanged and retain all source
+  item validation.
+- Use the derived schema only for the execution call, never route selection.
+- Add pure and fake-runtime behavior tests proving narrow and comparison
+  budgets are passed to both runtime adapters and route schema is unchanged.
+- Do not alter scenario expectations, candidate instructions, or saved raw
+  artifacts. Run required tests and commit.
+
+This makes the structured response contract match the evaluator's existing
+source-quality rule; it does not suppress source-domain, citation-claim, or
+open-evidence scoring.
