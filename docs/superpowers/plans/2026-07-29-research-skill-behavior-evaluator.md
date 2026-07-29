@@ -1258,6 +1258,11 @@ staged protocol:
    only if the representative comparison is `adopt` or `review` and expansion
    would test a materially different behavior.
 
+The Task 8 Codex-direct `sources_opened`, `searches`, and
+`forbidden_actions` incompletes are protocol-observability limits, not
+candidate behavior failures. They may yield a `review` recommendation. Any
+other failed or incomplete assertion still blocks acceptance.
+
 The adaptive protocol has no token, response-length, or latency cap. It saves
 work by stopping when additional scenarios would only repeat an already known
 failure signature.
