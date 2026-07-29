@@ -15,5 +15,18 @@
     "apm",
     "pup"
   ],
-  "skills": "./skills/"
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Datadog",
+    "shortDescription": "Datadog observability guidance via the pup CLI",
+    "longDescription": "Datadog observability guidance via the pup CLI",
+    "developerName": "baleen37",
+    "category": "Productivity",
+    "capabilities": [
+      "Skills"
+    ],
+    "defaultPrompt": [
+      "Use Datadog for this task."
+    ]
+  }
 }

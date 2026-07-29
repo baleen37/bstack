@@ -8,7 +8,7 @@ setup() {
 
 @test "official mcp plugins expose claude and codex manifests" {
     local plugin
-    for plugin in slack notion jira; do
+    for plugin in slack notion jira knowledge-base; do
         assert_file_exists "${PROJECT_ROOT}/plugins/${plugin}/.claude-plugin/plugin.json"
         assert_file_exists "${PROJECT_ROOT}/plugins/${plugin}/.codex-plugin/plugin.json"
         assert_file_exists "${PROJECT_ROOT}/plugins/${plugin}/.mcp.json"

@@ -139,3 +139,56 @@ job_has_if_condition() {
 
     [[ "$fetch_depth" == "0" ]]
 }
+
+@test "knowledge-base package is built and tested in CI without the real-model opt-in smoke" {
+    ensure_yaml_validator
+    local build_command
+    local test_command
+    build_command=$(yaml_get "$CI_WORKFLOW" '.jobs.test.steps[] | select(.name == "Build knowledge-base package") | .run')
+    test_command=$(yaml_get "$CI_WORKFLOW" '.jobs.test.steps[] | select(.name == "Test knowledge-base package") | .run')
+
+    [[ "$build_command" == "bun run --cwd plugins/knowledge-base build" ]]
+    [[ "$test_command" == "bun run --cwd plugins/knowledge-base test" ]]
+    ! grep -q 'KNOWLEDGE_BASE_REAL_MODEL=1' "$CI_WORKFLOW"
+}
+
+@test "release prepare synchronizes the nested knowledge-base package version" {
+    run node --input-type=module --eval '
+      import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+      import { tmpdir } from "node:os";
+      import { join } from "node:path";
+      import { pathToFileURL } from "node:url";
+
+      const releaseConfig = process.argv[1];
+      const fixture = await mkdtemp(join(tmpdir(), "knowledge-base-release-"));
+      await mkdir(join(fixture, "plugins", "knowledge-base", ".claude-plugin"), { recursive: true });
+      await mkdir(join(fixture, ".claude-plugin"), { recursive: true });
+      await writeFile(join(fixture, "plugins", "knowledge-base", ".claude-plugin", "plugin.json"), "{\"name\":\"knowledge-base\",\"version\":\"0.0.0\"}\n");
+      await writeFile(join(fixture, "plugins", "knowledge-base", "package.json"), "{\"name\":\"@baleen37/knowledge-base\",\"version\":\"0.0.0\"}\n");
+      await writeFile(join(fixture, ".claude-plugin", "marketplace.json"), "{\"plugins\":[{\"name\":\"knowledge-base\",\"version\":\"0.0.0\"}]}\n");
+      const originalCwd = process.cwd();
+      try {
+        process.chdir(fixture);
+        const { default: config } = await import(`${pathToFileURL(releaseConfig).href}?fixture=${Date.now()}`);
+        const plugin = config.plugins.find((entry) => !Array.isArray(entry) && typeof entry.prepare === "function");
+        await plugin.prepare({}, { nextRelease: { version: "99.0.0" } });
+        const nested = JSON.parse(await readFile(join(fixture, "plugins", "knowledge-base", "package.json"), "utf8"));
+        if (nested.version !== "99.0.0") throw new Error(`nested package version: ${nested.version}`);
+      } finally {
+        process.chdir(originalCwd);
+        await rm(fixture, { recursive: true, force: true });
+      }
+    ' "${PROJECT_ROOT}/.releaserc.js"
+    [ "$status" -eq 0 ]
+}
+
+@test "release git assets include the nested knowledge-base package" {
+    run node --input-type=module --eval '
+      const { default: config } = await import(process.argv[1]);
+      const git = config.plugins.find((entry) => Array.isArray(entry) && entry[0] === "@semantic-release/git");
+      if (!git[1].assets.includes("plugins/knowledge-base/package.json")) {
+        throw new Error("nested knowledge-base package is not a release asset");
+      }
+    ' "file://${PROJECT_ROOT}/.releaserc.js"
+    [ "$status" -eq 0 ]
+}
