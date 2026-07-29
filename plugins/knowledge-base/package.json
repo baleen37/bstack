@@ -8,9 +8,10 @@
     "node": ">=22.0.0"
   },
   "bin": {
-    "knowledge-base": "dist/cli.js"
+    "knowledge-base": "bin/knowledge-base.mjs"
   },
   "files": [
+    "bin/",
     "dist/",
     "README.md",
     "LICENSE"
