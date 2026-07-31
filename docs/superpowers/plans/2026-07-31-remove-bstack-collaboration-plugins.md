@@ -85,7 +85,7 @@ Replace the Jira/Notion/Slack manifest and endpoint tests with the existing Data
 
 - [ ] **Step 4: Delete manifest entries**
 
-Delete the three plugin directories. Delete their complete objects from the `plugins` array in `.claude-plugin/marketplace.json`.
+Delete the complete Jira, Notion, and Slack objects from the `plugins` array in `.claude-plugin/marketplace.json`.
 
 - [ ] **Step 5: Regenerate Codex artifacts**
 
