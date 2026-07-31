@@ -17,4 +17,5 @@ setup() {
 @test "marketplace excludes retired collaboration plugins" {
     local manifest="${PROJECT_ROOT}/.claude-plugin/marketplace.json"
     ! jq -e '.plugins[] | select(.name == "jira" or .name == "notion" or .name == "slack")' "$manifest"
+    ! jq -e '.enabledPlugins["jira@bstack"]' "${PROJECT_ROOT}/plugins/me/skills/setup/settings.json"
 }
