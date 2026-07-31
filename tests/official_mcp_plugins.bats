@@ -14,8 +14,7 @@ setup() {
     [ "$(jq -r '.mcpServers // empty' "${PROJECT_ROOT}/plugins/datadog/.codex-plugin/plugin.json")" = "" ]
 }
 
-@test "marketplace excludes retired collaboration plugins" {
+@test "marketplace contains the supported bstack plugins" {
     local manifest="${PROJECT_ROOT}/.claude-plugin/marketplace.json"
-    ! jq -e '.plugins[] | select(.name == "jira" or .name == "notion" or .name == "slack")' "$manifest"
-    ! jq -e '.enabledPlugins["jira@bstack"]' "${PROJECT_ROOT}/plugins/me/skills/setup/settings.json"
+    [ "$(jq -c '[.plugins[].name] | sort' "$manifest")" = '["autoresearch","datadog","me"]' ]
 }
