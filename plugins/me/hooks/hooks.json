@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${PLUGIN_ROOT:-$CLAUDE_PLUGIN_ROOT}/skills/setup/setup-worktree.sh\"",
+            "command": "bash \"${PLUGIN_ROOT:-$CLAUDE_PLUGIN_ROOT}/hooks/setup-worktree.sh\"",
             "timeout": 30
           }
         ]

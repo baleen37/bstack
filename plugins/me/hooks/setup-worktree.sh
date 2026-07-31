@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # WorktreeCreate hook: creates worktrees under .worktrees/ directory
-# Matches gw() convention: .worktrees/{NNNNN}-{name}
+# Matches the wt() shell wrapper convention: .worktrees/{YYMMDD}-{name}
 # Input: JSON via stdin with { name, cwd, ... }
 # Output: worktree path to stdout
 
@@ -11,13 +11,17 @@ NAME=$(echo "$INPUT" | jq -r '.name')
 CWD=$(echo "$INPUT" | jq -r '.cwd')
 
 # Resolve repo root (handles being called from inside a worktree)
-REPO_ROOT=$(git -C "$CWD" worktree list | head -1 | awk '{print $1}')
+REPO_ROOT=$(git -C "$CWD" worktree list --porcelain | sed -n 's/^worktree //p' | head -1)
 
 mkdir -p "$REPO_ROOT/.worktrees"
 
-# Sequential number prefix matching gw() convention
-NEXT_NUM=$(printf "%05d" $(( $(git -C "$CWD" worktree list | tail -n +2 | wc -l | tr -d ' ') + 1 )))
-DIR="$REPO_ROOT/.worktrees/${NEXT_NUM}-${NAME}"
+# Date prefix and slash sanitizing match wt()'s _sanitize_branch
+DIR="$REPO_ROOT/.worktrees/$(date +%y%m%d)-${NAME//\//-}"
+
+if [ -d "$DIR" ]; then
+  echo "Worktree already exists: $DIR" >&2
+  exit 1
+fi
 
 # Find base branch
 if git -C "$CWD" rev-parse --verify main >/dev/null 2>&1; then
