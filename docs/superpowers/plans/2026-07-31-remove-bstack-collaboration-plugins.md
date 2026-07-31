@@ -64,26 +64,21 @@ Run the Step 1 commands. Expected: none of the four removal commands' IDs is ins
 
 - [ ] **Step 1: Add a failing marketplace-absence test**
 
-Add this Bats test to `tests/official_mcp_plugins.bats`:
+Replace the retired-plugin tests with one Bats test that asserts the complete
+remaining marketplace set:
 
 ```bash
-@test "marketplace excludes retired collaboration plugins" {
+@test "marketplace contains the supported bstack plugins" {
     local manifest="${PROJECT_ROOT}/.claude-plugin/marketplace.json"
-    ! jq -e '.plugins[] | select(.name == "jira" or .name == "notion" or .name == "slack")' "$manifest"
+    [ "$(jq -c '[.plugins[].name] | sort' "$manifest")" = '["autoresearch","datadog","me"]' ]
 }
-```
-
-Also add this assertion to the same test:
-
-```bash
-! jq -e '.enabledPlugins["jira@bstack"]' "${PROJECT_ROOT}/plugins/me/skills/setup/settings.json"
 ```
 
 - [ ] **Step 2: Verify the test is red**
 
 Run `bats tests/official_mcp_plugins.bats`.
 
-Expected: fail because the current marketplace manifest contains all three names and the setup default still enables `jira@bstack`.
+Expected: fail because the current marketplace manifest contains retired plugins.
 
 
 - [ ] **Step 3: Remove obsolete test coverage and source packages**
