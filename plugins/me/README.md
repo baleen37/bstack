@@ -13,28 +13,19 @@ Personal Claude Code workflow toolkit for git safety, session continuity, verifi
 
 ### Verify
 
-- `test` — Design, run, and improve tests using local conventions and `test-engineer`.
 - `verify` — Verify implementation scope and report `PASS`, `PARTIAL`, or `FAIL` with evidence.
-- `e2e` — Verify flows across multiple components, services, or layers.
 - `e2e-scenario-testing` — Verify a running web UI, CLI, or TUI with reusable scenario cards and falsifiable assertions.
 - `story-loop` — Inventory repository capabilities and loop through scenario testing, fixes, and fresh verification.
-
-### Review
-
-- `review` — Review code with specialist subagents for correctness, tests, security, and architecture.
 
 ### Ship
 
 - `ship` — Run pre-deploy checks, the deploy, and post-deploy verification with a rollback path.
 - `create-pr` — Commit, push, create a PR, and optionally wait for checks or merge.
 
-### Evolve
-
-- `evolve` — Aggregate skill-usage signals and propose skill improvements.
-
 ### Session
 
 - `handoff` — Write structured session handoff files.
+- `write-skill` — Create or improve a skill with Microsoft SkillOpt, gated on held-out validation.
 
 ## Agents
 
