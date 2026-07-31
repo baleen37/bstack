@@ -54,7 +54,7 @@ Expected: absent IDs are recorded as absent; no third-party Slack plugin is remo
 
 Run the Step 1 commands. Expected: none of the four removal commands' IDs is installed.
 
-### Task 2: Establish and update the test contract
+### Task 2: Remove source plugins with a complete red-green test cycle
 
 **Files:**
 - Modify: `tests/official_mcp_plugins.bats`
@@ -78,27 +78,22 @@ Run `bats tests/official_mcp_plugins.bats`.
 
 Expected: fail because the current marketplace manifest contains all three names.
 
-- [ ] **Step 3: Remove obsolete test coverage**
 
-Replace the Jira/Notion/Slack manifest and endpoint tests with the existing Datadog-only contract. Remove `jira` from `test_dirs` in `tests/run-all-tests.sh`, then delete `tests/jira/` and `tests/fixtures/jira/`.
+- [ ] **Step 3: Remove obsolete test coverage and source packages**
 
-### Task 3: Remove source plugins and generate artifacts
+Replace the Jira/Notion/Slack manifest and endpoint tests with the existing Datadog-only contract. Remove `jira` from `test_dirs` in `tests/run-all-tests.sh`, then delete `tests/jira/`, `tests/fixtures/jira/`, `plugins/jira/`, `plugins/notion/`, and `plugins/slack/`.
 
-**Files:**
-- Modify: `.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json`
-- Delete: `plugins/jira/`, `plugins/notion/`, `plugins/slack/`
-
-- [ ] **Step 1: Delete source packages and manifest entries**
+- [ ] **Step 4: Delete manifest entries**
 
 Delete the three plugin directories. Delete their complete objects from the `plugins` array in `.claude-plugin/marketplace.json`.
 
-- [ ] **Step 2: Regenerate Codex artifacts**
+- [ ] **Step 5: Regenerate Codex artifacts**
 
 Run `npm run sync:codex`.
 
 Expected: `.agents/plugins/marketplace.json` contains no Jira, Notion, or Slack bstack entry.
 
-- [ ] **Step 3: Verify green**
+- [ ] **Step 6: Verify green**
 
 Run:
 
@@ -110,9 +105,9 @@ rg -n 'plugins/(jira|notion|slack)|"(jira|notion|slack)"' .claude-plugin .agents
 
 Expected: the first two commands pass; `rg` exits 1 with no matches.
 
-### Task 4: Full verification and catalog propagation
+### Task 3: Full verification and catalog propagation
 
-**Files:** all Task 2 and Task 3 paths.
+**Files:** all Task 2 paths.
 
 - [ ] **Step 1: Run regressions**
 
