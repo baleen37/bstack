@@ -20,7 +20,7 @@
 
 - Modify: `.claude-plugin/marketplace.json` and regenerated `.agents/plugins/marketplace.json`.
 - Delete: `plugins/jira/`, `plugins/notion/`, `plugins/slack/`, `tests/jira/`, and `tests/fixtures/jira/`.
-- Modify: `tests/official_mcp_plugins.bats` and `tests/run-all-tests.sh`.
+- Modify: `plugins/me/skills/setup/settings.json`, `tests/official_mcp_plugins.bats`, and `tests/run-all-tests.sh`.
 
 ### Task 1: Remove only the local bstack installations
 
@@ -59,6 +59,7 @@ Run the Step 1 commands. Expected: none of the four removal commands' IDs is ins
 **Files:**
 - Modify: `tests/official_mcp_plugins.bats`
 - Modify: `tests/run-all-tests.sh`
+- Modify: `plugins/me/skills/setup/settings.json`
 - Delete: `tests/jira/`, `tests/fixtures/jira/`
 
 - [ ] **Step 1: Add a failing marketplace-absence test**
@@ -72,16 +73,22 @@ Add this Bats test to `tests/official_mcp_plugins.bats`:
 }
 ```
 
+Also add this assertion to the same test:
+
+```bash
+! jq -e '.enabledPlugins["jira@bstack"]' "${PROJECT_ROOT}/plugins/me/skills/setup/settings.json"
+```
+
 - [ ] **Step 2: Verify the test is red**
 
 Run `bats tests/official_mcp_plugins.bats`.
 
-Expected: fail because the current marketplace manifest contains all three names.
+Expected: fail because the current marketplace manifest contains all three names and the setup default still enables `jira@bstack`.
 
 
 - [ ] **Step 3: Remove obsolete test coverage and source packages**
 
-Replace the Jira/Notion/Slack manifest and endpoint tests with the existing Datadog-only contract. Remove `jira` from `test_dirs` in `tests/run-all-tests.sh`, then delete `tests/jira/`, `tests/fixtures/jira/`, `plugins/jira/`, `plugins/notion/`, and `plugins/slack/`.
+Replace the Jira/Notion/Slack manifest and endpoint tests with the existing Datadog-only contract. Remove `jira` from `test_dirs` in `tests/run-all-tests.sh`; remove `jira@bstack` from `plugins/me/skills/setup/settings.json`; then delete `tests/jira/`, `tests/fixtures/jira/`, `plugins/jira/`, `plugins/notion/`, and `plugins/slack/`.
 
 - [ ] **Step 4: Delete manifest entries**
 
