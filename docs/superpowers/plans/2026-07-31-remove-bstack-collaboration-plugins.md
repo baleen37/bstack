@@ -100,10 +100,10 @@ Run:
 ```bash
 bats tests/official_mcp_plugins.bats
 npm run check:codex
-rg -n 'plugins/(jira|notion|slack)|"(jira|notion|slack)"' .claude-plugin .agents plugins scripts tests .github
+rg -n 'plugins/(jira|notion|slack)' .claude-plugin .agents plugins scripts .github
 ```
 
-Expected: the first two commands pass; `rg` exits 1 with no matches.
+Expected: the first two commands pass; `rg` exits 1 with no removed source paths. Tests may intentionally mention retired plugin names when asserting their absence.
 
 ### Task 3: Full verification and catalog propagation
 
