@@ -25,32 +25,6 @@
       "version": "17.39.0"
     },
     {
-      "name": "slack",
-      "description": "Slack workflow guidance backed by the official Slack MCP server",
-      "source": "./plugins/slack",
-      "category": "development",
-      "tags": [
-        "slack",
-        "collaboration",
-        "messaging",
-        "mcp"
-      ],
-      "version": "17.39.0"
-    },
-    {
-      "name": "notion",
-      "description": "Notion workspace guidance backed by the official Notion MCP server",
-      "source": "./plugins/notion",
-      "category": "development",
-      "tags": [
-        "notion",
-        "knowledge-management",
-        "documentation",
-        "mcp"
-      ],
-      "version": "17.39.0"
-    },
-    {
       "name": "datadog",
       "description": "Datadog observability guidance via the pup CLI",
       "source": "./plugins/datadog",

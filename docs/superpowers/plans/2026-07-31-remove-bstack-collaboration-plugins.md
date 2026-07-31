@@ -1,0 +1,145 @@
+# bstack Collaboration Plugin Removal Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Remove bstack-owned Jira, Notion, and Slack plugins from local clients and the bstack marketplace source.
+
+**Architecture:** `.claude-plugin/marketplace.json` is the source manifest and `.agents/plugins/marketplace.json` is generated from it. Delete the three source plugins, replace their tests with an absence assertion, and regenerate Codex artifacts. Baleen Marketplace imports bstack with `plugins/*`, so a normal source refresh propagates the result without an edit to `sources.json`.
+
+**Tech Stack:** Bash, Bats, JSON manifests, Claude Code CLI, Codex CLI.
+
+## Global Constraints
+
+- Remove only bstack-owned `jira`, `notion`, and `slack`.
+- Preserve third-party Slack plugins.
+- Do not edit marketplace caches or `/Users/jito.hello/dev/wooto/baleen-marketplace/sources.json`.
+
+---
+
+## File Structure
+
+- Modify: `.claude-plugin/marketplace.json` and regenerated `.agents/plugins/marketplace.json`.
+- Delete: `plugins/jira/`, `plugins/notion/`, `plugins/slack/`, `tests/jira/`, and `tests/fixtures/jira/`.
+- Modify: `plugins/me/skills/setup/settings.json`, `tests/official_mcp_plugins.bats`, and `tests/run-all-tests.sh`.
+
+### Task 1: Remove only the local bstack installations
+
+**Files:** user-level Claude and Codex plugin registries through their CLIs.
+
+- [ ] **Step 1: Record current state**
+
+Run:
+
+```bash
+codex plugin list | rg '^(jira|notion|slack)@'
+claude plugin list | rg -A3 '^  ❯ (jira|notion|slack)@'
+```
+
+Expected: only the bstack IDs identified in the design are candidates for removal.
+
+- [ ] **Step 2: Remove bstack IDs**
+
+Run:
+
+```bash
+codex plugin remove jira@baleen-marketplace
+codex plugin remove slack@baleen-marketplace
+claude plugin uninstall jira@baleen-marketplace
+claude plugin uninstall notion@baleen-marketplace
+```
+
+Expected: absent IDs are recorded as absent; no third-party Slack plugin is removed.
+
+- [ ] **Step 3: Verify removal**
+
+Run the Step 1 commands. Expected: none of the four removal commands' IDs is installed.
+
+### Task 2: Remove source plugins with a complete red-green test cycle
+
+**Files:**
+- Modify: `tests/official_mcp_plugins.bats`
+- Modify: `tests/run-all-tests.sh`
+- Modify: `plugins/me/skills/setup/settings.json`
+- Delete: `tests/jira/`, `tests/fixtures/jira/`
+
+- [ ] **Step 1: Add a failing marketplace-absence test**
+
+Replace the retired-plugin tests with one Bats test that asserts the complete
+remaining marketplace set:
+
+```bash
+@test "marketplace contains the supported bstack plugins" {
+    local manifest="${PROJECT_ROOT}/.claude-plugin/marketplace.json"
+    [ "$(jq -c '[.plugins[].name] | sort' "$manifest")" = '["autoresearch","datadog","me"]' ]
+}
+```
+
+- [ ] **Step 2: Verify the test is red**
+
+Run `bats tests/official_mcp_plugins.bats`.
+
+Expected: fail because the current marketplace manifest contains retired plugins.
+
+
+- [ ] **Step 3: Remove obsolete test coverage and source packages**
+
+Replace the Jira/Notion/Slack manifest and endpoint tests with the existing Datadog-only contract. Remove `jira` from `test_dirs` in `tests/run-all-tests.sh`; remove `jira@bstack` from `plugins/me/skills/setup/settings.json`; then delete `tests/jira/`, `tests/fixtures/jira/`, `plugins/jira/`, `plugins/notion/`, and `plugins/slack/`.
+
+- [ ] **Step 4: Delete manifest entries**
+
+Delete the complete Jira, Notion, and Slack objects from the `plugins` array in `.claude-plugin/marketplace.json`.
+
+- [ ] **Step 5: Regenerate Codex artifacts**
+
+Run `npm run sync:codex`.
+
+Expected: `.agents/plugins/marketplace.json` contains no Jira, Notion, or Slack bstack entry.
+
+- [ ] **Step 6: Verify green**
+
+Run:
+
+```bash
+bats tests/official_mcp_plugins.bats
+npm run check:codex
+rg -n 'plugins/(jira|notion|slack)' .claude-plugin .agents plugins scripts .github
+```
+
+Expected: the first two commands pass; `rg` exits 1 with no removed source paths. Tests may intentionally mention retired plugin names when asserting their absence.
+
+### Task 3: Full verification and catalog propagation
+
+**Files:** all Task 2 paths.
+
+- [ ] **Step 1: Run regressions**
+
+Run:
+
+```bash
+npm test
+git diff --check
+git status --short
+```
+
+Expected: tests and whitespace checks pass; status contains only scoped changes and the implementation plan.
+
+- [ ] **Step 2: Confirm marketplace propagation contract**
+
+Run `jq -r '.bstack.paths[]' /Users/jito.hello/dev/wooto/baleen-marketplace/sources.json`.
+
+Expected: `plugins/*`, confirming no static Baleen Marketplace deletion is needed.
+
+- [ ] **Step 3: Commit the removal**
+
+Run:
+
+```bash
+git add .claude-plugin/marketplace.json .agents/plugins/marketplace.json plugins tests
+git commit -m "chore: remove retired collaboration plugins"
+```
+
+Expected: a focused source-removal commit.
+
+- [ ] **Step 4: Trigger normal marketplace source refresh after merge**
+
+Use the existing bstack release or Baleen Marketplace refresh flow. Do not edit generated snapshots. Verify the refreshed catalog has no matching plugin names.
