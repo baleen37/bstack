@@ -1,6 +1,6 @@
 # Exploration Guide
 
-Reference for QA exploration by project type. Suggestions, not mandatory — adapt to the project.
+Reference for verification exploration by project type. Suggestions, not mandatory — adapt to the project.
 
 ## Web Applications
 
@@ -15,7 +15,7 @@ Reference for QA exploration by project type. Suggestions, not mandatory — ada
 
 **Framework hints:** Next.js (hydration errors, `_next/data` 404s), Rails (N+1, CSRF), SPA (stale state, back/forward).
 
-**Browser testing:** Use `/browse` skill for browser automation.
+**Browser testing:** Use the `claude-in-chrome` skill for browser automation.
 
 ## CLI Tools
 

@@ -12,6 +12,12 @@ fix, and fresh re-test until the results are verified or explicitly parked.
 **REQUIRED SUB-SKILL:** Use `e2e-scenario-testing` before Phase 0 for the card
 format, interface recipes, evidence discipline, and cleanup rules.
 
+## Which skill to use
+
+- `/verify` — does one change behave as intended (default path)
+- `/e2e-scenario-testing` — drive a running app through its real interface, one scenario
+- `/story-loop` — catalog the whole repository as scenarios, then loop to green
+
 ## Scope
 
 Use the area or surface named by the user. If the user gives no narrower scope,
@@ -35,7 +41,8 @@ Create one card per capability under `test/scenarios/`, named
 `<area>-<nnn>-<slug>.md`. The filename stem is the stable ID; never renumber it.
 Use the `e2e-scenario-testing` card format with these additions:
 
-- Put the actor, user story, and source references under **What this covers**.
+- Put the actor, the scenario being covered, and source references under
+  **What this covers**.
 - Put code-derived behavior under **Expected**, with one falsification
   condition per assertion.
 - Put ambiguities and footguns under **Sharp edges** and in the ledger notes.

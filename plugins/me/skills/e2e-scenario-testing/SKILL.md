@@ -16,6 +16,12 @@ A green unit test proves the wiring in isolation. A scenario proves the wiring
 *as assembled and rendered*. They catch different bugs — write the card even
 when the unit tests pass.
 
+## Which skill to use
+
+- `/verify` — does one change behave as intended (default path)
+- `/e2e-scenario-testing` — drive a running app through its real interface, one scenario
+- `/story-loop` — catalog the whole repository as scenarios, then loop to green
+
 ## When to use this
 
 - A feature touches a user-facing surface (button, palette command, status
