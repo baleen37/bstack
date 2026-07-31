@@ -17,42 +17,6 @@
       "category": "Productivity"
     },
     {
-      "name": "jira",
-      "source": {
-        "source": "local",
-        "path": "./plugins/jira"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Productivity"
-    },
-    {
-      "name": "slack",
-      "source": {
-        "source": "local",
-        "path": "./plugins/slack"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Productivity"
-    },
-    {
-      "name": "notion",
-      "source": {
-        "source": "local",
-        "path": "./plugins/notion"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Productivity"
-    },
-    {
       "name": "datadog",
       "source": {
         "source": "local",
