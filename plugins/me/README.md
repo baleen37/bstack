@@ -11,10 +11,6 @@ Personal Claude Code workflow toolkit for git safety, session continuity, verifi
 - `writing-rfcs` — Write technical RFCs for engineering decisions.
 - `competitive-agents` — Compare parallel approaches for architecture, API, or system decisions.
 
-### Build
-
-- `setup` — Bootstrap global Claude Code configuration on a new machine.
-
 ### Verify
 
 - `test` — Design, run, and improve tests using local conventions and `test-engineer`.
@@ -49,7 +45,7 @@ Personal Claude Code workflow toolkit for git safety, session continuity, verifi
 
 ## Hooks
 
-- `WorktreeCreate` runs `skills/setup/setup-worktree.sh` through `bash`.
+- `WorktreeCreate` runs `hooks/setup-worktree.sh` through `bash`.
 - `PreToolUse` for `Bash:git` runs `hooks/commit-guard.sh` to block unsafe git operations.
 
 ## References

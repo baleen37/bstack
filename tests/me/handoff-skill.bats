@@ -4,8 +4,6 @@ load ../helpers/bats_helper
 
 setup() {
     SKILL_FILE="${PROJECT_ROOT}/plugins/me/skills/handoff/SKILL.md"
-    SETUP_SKILL_FILE="${PROJECT_ROOT}/plugins/me/skills/setup/SKILL.md"
-    SETTINGS_UPDATER="${PROJECT_ROOT}/plugins/me/skills/setup/configure-handoff-directory.mjs"
     OUTPUT_FIXTURE="${PROJECT_ROOT}/tests/fixtures/handoff/compound-user-direction.md"
     TEST_TEMP_DIR="$(mktemp -d -t handoff-test.XXXXXX)"
 }
@@ -40,26 +38,6 @@ teardown() {
     grep -Fq '$HANDOFF_DIR/YYYY-MM-DD-HHmm-<topic>.md' "$SKILL_FILE"
     grep -Fq 'Writes a file under `$HANDOFF_DIR`' "$SKILL_FILE"
     grep -Fq 'mkdir -p "$HANDOFF_DIR"' "$SKILL_FILE"
-}
-
-@test "me: setup resolves custom XDG handoff directory and preserves unrelated directories" {
-    [ -f "$SETTINGS_UPDATER" ]
-    grep -Fq 'configure-handoff-directory.mjs' "$SETUP_SKILL_FILE"
-
-    settings_file="$TEST_TEMP_DIR/settings.json"
-    printf '%s\n' '{"permissions":{"additionalDirectories":["/keep/me/","~/.local/share/bstack/handoff/"]}}' > "$settings_file"
-
-    run env HOME="$TEST_TEMP_DIR/home" XDG_DATA_HOME="$TEST_TEMP_DIR/custom-data" \
-        node "$SETTINGS_UPDATER" "$settings_file"
-    assert_success
-
-    run node -e '
-        const fs = require("node:fs");
-        const settings = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-        const dirs = settings.permissions.additionalDirectories;
-        if (dirs.length !== 2 || dirs[0] !== "/keep/me/" || dirs[1] !== process.argv[2]) process.exit(1);
-    ' "$settings_file" "$TEST_TEMP_DIR/custom-data/bstack/handoff/"
-    assert_success
 }
 
 @test "me: handoff distinguishes temporary context from permanent rules" {
