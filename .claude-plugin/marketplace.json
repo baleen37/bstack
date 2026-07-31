@@ -22,7 +22,7 @@
         "memory",
         "context"
       ],
-      "version": "17.39.2"
+      "version": "17.39.3"
     },
     {
       "name": "datadog",
@@ -37,7 +37,7 @@
         "apm",
         "pup"
       ],
-      "version": "17.39.2"
+      "version": "17.39.3"
     },
     {
       "name": "autoresearch",
@@ -50,7 +50,7 @@
         "autonomous",
         "research"
       ],
-      "version": "17.39.2"
+      "version": "17.39.3"
     }
   ]
 }
