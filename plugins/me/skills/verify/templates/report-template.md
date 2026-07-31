@@ -1,4 +1,4 @@
-# QA Verification Report: {PROJECT_NAME}
+# Verification Report: {PROJECT_NAME}
 
 ## Verdict: {PASS | PARTIAL | FAIL}
 
@@ -12,17 +12,20 @@
 
 ## Risk Surface
 
-- {외부 시스템 경계} — verified / skipped (reason) / inaccessible
+- {외부 시스템 접점} — verified / skipped (reason) / inaccessible
 
 ## Verification Summary
 
 ### Golden path
+
 - {scenario} — PASS / PARTIAL / FAIL
 
 ### Key edge cases
+
 - {scenario} — PASS / PARTIAL / FAIL
 
 ### Obvious regressions
+
 - {scenario} — PASS / PARTIAL / FAIL
 
 ## Failed / Incomplete Scenarios

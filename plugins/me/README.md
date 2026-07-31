@@ -14,7 +14,7 @@ Personal Claude Code workflow toolkit for git safety, session continuity, verifi
 ### Verify
 
 - `test` — Design, run, and improve tests using local conventions and `test-engineer`.
-- `qa` — Verify implementation scope and report `PASS`, `PARTIAL`, or `FAIL` with evidence.
+- `verify` — Verify implementation scope and report `PASS`, `PARTIAL`, or `FAIL` with evidence.
 - `e2e` — Verify flows across multiple components, services, or layers.
 - `e2e-scenario-testing` — Verify a running web UI, CLI, or TUI with reusable scenario cards and falsifiable assertions.
 - `story-loop` — Inventory repository capabilities and loop through scenario testing, fixes, and fresh verification.
@@ -25,7 +25,7 @@ Personal Claude Code workflow toolkit for git safety, session continuity, verifi
 
 ### Ship
 
-- `ship` — Prepare staged rollout, monitoring, rollback, and production launch checks.
+- `ship` — Run pre-deploy checks, the deploy, and post-deploy verification with a rollback path.
 - `create-pr` — Commit, push, create a PR, and optionally wait for checks or merge.
 
 ### Evolve
@@ -50,4 +50,4 @@ Personal Claude Code workflow toolkit for git safety, session continuity, verifi
 
 ## References
 
-Most detailed references live next to the skill that uses them, such as `skills/qa/references/`.
+Most detailed references live next to the skill that uses them, such as `skills/verify/references/`.
