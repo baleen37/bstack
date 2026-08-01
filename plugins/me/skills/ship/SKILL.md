@@ -31,7 +31,7 @@ project-specific. Discover them; never assume or invent them.
    - How to roll back.
 
    In a monorepo, scope discovery to the changed paths — there may be one pipeline per
-   service. Offer to record the answers in the project's docs when you had to ask.
+   service. Track where each of the four answers came from; you report that below.
    Only when a deploy is required and no trigger can be established: `BLOCKED`.
 
 3. **Check reversibility.** Scan the diff for anything that changes persistent state, not
@@ -44,7 +44,16 @@ project-specific. Discover them; never assume or invent them.
 
 4. **Verify readiness** — CI green, checks passing. Use the project's own commands.
 
-5. **Report** — GO/NO-GO with the rollback plan and the reversibility verdict.
+5. **Report** — four parts, in order:
+   - **Verdict** — GO or NO-GO, with the reversibility verdict from step 3. When the
+     verdict is `partial`, name which part rolls back and which part stays.
+   - **Rollback plan** — the procedure, or `undocumented` when the project has none.
+   - **Discovery** — each of the four answers with where you found it. Mark any you
+     inferred rather than read as `inferred`.
+   - **Undocumented** — every answer that was `undocumented` or `inferred`, as a list.
+     Empty list when the project documented all four. When the list is non-empty, ask
+     the user whether to write those answers into the project's docs before continuing.
+
    Stop and show evidence if anything is `BLOCKED`.
 
 ## Phase 2 — Deploy
