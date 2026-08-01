@@ -65,7 +65,7 @@ Add this entry under `Verify`, after `e2e`:
 Run:
 
 ```bash
-python3 /Users/jito.hello/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/me/skills/e2e-scenario-testing
+python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/me/skills/e2e-scenario-testing
 bunx markdownlint-cli2 plugins/me/skills/e2e-scenario-testing/SKILL.md plugins/me/README.md
 ```
 
@@ -129,7 +129,7 @@ Add this entry under `Verify`, after `e2e-scenario-testing`:
 Run:
 
 ```bash
-python3 /Users/jito.hello/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/me/skills/story-loop
+python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/me/skills/story-loop
 bunx markdownlint-cli2 plugins/me/skills/story-loop/SKILL.md plugins/me/README.md
 bats tests/integration/plugin_loading.bats tests/integration/cross_plugin_interactions.bats
 git diff --check

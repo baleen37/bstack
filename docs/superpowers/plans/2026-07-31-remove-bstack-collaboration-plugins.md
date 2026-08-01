@@ -12,7 +12,7 @@
 
 - Remove only bstack-owned `jira`, `notion`, and `slack`.
 - Preserve third-party Slack plugins.
-- Do not edit marketplace caches or `/Users/jito.hello/dev/wooto/baleen-marketplace/sources.json`.
+- Do not edit marketplace caches or `~/dev/wooto/baleen-marketplace/sources.json`.
 
 ---
 
@@ -125,7 +125,7 @@ Expected: tests and whitespace checks pass; status contains only scoped changes 
 
 - [ ] **Step 2: Confirm marketplace propagation contract**
 
-Run `jq -r '.bstack.paths[]' /Users/jito.hello/dev/wooto/baleen-marketplace/sources.json`.
+Run `jq -r '.bstack.paths[]' ~/dev/wooto/baleen-marketplace/sources.json`.
 
 Expected: `plugins/*`, confirming no static Baleen Marketplace deletion is needed.
 

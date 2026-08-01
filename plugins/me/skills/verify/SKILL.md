@@ -44,8 +44,8 @@ Decide scope in this order unless the user explicitly overrides it:
 If the user explicitly narrows scope (for example: "login only", "verify checkout success flow
 only"), treat that as **user override** and use it as the primary scope.
 
-If the user names a verification environment or execution path (for example `local/alpha/beta/prod`,
-Jenkins, batch, Databricks), treat it as scope refinement. Before writing the report, confirm the
+If the user names a verification environment or execution path (a named deploy environment, a CI
+job, a batch or data pipeline), treat it as scope refinement. Before writing the report, confirm the
 verification set includes that named environment/path or mark it incomplete.
 
 Always report the scope source as one of:

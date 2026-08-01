@@ -52,7 +52,7 @@ user's explicit go-ahead.
 
 Run in order. The order matters.
 
-1. **Did the deploy finish?** During a rolling update old and new versions both serve
+1. **Did the deploy finish?** When a deploy rolls out gradually, old and new both serve
    traffic, so verifying early tests whichever answers first. Wait for the project's
    completion signal before continuing.
 
