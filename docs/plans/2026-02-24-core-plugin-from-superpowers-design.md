@@ -10,7 +10,7 @@ Migrate the `superpowers` marketplace plugin's skills and hooks into a self-owne
 
 ## What We're Migrating
 
-Source: `/Users/jito.hello/.claude/plugins/cache/superpowers-marketplace/superpowers/4.3.1/`
+Source: `~/.claude/plugins/cache/superpowers-marketplace/superpowers/4.3.1/`
 
 - 14 skills (with subdirectories for some)
 - `hooks/session-start` script
