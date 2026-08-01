@@ -34,9 +34,13 @@ project-specific. Discover them; never assume or invent them.
    service. Offer to record the answers in the project's docs when you had to ask.
    Only when a deploy is required and no trigger can be established: `BLOCKED`.
 
-3. **Check reversibility.** Scan the diff for migrations, schema changes, or data-format
-   changes. These make rollback destructive — record `rollback-safe` or `fix-forward-only`
-   now. Deciding this during an incident is deciding it badly.
+3. **Check reversibility.** Scan the diff for anything that changes persistent state, not
+   just code. Record `rollback-safe`, `partial`, or `fix-forward-only` now. Deciding this
+   during an incident is deciding it badly.
+
+   `partial` is the common case: the parts revert independently, so name which part rolls
+   back and which one stays. A single verdict covering the whole change will be wrong about
+   one half of it.
 
 4. **Verify readiness** — CI green, checks passing. Use the project's own commands.
 
@@ -72,6 +76,8 @@ or `FAIL` with the exact failing output. No success claims without evidence.
 1. Collect evidence.
 2. Choose from the Phase 1 reversibility verdict: `rollback-safe` → roll back.
    `fix-forward-only` → rolling back is itself destructive, so fix forward.
+   `partial` → roll back only the part you recorded as reversible, and say what you are
+   deliberately leaving in place.
 3. Present the command as `NEEDS_APPROVAL` with reasoning. When no rollback procedure was
    documented, redeploying the previous known-good version is the usual path — propose it
    as your reading of this project's setup, not as an established procedure.
