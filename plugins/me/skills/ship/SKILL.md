@@ -8,14 +8,22 @@ description: >-
 
 # Ship
 
-Three phases: **pre-deploy → deploy → post-deploy**. Don't skip phases.
+Use one closed workflow: **scope changed behavior → define its evidence → deploy →
+wait for completion → verify each changed behavior → check unaffected critical behavior**.
+Don't skip phases.
 
 How a project deploys, how to tell a deploy finished, and how to roll back are all
 project-specific. Discover them; never assume or invent them.
 
 ## Phase 1 — Pre-deploy
 
-1. **Scope** — what changed, what production systems it touches.
+1. **Scope** — what changed, what production systems it touches, and every behavior changed
+   by the deploy. Include user-visible behavior, integration boundaries, deferred effects, and
+   durable-state changes when applicable.
+   Before declaring `GO`, create one provisional verification-matrix row per changed behavior:
+   the production-safe check, expected observable result, and evidence to collect. Phase 3
+   completes these same rows. If a changed behavior has no viable check, stop and show the gap
+   before deployment.
    Ask what this repo actually ships: if the changed files are its release artifact, the
    change is deployable regardless of file type. Only when nothing reaches production →
    say "Non-deployable change, skipping deploy/verify phases" and stop after the normal
@@ -50,6 +58,8 @@ project-specific. Discover them; never assume or invent them.
    - **Rollback plan** — the procedure, or `undocumented` when the project has none.
    - **Discovery** — each of the four answers with where you found it. Mark any you
      inferred rather than read as `inferred`.
+   - **Validation plan** — the provisional verification matrix, with one row for every
+     changed behavior.
    - **Undocumented** — every answer that was `undocumented` or `inferred`, as a list.
      Empty list when the project documented all four. When the list is non-empty, ask
      the user whether to write those answers into the project's docs before continuing.
@@ -74,8 +84,24 @@ Run in order. The order matters.
    against what you deployed. A mismatch means the deploy did not take effect — treat as
    failure. When nothing can report it, say so and note the gap.
 
-3. **Does it work?** Health check, then one request that exercises real dependencies.
-   For UI changes, walk the primary user path.
+3. **Verify every changed behavior.** Build a **Verification matrix** from Phase 1 before
+   running checks:
+
+   | Changed behavior | Production-safe check | Expected observable result | Evidence | Outcome |
+   | --- | --- | --- | --- | --- |
+
+   For every behavior changed by the deploy, run a check that takes the changed path and
+   assert its changed observable result: visible output, rendered state, durable state, emitted
+   signal, or other relevant effect. A health check, a matching version, or an unrelated check
+   does not cover a row. For a changed user journey, walk its primary path.
+
+   An untested changed behavior is not a successful deploy. Report it as `GAP` with the
+   reason and the safe check needed; do not report an overall verification success until
+   every row is `OK`.
+
+4. **Check unaffected critical behavior.** Run the project's baseline availability check, then
+   one unchanged critical path that exercises its real dependencies when the change could affect
+   it.
 
 Report each `OK` with evidence (status code, version string, log excerpt, screenshot path)
 or `FAIL` with the exact failing output. No success claims without evidence.
