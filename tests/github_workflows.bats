@@ -173,6 +173,7 @@ job_has_if_condition() {
 
     [[ "$sync_command" == *"bash scripts/sync-marketplace-version.sh"* ]]
     [[ "$sync_command" == *"bash scripts/sync-codex-artifacts.sh"* ]]
+    [[ "$sync_command" == *"bash scripts/sync-opencode-artifacts.sh"* ]]
 }
 
 @test "Release workflow has infinite loop prevention" {

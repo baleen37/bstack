@@ -27,6 +27,7 @@ jobs:
         run: |
           bash scripts/sync-marketplace-version.sh
           bash scripts/sync-codex-artifacts.sh
+          bash scripts/sync-opencode-artifacts.sh
 
       - name: Check for changes
         id: check_changes
