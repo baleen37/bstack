@@ -28,6 +28,9 @@ jobs:
       - name: Sync Codex artifacts
         run: bash scripts/sync-codex-artifacts.sh
 
+      - name: Sync OpenCode artifacts
+        run: bash scripts/sync-opencode-artifacts.sh
+
       - name: Setup Bats and bats libs
         id: setup-bats
         uses: bats-core/bats-action@6709b66533837d44e32f014ef4152e31e0047a17
@@ -51,13 +54,18 @@ jobs:
         shell: bash
         run: bash scripts/check-codex-artifacts.sh
 
+      - name: Check OpenCode artifact drift
+        id: check_opencode_drift
+        shell: bash
+        run: bash scripts/check-opencode-artifacts.sh
+
       # Create a GitHub status for branch protection
       - name: Report status
         if: always()
         uses: actions/github-script@v7
         with:
           script: |
-            const state = '${{ steps.run_tests.outcome }}' === 'success' && '${{ steps.check_drift.outcome }}' === 'success'
+            const state = '${{ steps.run_tests.outcome }}' === 'success' && '${{ steps.check_drift.outcome }}' === 'success' && '${{ steps.check_opencode_drift.outcome }}' === 'success'
               ? 'success'
               : 'failure';
             const sha = context.eventName === 'pull_request'

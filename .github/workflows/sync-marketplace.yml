@@ -35,13 +35,15 @@ jobs:
           untracked_artifacts="$(
             git ls-files --others --exclude-standard -- \
               .agents/plugins/marketplace.json \
-              'plugins/*/.codex-plugin/plugin.json'
+              'plugins/*/.codex-plugin/plugin.json' \
+              .opencode
           )"
 
           if git diff --quiet -- \
             .claude-plugin/marketplace.json \
             .agents/plugins/marketplace.json \
-            'plugins/*/.codex-plugin/plugin.json' && \
+            'plugins/*/.codex-plugin/plugin.json' \
+            .opencode && \
             [ -z "${untracked_artifacts}" ]; then
             echo "changed=false" >> $GITHUB_OUTPUT
           else
@@ -56,6 +58,7 @@ jobs:
           git add \
             .claude-plugin/marketplace.json \
             .agents/plugins/marketplace.json \
-            'plugins/*/.codex-plugin/plugin.json'
+            'plugins/*/.codex-plugin/plugin.json' \
+            .opencode
           git commit -m "chore: sync marketplace artifacts"
           git push
