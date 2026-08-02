@@ -11,7 +11,10 @@
     "test": "bash tests/run-all-tests.sh",
     "test:bats": "bash tests/run-all-tests.sh",
     "sync:codex": "bash scripts/sync-codex-artifacts.sh",
-    "check:codex": "bash scripts/check-codex-artifacts.sh"
+    "check:codex": "bash scripts/check-codex-artifacts.sh",
+    "sync:opencode": "bash scripts/sync-opencode-artifacts.sh",
+    "check:opencode": "bash scripts/check-opencode-artifacts.sh",
+    "install:opencode": "bash scripts/install-opencode.sh"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.6.1",
