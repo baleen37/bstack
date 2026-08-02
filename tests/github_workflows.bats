@@ -176,6 +176,47 @@ job_has_if_condition() {
     [[ "$sync_command" == *"bash scripts/sync-opencode-artifacts.sh"* ]]
 }
 
+@test "Marketplace sync workflow detects and commits OpenCode artifacts" {
+    ensure_yaml_validator
+    local check_command
+    check_command=$(yaml_get "${WORKFLOW_DIR}/sync-marketplace.yml" ".jobs.sync-marketplace.steps[] | select(.name == \"Check for changes\") | .run")
+    local commit_command
+    commit_command=$(yaml_get "${WORKFLOW_DIR}/sync-marketplace.yml" ".jobs.sync-marketplace.steps[] | select(.name == \"Commit changes\") | .run")
+
+    [[ "$check_command" == *".opencode"* ]]
+    [[ "$commit_command" == *".opencode"* ]]
+}
+
+@test "CI workflow syncs and checks OpenCode artifacts" {
+    ensure_yaml_validator
+    local sync_command
+    sync_command=$(yaml_get "$CI_WORKFLOW" ".jobs.test.steps[] | select(.name == \"Sync OpenCode artifacts\") | .run")
+    local check_command
+    check_command=$(yaml_get "$CI_WORKFLOW" ".jobs.test.steps[] | select(.name == \"Check OpenCode artifact drift\") | .run")
+
+    [[ "$sync_command" == *"bash scripts/sync-opencode-artifacts.sh"* ]]
+    [[ "$check_command" == *"bash scripts/check-opencode-artifacts.sh"* ]]
+}
+
+@test "CI workflow gates status report on OpenCode drift" {
+    ensure_yaml_validator
+    local report_script
+    report_script=$(yaml_get "$CI_WORKFLOW" ".jobs.test.steps[] | select(.name == \"Report status\") | .with.script")
+
+    [[ "$report_script" == *"check_opencode_drift"* ]]
+}
+
+@test "Release workflow syncs and checks OpenCode artifacts" {
+    ensure_yaml_validator
+    local sync_command
+    sync_command=$(yaml_get "${WORKFLOW_DIR}/release.yml" ".jobs.release.steps[] | select(.name == \"Sync OpenCode artifacts\") | .run")
+    local check_command
+    check_command=$(yaml_get "${WORKFLOW_DIR}/release.yml" ".jobs.release.steps[] | select(.name == \"Check OpenCode artifact drift\") | .run")
+
+    [[ "$sync_command" == *"bash scripts/sync-opencode-artifacts.sh"* ]]
+    [[ "$check_command" == *"bash scripts/check-opencode-artifacts.sh"* ]]
+}
+
 @test "Release workflow has infinite loop prevention" {
     ensure_yaml_validator
     # Verify that the workflow prevents infinite loops from bot release commits
