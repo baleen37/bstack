@@ -1,0 +1,4 @@
+interface:
+  display_name: "Write Skills with SkillOpt"
+  short_description: "Create or improve skills with SkillOpt"
+  default_prompt: "Use SkillOpt to create a new agent skill or improve an existing skill with a validation-gated proposal."

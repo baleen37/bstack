@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "answerState": {
+      "type": "string",
+      "enum": ["supported", "unavailable", "out_of_scope"]
+    },
+    "answerMarkdown": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": { "type": "string", "minLength": 1 },
+          "url": { "type": "string", "format": "uri" },
+          "claim": { "type": "string", "minLength": 1 }
+        },
+        "required": ["title", "url", "claim"]
+      }
+    },
+    "uncertainty": { "type": "string" }
+  },
+  "required": ["answerState", "answerMarkdown", "sources", "uncertainty"]
+}
