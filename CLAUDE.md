@@ -19,6 +19,7 @@ AI 보조 개발을 위한 도구들을 제공하며, 반복적 자기 참조 AI
 | `.pre-commit-config.yaml` | Pre-commit hooks configuration (YAML, JSON, ShellCheck, markdownlint, commitlint) |
 | `.commitlintrc.js` | Commitlint configuration for Conventional Commits |
 | `.gitignore` | Git ignore patterns |
+| `.opencode/` | Generated OpenCode plugin bundle (regenerate with `bun run sync:opencode`, never hand-edit) |
 
 ## Subdirectories
 
@@ -27,6 +28,7 @@ AI 보조 개발을 위한 도구들을 제공하며, 반복적 자기 참조 AI
 | `plugins/` | Plugin sources, one subdirectory per plugin (`me`, `slack`, `notion`, `datadog`, `autoresearch`); each holds its own `agents/`, `hooks/`, `skills/`, and `.claude-plugin/plugin.json` |
 | `scripts/` | Utility scripts (handoff, conflict checks, PR verification) |
 | `.claude-plugin/` | Marketplace configuration (`marketplace.json`) listing all plugins |
+| `.opencode/` | Generated OpenCode plugin bundle (skills, agents, command, plugin template) |
 | `.github/` | GitHub Actions workflows and custom actions (see `.github/AGENTS.md`) |
 | `tests/` | BATS test suites (see `tests/AGENTS.md`) |
 | `schemas/` | JSON schemas for validation (see `schemas/AGENTS.md`) |
@@ -53,6 +55,8 @@ AI 보조 개발을 위한 도구들을 제공하며, 반복적 자기 참조 AI
 ### Working In This Directory
 
 - Always run `bun install` after modifying package.json
+- Use `bun run sync:opencode` to regenerate the `.opencode/` bundle after changing plugin metadata
+- Run `bun run check:opencode` to verify the committed `.opencode/` bundle is in sync
 - Use Conventional Commits format: `type(scope): description`
 - Use `bun run commit` for interactive commit creation (works via Bun's npm compatibility)
 - Never bypass pre-commit hooks with `--no-verify` (blocked by git-guard)

@@ -33,6 +33,21 @@ This repository treats Claude Code metadata as the source of truth and generates
 bun run sync:codex
 ```
 
+## OpenCode 호환성
+
+This repository treats Claude Code metadata as the source of truth and generates OpenCode artifacts from it.
+
+- Source of truth: `.claude-plugin/marketplace.json`, `plugins/*/.claude-plugin/plugin.json`
+- Generated artifacts: `.opencode/` bundle (skills, agents, command, plugin template)
+- Generator: `scripts/generate-opencode-artifacts.sh`, template `scripts/opencode-plugin/bstack.ts`
+- `.opencode/` is generated, committed, and must not be hand-edited; regenerate it with `bun run sync:opencode`
+- Verify the committed bundle is in sync with `bun run check:opencode`
+- Install the bundle into `~/.config/opencode/` with `bun run install:opencode`
+
+```bash
+bun run sync:opencode
+```
+
 ## Plugins
 
 | Plugin | Purpose |
