@@ -38,15 +38,22 @@ bun run sync:codex
 This repository treats Claude Code metadata as the source of truth and generates OpenCode artifacts from it.
 
 - Source of truth: `.claude-plugin/marketplace.json`, `plugins/*/.claude-plugin/plugin.json`
-- Generated artifacts: `.opencode/` bundle (skills, agents, command, plugin template)
+- Generated artifacts: `.opencode/` bundle (skills, agents, command, `plugins/bstack.ts`)
 - Generator: `scripts/generate-opencode-artifacts.sh`, template `scripts/opencode-plugin/bstack.ts`
 - `.opencode/` is generated, committed, and must not be hand-edited; regenerate it with `bun run sync:opencode`
-- Verify the committed bundle is in sync with `bun run check:opencode`
-- Install the bundle into `~/.config/opencode/` with `bun run install:opencode`
 
 ```bash
 bun run sync:opencode
+bun run install:opencode
 ```
+
+`install:opencode` symlinks the artifacts into `~/.config/opencode/` (skills, agents, command, and the `bstack.ts` commit-guard plugin). Restart opencode after installing. The `bstack.ts` plugin blocks dangerous git commands (`--no-verify`, hook bypasses) and injects `CLAUDE_PLUGIN_ROOT` so skill scripts resolve. Notes:
+
+- `setup-worktree` / `agent-status` Claude Code hooks have no OpenCode equivalent.
+- Skill names must be globally unique in OpenCode; on collision, resolve via opencode config permissions.
+- Agents inherit the OpenCode default model.
+
+Verify generated artifacts are in sync with `bun run check:opencode`.
 
 ## Plugins
 
