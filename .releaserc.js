@@ -65,6 +65,11 @@ function updatePluginJsons() {
       if (existsSync(syncScript)) {
         execSync(`bash ${syncScript}`, { stdio: 'inherit' });
       }
+
+      const opencodeSyncScript = resolve(process.cwd(), 'scripts/sync-opencode-artifacts.sh');
+      if (existsSync(opencodeSyncScript)) {
+        execSync(`bash ${opencodeSyncScript}`, { stdio: 'inherit' });
+      }
     },
   };
 }
@@ -79,6 +84,8 @@ const codexMarketplacePath = '.agents/plugins/marketplace.json';
 const codexMarketplaceAsset = existsSync(resolve(process.cwd(), codexMarketplacePath))
   ? [codexMarketplacePath]
   : [];
+
+const opencodeAssets = ['.opencode/**'];
 
 const pluginsDir = resolve(process.cwd(), 'plugins');
 const pluginAssets = readdirSync(pluginsDir, { withFileTypes: true })
@@ -113,6 +120,7 @@ const plugins = [
         '.claude-plugin/marketplace.json',
         ...codexPluginAssets,
         ...codexMarketplaceAsset,
+        ...opencodeAssets,
       ],
       message: 'chore(release): ${nextRelease.version}\n\n${nextRelease.notes}',
     },
