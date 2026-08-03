@@ -51,6 +51,31 @@
         "research"
       ],
       "version": "17.41.1"
+    },
+    {
+      "name": "notion",
+      "description": "Notion workspace guidance via the official ntn CLI",
+      "source": "./plugins/notion",
+      "category": "development",
+      "tags": [
+        "notion",
+        "cli",
+        "documentation"
+      ],
+      "version": "17.41.1"
+    },
+    {
+      "name": "atlassian",
+      "description": "Jira work guidance via the official Atlassian twg CLI",
+      "source": "./plugins/atlassian",
+      "category": "development",
+      "tags": [
+        "atlassian",
+        "jira",
+        "twg",
+        "cli"
+      ],
+      "version": "17.41.1"
     }
   ]
 }
