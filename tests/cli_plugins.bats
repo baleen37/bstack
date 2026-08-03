@@ -25,3 +25,15 @@ setup() {
     grep -q 'jira workitem search' "${PROJECT_ROOT}/plugins/atlassian/skills/twg-jira/SKILL.md"
     grep -q 'jira workitem get' "${PROJECT_ROOT}/plugins/atlassian/skills/twg-jira/SKILL.md"
 }
+
+@test "CLI skills document explicit safety boundaries" {
+    local notion_skill="${PROJECT_ROOT}/plugins/notion/skills/notion/SKILL.md"
+    local jira_skill="${PROJECT_ROOT}/plugins/atlassian/skills/twg-jira/SKILL.md"
+
+    grep -q 'only when the user explicitly requests setup, auth, or repair' "$notion_skill"
+    grep -q 'do not automatically install the CLI, start OAuth, or modify credentials' "$notion_skill"
+    grep -q 'exact change, target, and expected impact' "$jira_skill"
+    grep -q 'only after the user explicitly approves' "$jira_skill"
+    grep -q 'whether or not --yes is present' "$jira_skill"
+    grep -q 'Reads and searches remain allowed' "$jira_skill"
+}

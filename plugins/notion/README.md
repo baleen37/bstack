@@ -4,6 +4,10 @@ Notion workspace guidance powered by the official [`ntn`](https://developers.not
 
 This plugin is intentionally MCP-free.
 
+## Safety boundary
+
+Run installation, login, token, and credential commands only when the user explicitly requests setup, auth, or repair. During ordinary Notion work, if `ntn` is not installed or authentication is expired, report the state and required user action; do not automatically install the CLI, start OAuth, or modify credentials.
+
 ## Installation
 
 Recommended on macOS and Linux:

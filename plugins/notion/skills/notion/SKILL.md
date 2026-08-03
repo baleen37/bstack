@@ -7,6 +7,11 @@ description: Use the official ntn CLI for Notion workspace authentication, API r
 
 Route Notion workspace requests through the official `ntn` CLI. This plugin intentionally does not configure an MCP server.
 
+## Safety boundaries
+
+- Run installation, login, token, and credential commands only when the user explicitly requests setup, auth, or repair.
+- During ordinary Notion work, if `ntn` is not installed or authentication is expired, report the state and required user action; do not automatically install the CLI, start OAuth, or modify credentials.
+
 ## Setup
 
 ```bash
