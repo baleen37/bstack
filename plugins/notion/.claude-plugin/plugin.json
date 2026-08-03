@@ -1,6 +1,6 @@
 {
   "name": "notion",
-  "version": "17.41.1",
+  "version": "17.41.2",
   "description": "Notion workspace guidance via the official ntn CLI",
   "author": {
     "name": "baleen37",
@@ -8,6 +8,11 @@
   },
   "license": "MIT",
   "homepage": "https://developers.notion.com/cli/get-started/overview",
-  "keywords": ["notion", "cli", "documentation", "knowledge-management"],
+  "keywords": [
+    "notion",
+    "cli",
+    "documentation",
+    "knowledge-management"
+  ],
   "skills": "./skills/"
 }
