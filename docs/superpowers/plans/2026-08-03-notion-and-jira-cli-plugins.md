@@ -354,6 +354,7 @@ git commit -m "feat(plugins): register cli integrations"
 - Generated: `.agents/plugins/marketplace.json`
 - Generated: `plugins/notion/.codex-plugin/plugin.json`
 - Generated: `plugins/atlassian/.codex-plugin/plugin.json`
+- Modify: `tests/official_mcp_plugins.bats` to align its aggregate marketplace expectation with the newly registered plugins.
 
 **Interfaces:**
 
@@ -390,7 +391,23 @@ bun run test
 
 Expected: all root and integration BATS tests pass, including marketplace and frontmatter validation.
 
-- [ ] **Step 4: Run whitespace and scope checks**
+- [ ] **Step 4: Update the stale aggregate marketplace contract**
+
+Change the expected plugin list in `tests/official_mcp_plugins.bats` to the current sorted list:
+
+```bash
+[ "$(jq -c '[.plugins[].name] | sort' "$manifest")" = '["atlassian","autoresearch","datadog","me","notion"]' ]
+```
+
+Preserve the existing Datadog MCP-free assertion. Run:
+
+```bash
+bats tests/official_mcp_plugins.bats
+```
+
+Expected: all tests in the file pass.
+
+- [ ] **Step 5: Run whitespace and scope checks**
 
 Run:
 
@@ -402,13 +419,13 @@ git diff --stat HEAD~4..HEAD
 
 Confirm there are no whitespace errors, no unexpected modified files, no `.mcp.json` files under the new plugins, and no changes to retired integration plugins.
 
-- [ ] **Step 5: Commit generated artifacts**
+- [ ] **Step 6: Commit the aggregate contract fix**
 
 ```bash
-git add .agents/plugins/marketplace.json plugins/notion/.codex-plugin/plugin.json plugins/atlassian/.codex-plugin/plugin.json
-git commit -m "chore: sync codex cli plugin artifacts"
+git add tests/official_mcp_plugins.bats
+git commit -m "test: align marketplace plugin contract"
 ```
 
-- [ ] **Step 6: Report evidence**
+- [ ] **Step 7: Report evidence**
 
 Report the final commit list, exact test commands and outcomes, generated artifact check, and final changed-file scope. Do not claim live Notion or Jira access unless a separate authenticated smoke test is explicitly requested and completed.
