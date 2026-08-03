@@ -9,7 +9,7 @@ An AI coding assistant toolkit. It is designed for both Claude Code and Codex, a
 - LSP auto-installation: Bash, TypeScript, Python, Go, Kotlin, Lua, Nix, Terraform
 - Iterative development loop: PRD-driven automated improvement cycles
 - Personal skills: commit, review, research, PR creation, E2E verification
-- External integrations: Slack, Notion, Datadog
+- External integrations: Slack, Notion, Atlassian, Datadog
 
 ## 설치
 
@@ -40,6 +40,7 @@ bun run sync:codex
 | `me` | Personal workflow, handoff, commits, PRs, research, E2E, review |
 | `slack` | Slack message, thread, channel, and user search |
 | `notion` | Notion page and database search, document writing |
+| `atlassian` | Jira work guidance through `twg` |
 | `datadog` | Logs, monitors, APM, and metric investigation |
 | `autoresearch` | Automated experiment loop driven by metrics |
 
@@ -51,6 +52,7 @@ bstack/
 │   ├── me/               # Personal workflow plugin
 │   ├── slack/            # Slack integration
 │   ├── notion/           # Notion integration
+│   ├── atlassian/        # Jira guidance through twg
 │   ├── datadog/          # Datadog integration
 │   └── autoresearch/     # Automated experiment loop
 ├── scripts/              # Sync and utility scripts
