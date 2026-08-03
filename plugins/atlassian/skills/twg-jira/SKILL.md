@@ -22,6 +22,12 @@ Use `twg help describe "<command path>"` for exact command grammar. Issue keys a
 
 Search results are candidate anchors. Use a native `twg jira workitem get PROJ-123` read to confirm final fields, status, comments, and URLs.
 
+## Output boundaries
+
+- Use bounded, human-readable output by default for searches and reads.
+- Limit result counts with `--limit` or the command's appropriate range before expanding a query.
+- Use `--output json` only when filtering results or collecting machine-readable evidence requires it.
+
 ## Safe mutations
 
 - Read current state before every create, update, comment, or transition.
