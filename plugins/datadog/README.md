@@ -1,6 +1,8 @@
 # datadog
 
-Datadog observability skills for Claude Code, powered by the [`pup`](https://github.com/DataDog/pup) CLI.
+Datadog observability guidance powered by the [`pup`](https://github.com/DataDog/pup) CLI.
+
+This plugin intentionally does not configure a Datadog MCP server.
 
 ## Prerequisites
 
@@ -28,18 +30,6 @@ export DD_APP_KEY=...
 export DD_SITE=datadoghq.com   # or datadoghq.eu, etc.
 ```
 
-## Included Skills
+## Included Skill
 
-| Skill | Purpose |
-|---|---|
-| `dd-pup` | Core pup CLI auth, command structure, output formats |
-| `dd-logs` | Log search, pipelines, archives, cost control |
-| `dd-monitors` | Monitor create/update/mute, alerting best practices |
-| `dd-apm` | APM traces, services, dependencies, performance |
-| `dd-docs` | Datadog docs lookup via `docs.datadoghq.com/llms.txt` |
-
-## Upstream
-
-Skill bodies are mirrored verbatim from [`DataDog/pup`](https://github.com/DataDog/pup)
-(`skills/` directory). Only the frontmatter is adjusted to match bstack's `name` +
-`description` convention. See `SYNC.md` for the upstream commit SHA and re-sync procedure.
+- `datadog`: logs, monitors, APM, metrics, and incident investigation via `pup`.

@@ -24,6 +24,52 @@ workflow_has_trigger() {
     yaml_get "$workflow_file" ".on.${trigger_type}" &>/dev/null
 }
 
+create_dist_gate_fixture() {
+    local fixture="$1"
+    local mode="$2"
+    node --input-type=module --eval '
+      import { execFileSync } from "node:child_process";
+      import { mkdir, writeFile } from "node:fs/promises";
+      import { join } from "node:path";
+
+      const [fixture, mode] = process.argv.slice(1);
+      const packageRoot = join(fixture, "package");
+      await mkdir(join(packageRoot, "dist"), { recursive: true });
+      await writeFile(join(fixture, ".gitignore"), "!package/dist/\n!package/dist/**\n");
+      await writeFile(
+        join(packageRoot, "package.json"),
+        JSON.stringify({
+          name: "dist-gate-fixture",
+          private: true,
+          scripts: { build: "node build.mjs" },
+        }, null, 2) + "\n",
+      );
+      const extraOutput = mode === "untracked"
+        ? "await writeFile(join(root, \"dist\", \"generated.js\"), \"generated\\n\");"
+        : "";
+      await writeFile(join(packageRoot, "build.mjs"), `
+        import { mkdir, writeFile } from "node:fs/promises";
+        import { dirname, join } from "node:path";
+        import { fileURLToPath } from "node:url";
+        const root = dirname(fileURLToPath(import.meta.url));
+        await mkdir(join(root, "dist"), { recursive: true });
+        await writeFile(join(root, "dist", "current.js"), "current\\n");
+        ${extraOutput}
+      `);
+      await writeFile(join(packageRoot, "dist", "current.js"), "current\n");
+      if (mode === "stale") {
+        await writeFile(join(packageRoot, "dist", "stale.js"), "stale\n");
+      }
+      execFileSync("git", ["init", "-q"], { cwd: fixture });
+      execFileSync("git", ["add", "."], { cwd: fixture });
+      execFileSync("git", [
+        "-c", "user.name=Dist Gate Test",
+        "-c", "user.email=dist-gate@example.com",
+        "commit", "-qm", "fixture",
+      ], { cwd: fixture });
+    ' "$fixture" "$mode"
+}
+
 # Helper: Check if job has 'if' condition
 job_has_if_condition() {
     local workflow_file="$1"
@@ -54,6 +100,15 @@ job_has_if_condition() {
 @test "CI workflow triggers on pull_request" {
     ensure_yaml_validator
     workflow_has_trigger "$CI_WORKFLOW" "pull_request"
+}
+
+@test "CI workflow does not trigger on pull_request_target" {
+    ensure_yaml_validator
+    [ "$(yaml_get "$CI_WORKFLOW" ".on.pull_request_target")" = "null" ]
+}
+
+@test "CI workflow reports pull request results on the head SHA" {
+    grep -q 'context.payload.pull_request.head.sha' "$CI_WORKFLOW"
 }
 
 @test "CI workflow has only test job (no release job)" {

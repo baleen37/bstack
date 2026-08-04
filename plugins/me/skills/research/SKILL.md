@@ -1,34 +1,33 @@
 ---
 name: research
-description: Use when exploring unfamiliar codebases, investigating bugs, checking external documentation, or learning unfamiliar technology before acting
+description: Use when external facts, documentation, standards, papers, releases, technology comparisons, recommendations, or other current reference material must be found or verified
 ---
 
 # Research
 
-Use the shallowest investigation that can answer safely: **Observe → Explore → Verify → Summarize**.
+Classify the request before using tools.
 
-## Depth Selection
+## Route
 
-| Need | Use | Stop When |
-| :--- | :--- | :--- |
-| Quick lookup | Direct `Read`, grep, or LSP | You can cite the exact file/line or source |
-| Codebase map | `Agent: subagent_type="Explore"` | Search spans many files, naming variants, or 3+ queries |
-| Bug/behavior | Reproduce with a targeted command or test | Execution output and code explain the cause |
-| Web/current docs | Context7 first; `Agent: subagent_type="me:web-researcher"` for broader web research | Official or recent sources answer the question |
-| Hybrid | Code and web research in parallel | Main session synthesizes both evidence sets |
+- Local codebase exploration or local bug investigation is outside this skill.
+  Reply with that boundary without reading files, browsing, or delegating.
+- If the user supplied one exact source and only wants it inspected, use a
+  direct fetch or open action such as `curl` on only that URL. Do not use any
+  search tool or delegate.
+- When source discovery or comparison is needed, send the complete request once
+  to `me:researcher`. Do not fan out.
 
-## Evidence Standards
+Give the researcher the question, decision to support, freshness constraint,
+evidence bar, and required output. Use the lowest-cost capable option available;
+escalate only after a stated quality requirement fails.
 
-- Match evidence depth to risk.
-- Quick lookups need one cited source.
-- Bug causes, recommendations, comparisons, and external facts need 2-3 independent signals when available.
-- Behavior claims need observed output, not code reading alone.
-- Negative evidence: say where you searched and what was absent.
+If delegation is unavailable or fails, read `../../agents/researcher.md` and
+apply its external, read-only contract directly. The exact-source path follows
+the same evidence contract without discovery.
 
-## Red Flags — STOP
+## Return
 
-- Doing 3-source research for a simple file-location question.
-- Using broad manual search when `Explore` would be faster.
-- Calling web research for repo-only questions.
-- Claiming behavior from code only when a runnable check exists.
-- Treating outdated or unsourced web content as fact.
+Use the research result without repeating its investigation. Return the direct
+answer with citations next to supported claims and only material uncertainty.
+Keep search logs, dead ends, unused sources, and duplicated evidence out of the
+response.

@@ -45,7 +45,7 @@ git commit -m "chore(core): scaffold core plugin directory structure"
 
 ### Task 2: Copy skills from superpowers
 
-Source: `/Users/jito.hello/.claude/plugins/cache/superpowers-marketplace/superpowers/4.3.1/skills/`
+Source: `~/.claude/plugins/cache/superpowers-marketplace/superpowers/4.3.1/skills/`
 
 **Files to copy** (14 skills, some with subdirectories):
 - `brainstorming/SKILL.md`
@@ -66,7 +66,7 @@ Source: `/Users/jito.hello/.claude/plugins/cache/superpowers-marketplace/superpo
 **Step 1: Copy all skills**
 
 ```bash
-SUPERPOWERS=/Users/jito.hello/.claude/plugins/cache/superpowers-marketplace/superpowers/4.3.1/skills
+SUPERPOWERS=~/.claude/plugins/cache/superpowers-marketplace/superpowers/4.3.1/skills
 cp -r "$SUPERPOWERS/." plugins/core/skills/
 ```
 
@@ -98,7 +98,7 @@ git commit -m "chore(core): copy superpowers skills verbatim"
 **Step 1: Copy hooks**
 
 ```bash
-SUPERPOWERS=/Users/jito.hello/.claude/plugins/cache/superpowers-marketplace/superpowers/4.3.1
+SUPERPOWERS=~/.claude/plugins/cache/superpowers-marketplace/superpowers/4.3.1
 cp "$SUPERPOWERS/hooks/hooks.json" plugins/core/hooks/
 cp "$SUPERPOWERS/hooks/run-hook.cmd" plugins/core/hooks/
 cp "$SUPERPOWERS/hooks/session-start" plugins/core/hooks/

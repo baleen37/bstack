@@ -16,13 +16,18 @@ jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger marketplace update
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ github.event.release.tag_name || inputs.version }}
-        run: |
-          VERSION="${VERSION#v}"
-          gh api repos/baleen37/baleen-marketplace/dispatches \
-            -f event_type='update-plugin' \
-            -f client_payload[plugin]='bstack' \
-            -f client_payload[version]="$VERSION"
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.BALEEN_RELEASE_APP_ID }}
+          private-key: ${{ secrets.BALEEN_RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: baleen-marketplace
+
+      - name: Notify marketplace
+        uses: baleen37/baleen-marketplace/.github/actions/notify@v1
+        with:
+          source: bstack
+          version: ${{ github.event.release.tag_name || inputs.version }}
+          token: ${{ steps.app-token.outputs.token }}

@@ -8,7 +8,7 @@
   },
   "plugins": [
     {
-      "name": "bstack",
+      "name": "me",
       "description": "AI coding assistant toolkit - git workflow protection, session handoff, context management, and development automation",
       "source": "./plugins/me",
       "category": "development",
@@ -22,38 +22,11 @@
         "memory",
         "context"
       ],
-      "version": "17.11.1"
-    },
-    {
-      "name": "jira",
-      "description": "Atlassian Jira integration skills for Claude Code",
-      "source": "./plugins/jira",
-      "category": "development",
-      "tags": [
-        "jira",
-        "atlassian",
-        "confluence",
-        "project-management"
-      ],
-      "version": "17.11.1"
-    },
-    {
-      "name": "ralph",
-      "description": "PRD-driven persistence loop — keeps Claude working until all user stories pass",
-      "source": "./plugins/ralph",
-      "category": "development",
-      "tags": [
-        "ralph",
-        "loop",
-        "persistence",
-        "prd",
-        "automation"
-      ],
-      "version": "17.11.1"
+      "version": "17.41.4"
     },
     {
       "name": "datadog",
-      "description": "Datadog observability skills for Claude Code via the pup CLI",
+      "description": "Datadog observability guidance via the pup CLI",
       "source": "./plugins/datadog",
       "category": "development",
       "tags": [
@@ -64,7 +37,45 @@
         "apm",
         "pup"
       ],
-      "version": "17.11.1"
+      "version": "17.41.4"
+    },
+    {
+      "name": "autoresearch",
+      "description": "Autonomous experiment loop — iteratively optimize any metric with git-tracked experiments",
+      "source": "./plugins/autoresearch",
+      "category": "development",
+      "tags": [
+        "experiments",
+        "optimization",
+        "autonomous",
+        "research"
+      ],
+      "version": "17.41.4"
+    },
+    {
+      "name": "notion",
+      "description": "Notion workspace guidance via the official ntn CLI",
+      "source": "./plugins/notion",
+      "category": "development",
+      "tags": [
+        "notion",
+        "cli",
+        "documentation"
+      ],
+      "version": "17.41.4"
+    },
+    {
+      "name": "atlassian",
+      "description": "Jira work guidance via the official Atlassian twg CLI",
+      "source": "./plugins/atlassian",
+      "category": "development",
+      "tags": [
+        "atlassian",
+        "jira",
+        "twg",
+        "cli"
+      ],
+      "version": "17.41.4"
     }
   ]
 }

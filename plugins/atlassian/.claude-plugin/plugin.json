@@ -1,0 +1,19 @@
+{
+  "name": "atlassian",
+  "version": "17.41.4",
+  "description": "Jira work guidance via the official Atlassian twg CLI",
+  "author": {
+    "name": "baleen37",
+    "email": "git@baleen.me"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/atlassian/twg-cli",
+  "keywords": [
+    "atlassian",
+    "jira",
+    "twg",
+    "cli",
+    "project-management"
+  ],
+  "skills": "./skills/"
+}

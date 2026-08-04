@@ -1,79 +1,161 @@
 ---
 name: verify
-description: Prove the change works. Reproduces unexpected behavior with systematic debugging, then validates browser-runtime behavior with playwright-cli. Composes the `debugging-and-error-recovery` and `browse` skills.
+description: Use when asked to "verify this", "qa", "does this implementation work?", or "test this feature". Verifies the current implementation in context and reports `PASS`, `PARTIAL`, or `FAIL` with evidence.
+allowed-tools:
+  - Bash
+  - Read
+  - Write
+  - Edit
+  - Glob
+  - Grep
+  - Agent
 ---
 
-# /verify: prove it works
+# /verify: Scope → Verify → Report
 
-`/verify` is a **composition skill** that runs the two "Verify — prove it works" practices end-to-end against the current change. It does not introduce new procedure of its own; it sequences existing skills so that an agent (or user) running `/verify` always covers both the *root-cause* axis and the *runtime* axis before claiming a change is done.
+You are an implementation verifier. `/verify` checks whether a feature or change behaves correctly
+in context. It does not act as a release-readiness gate and it does not fix code.
 
-The two underlying skills:
+## Which skill to use
 
-| Skill | What it does | Use when |
-| --- | --- | --- |
-| [`debugging-and-error-recovery`](../debugging-and-error-recovery/SKILL.md) | Five-step triage: reproduce, localize, reduce, fix, guard. Stop-the-line rule, safe fallbacks. | Tests fail, builds break, or behavior is unexpected. |
-| [`browse`](../browse/SKILL.md) | playwright-cli for live runtime data — DOM inspection, console logs, network traces, performance profiling. | Building or debugging anything that runs in a browser. |
+- `/verify` — does one change behave as intended (default path)
+- `/e2e-scenario-testing` — drive a running app through its real interface, one scenario
+- `/story-loop` — catalog the whole repository as scenarios, then loop to green
 
-## When to run `/verify`
+## What `/verify` checks
 
-- Before declaring a task done if the change touches runtime behavior (UI, API responses, build pipelines).
-- Before merging a PR that claims "fixes bug X" — `/verify` forces you to reproduce X first, then prove it's gone.
-- After a refactor in a browser-runtime path: regressions hide in console errors, layout shifts, and network-call ordering that static review will not catch.
+Focus on the current work context:
 
-Skip `/verify` only when the change is purely textual (docs, comments) or when verification has already been completed in this session and no code has changed since.
+- the intended golden path
+- the most relevant edge cases
+- obvious regressions near the changed behavior
+- all risk surfaces identified in Phase 0 (외부 시스템 접점은 항상 직접 검증)
 
-## Phase 1 — Root-cause pass (`debugging-and-error-recovery`)
+`/verify` is the default verification path. If cross-service or multi-layer flow integrity is the main risk, add `/e2e-scenario-testing`.
 
-Invoke the `debugging-and-error-recovery` skill and walk its five-step triage against the current change:
+## Scope resolution
 
-1. **Reproduce** — write a failing test or capture an exact repro command. No fix proceeds without a deterministic repro.
-2. **Localize** — bisect by file, function, or commit until the minimum surface is identified.
-3. **Reduce** — strip the repro to the smallest input that still triggers the failure.
-4. **Fix** — apply the minimum change. No drive-by refactors.
-5. **Guard** — add a regression test or assertion so the failure cannot return silently.
+Decide scope in this order unless the user explicitly overrides it:
 
-If the change is greenfield (no existing failure to reproduce), still run steps 1 and 5: write the test that proves the new behavior, and keep it as the regression guard.
+1. **Plan context** — if there is an active implementation plan, verify the feature or task described there
+2. **Branch context** — otherwise inspect the current branch diff (for example `main...HEAD`) and verify the affected behavior
+3. **User hint** — if the user gives extra guidance without explicit override, use it to refine the current context
 
-**Stop-the-line rule.** If at any step a *different* defect surfaces (unexpected console error, unrelated test fail), stop and triage it before continuing — do not silence or work around it.
+If the user explicitly narrows scope (for example: "login only", "verify checkout success flow
+only"), treat that as **user override** and use it as the primary scope.
 
-## Phase 2 — Runtime pass (`browse`)
+If the user names a verification environment or execution path (a named deploy environment, a CI
+job, a batch or data pipeline), treat it as scope refinement. Before writing the report, confirm the
+verification set includes that named environment/path or mark it incomplete.
 
-If the change runs in a browser, invoke the `browse` skill and use playwright-cli to verify against live runtime data:
+Always report the scope source as one of:
 
-- **DOM** — confirm the rendered structure matches the expectation, not just the source JSX/HTML.
-- **Console** — zero unhandled errors or warnings introduced by this change.
-- **Network** — request count, payload shape, status codes, and ordering match the design.
-- **Performance** — no new long tasks, layout thrash, or memory leaks on the critical path.
-- **Visual** — screenshot or visual diff for any user-facing surface.
+- `Scope source: plan`
+- `Scope source: branch`
+- `Scope source: user override`
 
-If the change is server-only or CLI-only, skip Phase 2 and document why in the verification report.
+## Verification flow
 
-## Phase 3 — Verification report
+### Phase 0: Risk surface
 
-Produce a single output the user (or downstream skill like `/ship`) can read:
+변경된 코드가 외부 시스템 접점(OpenSearch, DB, message queue, 외부 API, 파일 시스템 등)과 상호작용하는지 식별한다.
 
-```markdown
-## Verification: PASS | PARTIAL | FAIL
+식별 단서:
 
-### Root-cause pass (debugging-and-error-recovery)
-- Repro: [command or test name + result before fix]
-- Fix scope: [files/functions touched]
-- Regression guard: [test name + result after fix]
+- diff에 외부 클라이언트/리포지토리/게이트웨이 호출이 포함됨
+- 계획서나 Rollout 메모에 "배포 전 ~ 확인 권장" 같은 항목이 있음
 
-### Runtime pass (browse)
-- DOM: [observation]
-- Console: [error/warning count]
-- Network: [requests verified]
-- Performance: [notable metrics]
-- Visual: [screenshot path or N/A]
+각 risk surface에 대해 다음을 결정한다:
 
-### Outstanding risks
-- [Anything not verified, with reason]
-```
+1. 어떤 호출/조회로 검증할 것인가
+2. 지금 접근 가능한가 (SSO, 권한, 터널 등)
 
-## Rules
+접근 불가능한 risk surface가 있으면 검증을 시작하기 전에 사용자에게 알리고, 접근 방법을 제공받거나 그 항목을 제외해도 되는지 명시적으로 확인받는다. 사용자 확인 없이 건너뛰지 않는다.
 
-1. `/verify` runs Phase 1 always; Phase 2 only if the change has a browser runtime surface.
-2. The verification report is mandatory — a `PASS` claim without the report is invalid.
-3. `/verify` does not modify code on its own. If Phase 1 surfaces a fix, apply the fix in a separate step and re-run `/verify`.
-4. If either phase returns `FAIL`, the overall verdict is `FAIL` regardless of the other phase.
+### Phase 1: Scope
+
+1. Identify the feature, scenario, or change under verification
+2. State the scope source: `plan`, `branch`, or `user override`
+3. Define a compact verification set:
+   - one golden path
+   - one or more key edge cases
+   - one or more obvious regression checks when relevant
+
+For project-type-specific verification ideas, read `references/exploration-guide.md`.
+
+### Phase 2: Verify
+
+Execute the verification plan.
+
+Create output directory: `mkdir -p .verify/reports/evidence`
+
+For each scenario:
+
+1. Run the scenario
+2. Save evidence when useful (command output, screenshots, HTTP responses)
+3. Record whether it passed, failed, or remains incomplete
+
+Web projects: use the `claude-in-chrome` skill for browser automation.
+
+## Boundaries with `/e2e-scenario-testing` and `/ship`
+
+`/verify` is the default verification path for implementation behavior.
+
+It does **not** replace `/e2e-scenario-testing` when the main question is whether a full flow still connects across:
+
+- a service boundary
+- multiple layers
+- an external integration
+
+It does **not** decide:
+
+- rollout readiness
+- rollback readiness
+- monitoring readiness
+- release readiness
+
+Those belong to `/ship`.
+
+## Verdicts
+
+Always choose one:
+
+- **PASS** — Phase 0에서 식별된 모든 risk surface와 scenario가 검증되었고, 문제가 없음
+- **PARTIAL** — 검증되지 않은 risk surface가 있거나, 일부 scenario가 실패/불완전/불확실
+- **FAIL** — 핵심 scenario가 실패했거나 의도한 동작과 명백히 다름
+
+## Report structure
+
+Use the template from `templates/report-template.md`. The report must include:
+
+1. Verdict
+2. Scope
+3. Verification summary
+4. Failed / incomplete scenarios
+5. Evidence
+6. Issues
+7. Next actions
+
+Use `references/issue-taxonomy.md` only as a supporting classification system, not as the primary output structure.
+
+## Transition
+
+Branch on the verdict:
+
+### PASS
+
+Report the verdict and end. Do not ask whether to fix anything — there is nothing to fix.
+
+Optionally point to the natural next step (for example `/ship` for release-readiness review),
+but never present "수정 후 재검증" options.
+
+### PARTIAL / FAIL
+
+Ask how to proceed:
+
+> "검증 결과는 PARTIAL/FAIL입니다. 수정 후 다시 검증하시겠습니까?"
+> A) Subagent-driven — 수정 후 재검증 (`superpowers:subagent-driven-development`)
+> B) Inline — 순차 수정 후 재검증 (`superpowers:executing-plans`)
+> C) 아니오 — 리포트만 남기고 종료
+
+If C: end.
