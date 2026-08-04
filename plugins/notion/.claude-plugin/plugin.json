@@ -1,6 +1,6 @@
 {
   "name": "notion",
-  "version": "17.41.2",
+  "version": "17.41.3",
   "description": "Notion workspace guidance via the official ntn CLI",
   "author": {
     "name": "baleen37",

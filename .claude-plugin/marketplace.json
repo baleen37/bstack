@@ -22,7 +22,7 @@
         "memory",
         "context"
       ],
-      "version": "17.41.2"
+      "version": "17.41.3"
     },
     {
       "name": "datadog",
@@ -37,7 +37,7 @@
         "apm",
         "pup"
       ],
-      "version": "17.41.2"
+      "version": "17.41.3"
     },
     {
       "name": "autoresearch",
@@ -50,7 +50,7 @@
         "autonomous",
         "research"
       ],
-      "version": "17.41.2"
+      "version": "17.41.3"
     },
     {
       "name": "notion",
@@ -62,7 +62,7 @@
         "cli",
         "documentation"
       ],
-      "version": "17.41.2"
+      "version": "17.41.3"
     },
     {
       "name": "atlassian",
@@ -75,7 +75,7 @@
         "twg",
         "cli"
       ],
-      "version": "17.41.2"
+      "version": "17.41.3"
     }
   ]
 }
