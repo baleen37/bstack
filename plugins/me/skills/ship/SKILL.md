@@ -1,6 +1,9 @@
 ---
 name: ship
-description: Use when preparing to deploy to production, asked to "ship", "release", or "deploy", or when you need to verify a deploy succeeded or plan a rollback. Covers the full flow: pre-deploy checks, the deploy itself, and post-deploy verification with rollback on failure.
+description: >-
+  Use when preparing to deploy to production, asked to "ship", "release", or "deploy", or when
+  you need to verify a deploy succeeded or plan a rollback. Covers the full flow: pre-deploy
+  checks, the deploy itself, and post-deploy verification with rollback on failure.
 ---
 
 # Ship
@@ -16,14 +19,9 @@ Run safe read-only checks and local reversible work automatically (git/CI status
 drafting rollout/rollback plans). Classify each finding `AUTO-COMPLETED`, `NEEDS_APPROVAL`, `BLOCKED`,
 or `READY_FOR_SHIP_REVIEW`.
 
-Ask for approval before anything that changes shared or external state: releases, deploys,
-infra/flag/config/secret/DB changes, external notifications, rollbacks, destructive commands,
-data migrations.
-
-**Exception — PR flow inside ship:** push, PR creation, and merge are part of the ship flow itself,
-so run them automatically without prompting. Always squash-merge via `gh pr merge --auto --squash`
-(delegate to `me:create-pr`, which defaults to squash auto-merge). The user invoked ship to drive
-the release end-to-end; pausing on each git step defeats the purpose.
+Ask for approval before anything that changes shared or external state: pushes, PR creation/merge,
+releases, deploys, infra/flag/config/secret/DB changes, external notifications, rollbacks, destructive
+commands, data migrations.
 
 ### When to Delegate to Subagents
 
@@ -71,9 +69,9 @@ If unsure, ask the user once. Don't invent a deploy step for a doc change.
 
 1. **Verify** — run the checks from "Post-Deploy Verification" below. Delegate to subagents only when
    criteria in "When to Delegate" are met.
-1. **On failure** — collect evidence, draft the rollback command from the deploy convention, present
+2. **On failure** — collect evidence, draft the rollback command from the deploy convention, present
    as `NEEDS_APPROVAL`. Do not auto-rollback.
-1. **Report** — what shipped, what was verified, what to watch.
+3. **Report** — what shipped, what was verified, what to watch.
 
 ## Decision Categories
 
