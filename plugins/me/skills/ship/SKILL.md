@@ -1,168 +1,203 @@
 ---
 name: ship
 description: >-
-  Use when preparing to deploy to production, asked to "ship", "release", or
-  "deploy", or when you need to verify a deploy succeeded or plan a rollback.
-  Covers project-specific promotion, pre-deploy checks, deployment, and
-  post-deploy verification.
+  Use when preparing to deploy to production, asked to "ship", "release", or "deploy", or when
+  you need to verify a deploy succeeded or plan a rollback. Covers the full flow: pre-deploy
+  checks, the deploy itself, and post-deploy verification with rollback on failure.
 ---
 
 # Ship
 
-Use one closed workflow: **scope changed behavior → resolve the project's
-promotion route → define its evidence → deploy → wait for completion → verify
-each changed behavior → check unaffected critical behavior**.
+## Overview
 
-How a project promotes changes, how to tell a deploy finished, and how to roll
-back are project-specific. Discover them from repository evidence. Never assume
-or invent them.
+Deploy safely, observably, reversibly. Every launch goes through three phases: **pre-deploy → deploy →
+post-deploy**. Don't skip phases.
 
-## Phase 1: Pre-deploy
+## Automation Policy
 
-1. **Scope** — identify what changed, which production systems it touches, and
-   every behavior changed by the deploy. Include user-visible behavior,
-   integration boundaries, deferred effects, and durable-state changes when
-   applicable.
+Run safe read-only checks and local reversible work automatically (git/CI status, tests, lint, audits,
+drafting rollout/rollback plans). Classify each finding `AUTO-COMPLETED`, `NEEDS_APPROVAL`, `BLOCKED`,
+or `READY_FOR_SHIP_REVIEW`.
 
-   Before declaring `GO`, create one provisional verification-matrix row per
-   changed behavior: the production-safe check, expected observable result, and
-   evidence to collect. Phase 3 completes these same rows. If a changed
-   behavior has no viable check, stop and show the gap before deployment.
+Ask for approval before anything that changes shared or external state: pushes, PR creation/merge,
+releases, deploys, infra/flag/config/secret/DB changes, external notifications, rollbacks, destructive
+commands, data migrations.
 
-   If the changed files are the project's release artifact, the change is
-   deployable regardless of file type. Only when nothing reaches production,
-   report `Non-deployable change`, skip deploy and verify phases, and continue
-   with the normal PR flow.
+### When to Delegate to Subagents
 
-2. **Resolve the promotion route before any action** — read the applicable
-   project instructions and release surfaces:
+Fan-out is a tool, not a requirement.
 
-   - `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `local.md`, `README`,
-     `CONTRIBUTING`, and release/deploy docs;
-   - CI/CD workflows, deploy scripts, release configuration, and branch or
-     environment filters;
-   - hosting metadata when available, including protected branches, required
-     checks, existing PR bases, and deployment environments.
+- **Delegate** when 2+ independent analyses can run in parallel, a specialist fits
+  (`me:security-auditor`, `me:test-engineer`, `Explore`), or output would pollute main context.
+- **Run directly** when a single command answers it, the result must be reasoned about immediately,
+  or blast radius is small.
 
-   Record the result:
+When delegating, batch independent calls in one message so they run in parallel.
 
-   ```text
-   Release route:
-     source: <current branch>
-     next PR/merge base: <branch, environment, or none>
-     required order: <promotion steps>
-     final target: <environment and/or branch>
-     deploy trigger: <documented trigger or none>
-     evidence: <file:line, workflow trigger, or command output>
-   ```
+## Execution Workflow
 
-   The phrase `ship to prod` names an outcome. It does not choose a branch or
-   authorize a direct production merge. Use the names and order found in the
-   project evidence.
+Three phases: **pre-deploy → deploy → post-deploy**. Do not skip phases.
 
-   - If an intermediate branch or environment is required, prepare only the
-     next step.
-   - A local merge or rebase only synchronizes a working branch. It does not
-     prove that a PR landed in the integration branch.
-   - Use the project's documented synchronization method. Skip local sync when
-     the project does not require it.
-   - If the route is missing, conflicting, or not provable, stop as `BLOCKED`
-     before fetch, merge, push, PR creation, or deploy.
-   - After an intermediate merge, verify the merged PR and required post-merge
-     jobs, then resolve the route again from the updated state.
+**First, classify the change:**
 
-3. **Find how this project deploys.** Determine:
+- **Deployable** (touches code/infra that runs in production) → full three-phase flow.
+- **Non-deployable** (docs, skills, internal scripts, CI config without runtime effect) → run
+  Phase 1 checks (tests/lint relevant to the change), commit/PR per normal flow, skip Phases 2–3.
+  State explicitly: "Non-deployable change, skipping deploy/verify phases."
 
-   - what triggers a deploy;
-   - how to tell the deploy finished;
-   - how to read the deployed version or commit;
-   - how to roll back.
+If unsure, ask the user once. Don't invent a deploy step for a doc change.
 
-   A merge to an integration branch is a valid deploy trigger when the project
-   documents it. A project with no manual deploy command is normal, not blocked.
-   In a monorepo, scope discovery to the changed paths because each service may
-   have a different pipeline. Track where each answer came from.
+### Phase 1 — Pre-deploy (배포 전 점검)
 
-   Only when a deploy is required and no trigger can be established: `BLOCKED`.
+1. **Identify scope** — launch type, changed files, blast radius, production systems touched.
+2. **Read the deploy convention** — see "Reading Deploy Convention" below. If the project has none,
+   ask once and offer to record the answer.
+3. **Run checks** — local verification (tests, lint, type, build), CI/PR status, dependency/security
+   audits, docs. For non-trivial changes consider fanning out per "When to Delegate".
+4. **Draft artifacts** — rollout stages, rollback triggers/procedure, monitoring targets, owners,
+   post-deploy checks.
+5. **Classify and decide** — mark each item `AUTO-COMPLETED`, `NEEDS_APPROVAL`, `BLOCKED`, or
+   `READY_FOR_SHIP_REVIEW`. Stop and report evidence if anything is `BLOCKED`. Present GO/NO-GO with
+   the rollback plan.
 
-4. **Check reversibility.** Scan the diff for persistent-state changes, not just
-   code. Record `rollback-safe`, `partial`, or `fix-forward-only` now.
+### Phase 2 — Deploy (배포)
 
-   For `partial`, name which part rolls back and which part stays. A single
-   verdict for the whole change can be wrong about one half of it.
+1. **Execute deploy** — run the command from the deploy convention. This is `NEEDS_APPROVAL`; never
+   run without the user's explicit go-ahead.
 
-5. **Verify readiness** — CI green and project-required checks passing. Use the
-   project's own commands.
+### Phase 3 — Post-deploy (배포 후 점검)
 
-6. **Report** in this order:
+1. **Verify** — run the checks from "Post-Deploy Verification" below. Delegate to subagents only when
+   criteria in "When to Delegate" are met.
+2. **On failure** — collect evidence, draft the rollback command from the deploy convention, present
+   as `NEEDS_APPROVAL`. Do not auto-rollback.
+3. **Report** — what shipped, what was verified, what to watch.
 
-   - Verdict: `GO` or `NO-GO`, including reversibility;
-   - Rollback plan, or `undocumented`;
-   - Discovery: the four deployment answers and their sources, marking inferred
-     answers as `inferred`;
-   - Validation plan: the provisional verification matrix;
-   - Undocumented: every undocumented or inferred answer.
+## Decision Categories
 
-   If the undocumented list is non-empty, ask whether to record those answers
-   in the project's documentation before continuing. Stop and show evidence if
-   anything is `BLOCKED`.
+- `AUTO-COMPLETED`: Safe checks or drafts completed locally with evidence.
+- `NEEDS_APPROVAL`: Risky, externally visible, shared-state, or hard-to-reverse actions that require user
+  approval.
+- `BLOCKED`: Launch blocker such as failing tests, missing rollback path, unknown owner, missing
+  monitoring, unresolved security risk, or unverifiable production impact.
+- `READY_FOR_SHIP_REVIEW`: Launch preparation is complete enough to produce a GO/NO-GO decision.
 
-## Phase 2: Deploy
+## Reading Deploy Convention
 
-Trigger the deploy using the route and trigger discovered in Phase 1.
+Deploy commands and verification endpoints live with the project, not in this skill. Before deploying,
+look for a deployment section in the project's own documentation. If none exists, ask the user.
 
-Anything that changes shared or external state is `NEEDS_APPROVAL`, including
-pushes, merges, releases, deploys, rollbacks, and external notifications. Never
-perform those actions without the user's explicit go-ahead.
+Look for:
 
-When handing off PR work, pass the route's immediate next base and final target
-separately. Create or merge directly to the final production target only when
-the project explicitly documents that route and its checks and approvals are
-satisfied.
+- **Deploy command(s)** — e.g. `bun run deploy:staging`, `bun run deploy:prod`
+- **Health check URL** — endpoint that returns 200 when the deploy is healthy
+- **Error/log inspection command** — how to check recent errors after deploy
+- **Rollback command** — exact command or procedure to revert
+- **Smoke flows** — critical user journeys to verify (especially for UI changes)
 
-## Phase 3: Post-deploy
+If any of these are missing, ask the user once and offer to record the answers in the project's
+docs so future runs are reproducible. If the user cannot provide a deploy command, mark the deploy
+step `BLOCKED` and stop — do not invent one.
 
-Run these checks in order:
+Also use the project's own verify commands (test, lint, build) when documented. If they conflict
+with the defaults in Phase 1 step 3, the project wins.
 
-1. **Did the deploy finish?** For gradual rollouts, wait for the project's
-   completion signal before continuing.
-2. **Is the deployed artifact mine?** Compare the live version or commit against
-   what was deployed. A health check alone is insufficient.
-3. **Verify every changed behavior.** Complete the matrix from Phase 1:
+Example convention block to suggest:
 
-   | Changed behavior | Production-safe check | Expected observable result | Evidence | Outcome |
-   | --- | --- | --- | --- | --- |
+```markdown
+## Deployment
+- Staging: `bun run deploy:staging`
+- Production: `bun run deploy:prod`
+- Health check: https://api.example.com/health
+- Error scan: `bun run logs:errors --since 5m`
+- Rollback: `git revert HEAD && bun run deploy:prod`
+- Smoke flows:
+  - Login → dashboard
+  - Create item → confirm in list
+```
 
-   Run a check through the changed path and assert its changed observable result.
-   Health, version, or unrelated checks do not cover a row. An untested changed
-   behavior is a `GAP`, not a successful deploy.
-4. **Check unaffected critical behavior.** Run the project's baseline
-   availability check and one unchanged critical path when the change could
-   affect it.
+## Post-Deploy Verification
 
-Report every `OK` with evidence such as a status code, version string, log
-excerpt, screenshot path, or observable result. Report `FAIL` with the exact
-output. Do not claim overall verification success while any matrix row is a
-`GAP`.
+Run these checks immediately after deploy. Each is `AUTO-COMPLETED` on success; any failure becomes
+`BLOCKED` and triggers the rollback flow in the Execution Workflow.
 
-## On failure
+1. **Health check** — hit the health URL from the deploy convention. Expect 200 with the expected body.
+2. **Error/log scan** — run the project's error scan command. Compare error rate to the baseline noted
+   before deploy.
+3. **UI smoke (when UI changed)** — run the smoke flows from the deploy convention. Delegate to
+   `me:browse` / `me:verify` for browser-runtime checks rather than re-implementing browser automation.
+4. **Critical user flow** — for production-bound changes, walk through the primary user path end-to-end.
 
-1. Collect evidence.
-2. Follow the Phase 1 reversibility verdict:
-   - `rollback-safe`: roll back after approval;
-   - `fix-forward-only`: do not roll back, fix forward;
-   - `partial`: roll back only the recorded reversible part.
-3. Present the command as `NEEDS_APPROVAL` with reasoning. If rollback is
-   undocumented, propose redeploying the previous known-good version as an
-   inference, not as an established procedure.
+Report each as `OK` with evidence (status code, log excerpt, screenshot path) or `FAIL` with the exact
+output that failed. Do not claim success without evidence.
 
-Never auto-rollback. Rollback changes production state and needs the same
-approval gate as deployment.
+## When to Use
 
-## Decision labels
+- Deploying a feature to production for the first time
+- Releasing a significant change to users
+- Migrating data or infrastructure
+- Opening a beta or early access program
+- Any deployment that carries risk (all of them)
 
-- `AUTO-COMPLETED` — safe read-only checks and local drafts completed with
-  evidence;
-- `NEEDS_APPROVAL` — shared or external state would change;
-- `BLOCKED` — checks fail, no deploy trigger exists, the route is unknown, or
-  production impact cannot be verified.
+## Pre-Launch Checklist
+
+For the heavy categories, delegate rather than re-implement:
+
+- **Code quality** — tests pass, lint/type/build clean, code reviewed (use `me:review`, `me:test`)
+- **Security** — no secrets, audit clean, auth/CORS/rate limits in place (use `me:security-auditor`)
+- **Performance / a11y** — see `references/performance-checklist.md`, `references/accessibility-checklist.md`
+- **Infra / docs** — env vars set, migrations ready, health endpoint exists, docs/changelog updated
+
+## Feature Flags
+
+Ship behind a flag to decouple deploy from release. Each flag has an owner and expiration. Clean up
+within 2 weeks of full rollout. Don't nest flags. Test both states in CI.
+
+## Staged Rollout
+
+Sequence: **staging → prod (flag OFF) → team → 5% canary → 25% → 50% → 100% → clean up flag**.
+Monitor at each step against baseline; advance, hold, or roll back per the thresholds below.
+
+| Metric | Advance | Hold | Roll back |
+|--------|---------|------|-----------|
+| Error rate | Within 10% of baseline | 10-100% above | >2x baseline |
+| P95 latency | Within 20% | 20-50% above | >50% above |
+| Client JS errors | No new types | New at <0.1% sessions | New at >0.1% |
+| Business metrics | Neutral/positive | Decline <5% | Decline >5% |
+
+## Rollback
+
+Never auto-rollback. On verification failure: **collect evidence → draft rollback command from the
+deploy convention → present as `NEEDS_APPROVAL`**. Rollback changes production state and warrants the
+same approval gate as the deploy itself. Database migrations may need their own rollback path —
+check before deploying, not after.
+
+## See Also
+
+- `references/security-checklist.md`, `references/performance-checklist.md`, `references/accessibility-checklist.md`
+
+## Common Rationalizations
+
+| Rationalization | Reality |
+|---|---|
+| "It works in staging, it'll work in production" | Production has different data, traffic patterns, and edge cases. Monitor after deploy. |
+| "We don't need feature flags for this" | Every feature benefits from a kill switch. Even "simple" changes can break things. |
+| "Monitoring is overhead" | Not having monitoring means you discover problems from user complaints instead of dashboards. |
+| "We'll add monitoring later" | Add it before launch. You can't debug what you can't see. |
+| "Rolling back is admitting failure" | Rolling back is responsible engineering. Shipping a broken feature is the failure. |
+
+## Red Flags
+
+- Deploying without a rollback plan
+- No monitoring or error reporting in production
+- Big-bang releases (everything at once, no staging)
+- Feature flags with no expiration or owner
+- No one monitoring the deploy for the first hour
+- Production environment configuration done by memory, not code
+- "It's Friday afternoon, let's ship it"
+
+## Verification
+
+- **Before deploying:** Pre-Launch Checklist sections green, rollback plan drafted, feature flag
+  configured if applicable.
+- **After deploying:** see "Post-Deploy Verification" above.

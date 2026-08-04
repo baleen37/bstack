@@ -42,15 +42,6 @@ load ../helpers/bats_helper
     [ -f "${PROJECT_ROOT}/plugins/me/skills/ship/SKILL.md" ]
 }
 
-@test "me: ship skill resolves a project-specific promotion route" {
-    local skill_file="${PROJECT_ROOT}/plugins/me/skills/ship/SKILL.md"
-
-    grep -q "Resolve the promotion route before any action" "$skill_file"
-    grep -q "project-specific" "$skill_file"
-    grep -q "NEEDS_APPROVAL" "$skill_file"
-    grep -q "If the route is missing, conflicting, or not provable" "$skill_file"
-}
-
 @test "me: write-skill uses transcript metadata for repository scope" {
     local skill_file="${PROJECT_ROOT}/plugins/me/skills/write-skill/SKILL.md"
 
