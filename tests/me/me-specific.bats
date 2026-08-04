@@ -42,12 +42,12 @@ load ../helpers/bats_helper
     [ -f "${PROJECT_ROOT}/plugins/me/skills/ship/SKILL.md" ]
 }
 
-@test "me: write-skill uses transcript metadata for repository scope" {
-    local skill_file="${PROJECT_ROOT}/plugins/me/skills/write-skill/SKILL.md"
+@test "me: write-skill keeps SkillOpt detail in a reference file" {
+    local skill_dir="${PROJECT_ROOT}/plugins/me/skills/write-skill"
 
-    grep -q "transcript metadata filter" "$skill_file"
-    grep -q "recorded `cwd`" "$skill_file"
-    grep -q "scope=all.*means all projects" "$skill_file"
+    [ -f "${skill_dir}/SKILL.md" ]
+    [ -f "${skill_dir}/references/skillopt.md" ]
+    [ ! -e "${skill_dir}/agents/openai.yaml" ]
 }
 
 @test "me: release-with-github-app doc uses bun release flow" {
