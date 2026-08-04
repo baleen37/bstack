@@ -25,7 +25,7 @@ Personal Claude Code workflow toolkit for git safety, session continuity, verifi
 ### Session
 
 - `handoff` — Write structured session handoff files.
-- `write-skill` — Create or improve a skill with Microsoft SkillOpt, gated on held-out validation.
+- `write-skill` — Write or fix a `SKILL.md`, prove it against a no-skill baseline, and tune it with SkillOpt.
 
 ## Agents
 
