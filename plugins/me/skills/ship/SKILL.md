@@ -125,7 +125,7 @@ Run these checks immediately after deploy. Each is `AUTO-COMPLETED` on success; 
 2. **Error/log scan** — run the project's error scan command. Compare error rate to the baseline noted
    before deploy.
 3. **UI smoke (when UI changed)** — run the smoke flows from the deploy convention. Delegate to
-   `me:browse` / `me:verify` for browser-runtime checks rather than re-implementing browser automation.
+   `me:verify` for browser-runtime checks rather than re-implementing browser automation.
 4. **Critical user flow** — for production-bound changes, walk through the primary user path end-to-end.
 
 Report each as `OK` with evidence (status code, log excerpt, screenshot path) or `FAIL` with the exact
@@ -143,9 +143,9 @@ output that failed. Do not claim success without evidence.
 
 For the heavy categories, delegate rather than re-implement:
 
-- **Code quality** — tests pass, lint/type/build clean, code reviewed (use `me:review`, `me:test`)
+- **Code quality** — tests pass, lint/type/build clean, code reviewed (use `me:code-reviewer`, `me:test-engineer`)
 - **Security** — no secrets, audit clean, auth/CORS/rate limits in place (use `me:security-auditor`)
-- **Performance / a11y** — see `references/performance-checklist.md`, `references/accessibility-checklist.md`
+- **Performance / a11y** — budgets met, no regressions, keyboard/screen-reader paths work
 - **Infra / docs** — env vars set, migrations ready, health endpoint exists, docs/changelog updated
 
 ## Feature Flags
@@ -171,10 +171,6 @@ Never auto-rollback. On verification failure: **collect evidence → draft rollb
 deploy convention → present as `NEEDS_APPROVAL`**. Rollback changes production state and warrants the
 same approval gate as the deploy itself. Database migrations may need their own rollback path —
 check before deploying, not after.
-
-## See Also
-
-- `references/security-checklist.md`, `references/performance-checklist.md`, `references/accessibility-checklist.md`
 
 ## Common Rationalizations
 
