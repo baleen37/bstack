@@ -1,34 +1,33 @@
 ---
 name: research
-description: Use when exploring unfamiliar codebases, investigating bugs, or learning new technologies before acting
+description: Use when external facts, documentation, standards, papers, releases, technology comparisons, recommendations, or other current reference material must be found or verified
 ---
 
 # Research
 
-Evidence-based exploration: **Observe → Explore → Verify → Summarize**.
+Classify the request before using tools.
 
-**Reading code is NOT research. Testing behavior IS research.**
+## Route
 
-## Tool Selection
+- Local codebase exploration or local bug investigation is outside this skill.
+  Reply with that boundary without reading files, browsing, or delegating.
+- If the user supplied one exact source and only wants it inspected, use a
+  direct fetch or open action such as `curl` on only that URL. Do not use any
+  search tool or delegate.
+- When source discovery or comparison is needed, send the complete request once
+  to `me:researcher`. Do not fan out.
 
-| Scenario | Tool | Note |
-| :--- | :--- | :--- |
-| Codebase | `Task: subagent_type="Explore"` | NEVER manual Grep/Glob |
-| Web | `Task: subagent_type="core:web-researcher"` | haiku built-in |
-| Hybrid | Both in parallel | synthesize in main session |
+Give the researcher the question, decision to support, freshness constraint,
+evidence bar, and required output. Use the lowest-cost capable option available;
+escalate only after a stated quality requirement fails.
 
-Use `model="haiku"` for simple Explore tasks.
+If delegation is unavailable or fails, read `../../agents/researcher.md` and
+apply its external, read-only contract directly. The exact-source path follows
+the same evidence contract without discovery.
 
-## Evidence Standards
+## Return
 
-- **3+ independent sources** before concluding
-- **Sufficient:** `lib/state.sh:45 validates regex + tested empty input → exits code 1`
-- **Insufficient:** "Read the code, it does X" — did you RUN it?
-- **Negative evidence:** document what's NOT there
-
-## Red Flags — STOP
-
-- "Read code, that's enough" → must RUN and TEST
-- "Found one good source" → need 3+
-- "Confident based on experience" → experience ≠ evidence
-- Listing "possible bugs" without testing → speculation
+Use the research result without repeating its investigation. Return the direct
+answer with citations next to supported claims and only material uncertainty.
+Keep search logs, dead ends, unused sources, and duplicated evidence out of the
+response.

@@ -1,6 +1,9 @@
 # Bun / Package managers
 node_modules/
 
+# playwright-cli runtime artifacts (snapshots, console logs, traces)
+.playwright-cli/
+
 # Python
 __pycache__/
 *.py[cod]
@@ -8,6 +11,8 @@ __pycache__/
 *.so
 .Python
 build/
+!plugins/*/skills/build/
+!plugins/*/skills/build/SKILL.md
 develop-eggs/
 dist/
 downloads/
@@ -63,3 +68,6 @@ htmlcov/
 
 # Cache directory
 .cache/
+
+# Local research-skill evaluation traces
+.research-eval/

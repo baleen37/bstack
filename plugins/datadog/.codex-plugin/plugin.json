@@ -1,0 +1,32 @@
+{
+  "name": "datadog",
+  "version": "17.41.2",
+  "description": "Datadog observability guidance via the pup CLI",
+  "author": {
+    "name": "baleen37",
+    "email": "git@baleen.me"
+  },
+  "license": "MIT",
+  "keywords": [
+    "datadog",
+    "observability",
+    "monitoring",
+    "logs",
+    "apm",
+    "pup"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Datadog",
+    "shortDescription": "Datadog observability guidance via the pup CLI",
+    "longDescription": "Datadog observability guidance via the pup CLI",
+    "developerName": "baleen37",
+    "category": "Productivity",
+    "capabilities": [
+      "Skills"
+    ],
+    "defaultPrompt": [
+      "Use Datadog for this task."
+    ]
+  }
+}

@@ -5,9 +5,9 @@ repos:
       - id: check-yaml
       - id: check-json
       - id: end-of-file-fixer
-        exclude: ^(tests/|\.ralph/)
+        exclude: ^tests/
       - id: trailing-whitespace
-        exclude: ^(tests/|\.ralph/)
+        exclude: ^tests/
 
   - repo: local
     hooks:

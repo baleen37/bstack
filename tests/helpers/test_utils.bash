@@ -184,42 +184,6 @@ assert_valid_plugin() {
     return $errors
 }
 
-# Validate a skill file (SKILL.md)
-# Checks:
-#   - File exists and is readable
-#   - Has valid frontmatter delimiter
-#   - Has required frontmatter fields (name, description)
-# Args:
-#   $1 - Path to SKILL.md file
-# Returns:
-#   0 if valid, 1 otherwise (outputs error messages to stderr)
-# Usage: if ! assert_valid_skill "$skill_file"; then echo "Invalid!"; fi
-assert_valid_skill() {
-    local skill_file="$1"
-
-    if [ ! -f "$skill_file" ]; then
-        echo "Error: Skill file not found: $skill_file" >&2
-        return 1
-    fi
-
-    if ! has_frontmatter_delimiter "$skill_file"; then
-        echo "Error: Missing frontmatter delimiter in $skill_file" >&2
-        return 1
-    fi
-
-    if ! has_frontmatter_field "$skill_file" "name"; then
-        echo "Error: Missing required frontmatter field 'name' in $skill_file" >&2
-        return 1
-    fi
-
-    if ! has_frontmatter_field "$skill_file" "description"; then
-        echo "Error: Missing required frontmatter field 'description' in $skill_file" >&2
-        return 1
-    fi
-
-    return 0
-}
-
 # Validate marketplace.json file
 # Checks:
 #   - File exists and is valid JSON
@@ -411,37 +375,6 @@ validate_all_plugins() {
     fi
 
     echo "Plugin validation: all $total plugins valid" >&2
-    return 0
-}
-
-# Validate all skill files in the project
-# Returns:
-#   0 if all valid, 1 otherwise (outputs summary of errors)
-# Usage: if ! validate_all_skills; then echo "Some skills are invalid"; fi
-validate_all_skills() {
-    local total=0
-    local valid=0
-    local invalid=0
-
-    # shellcheck disable=SC2329
-    _count_skill() {
-        local skill_file="$1"
-        ((total++))
-        if assert_valid_skill "$skill_file" 2>&1; then
-            ((valid++))
-        else
-            ((invalid++))
-        fi
-    }
-
-    for_each_skill_file _count_skill
-
-    if [ "$invalid" -gt 0 ]; then
-        echo "Skill validation: $valid/$total valid, $invalid invalid" >&2
-        return 1
-    fi
-
-    echo "Skill validation: all $total skills valid" >&2
     return 0
 }
 

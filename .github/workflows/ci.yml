@@ -3,8 +3,6 @@ name: CI / test
 on:
   pull_request:
     branches: ['**']
-  pull_request_target:
-    branches: ['**']
   push:
     branches:
       - main
@@ -20,9 +18,6 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-        with:
-          # For pull_request_target, checkout the PR branch
-          ref: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.sha || '' }}
 
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
@@ -39,6 +34,9 @@ jobs:
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
+
+      - name: Install Bun dependencies
+        run: bun install --frozen-lockfile
 
       - name: Run all tests
         id: run_tests
@@ -62,15 +60,14 @@ jobs:
             const state = '${{ steps.run_tests.outcome }}' === 'success' && '${{ steps.check_drift.outcome }}' === 'success'
               ? 'success'
               : 'failure';
-            // For pull_request_target, use the PR head SHA instead of context.sha
-            const sha = context.eventName === 'pull_request_target'
+            const sha = context.eventName === 'pull_request'
               ? context.payload.pull_request.head.sha
               : context.sha;
             console.log(`Creating status for SHA: ${sha}`);
             await github.rest.repos.createCommitStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              sha: sha,
+              sha,
               state: state,
               context: 'CI / test',
               description: 'Tests completed',
