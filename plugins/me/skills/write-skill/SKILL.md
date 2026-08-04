@@ -44,13 +44,17 @@ substitute for a benchmark when the user expects a benchmark claim.
 ## Collect Claude and Codex together
 
 When the user asks to learn from both Claude and Codex, collect the union of
-all available history from both providers for the current Git repository. Treat
-this as a **provider source set plus repository worktree scope**, not as one
-literal `--source` value.
+all available transcript history for the current Git repository. Treat this as
+a **provider source set plus transcript metadata filter**, not as one literal
+`--source` value.
 
-- Run the documented Claude source and Codex source for every worktree belonging
-  to the repository. If the runner accepts only one source or project per run,
-  execute that provider × worktree matrix separately.
+- The transcript record is the primary scope evidence. Claude and Codex
+  harvesters retain the session `cwd` as the project path; use it to associate
+  sessions with the requested repository. Do not enumerate live worktrees as
+  the harvest input.
+- Run the documented Claude source and Codex source against their transcript
+  stores. If the runner accepts only one source per run, run each provider
+  separately and filter the resulting task records by their recorded project.
 - Keep each task's provider, project/worktree, and session provenance in the
   task metadata or reviewed evidence manifest.
 - If any requested source has no usable evidence, label the source set partial;
@@ -76,25 +80,59 @@ Provider target paths are separate from history sources:
 - bstack source: the exact repository path requested by the user, such as
   `plugins/me/skills/<name>/SKILL.md`.
 
-## Worktree scope
+## Transcript scope and repository identity
 
-Resolve the current worktree before harvesting:
+SkillOpt's official CLI makes `--project` the transcript scope and keeps
+`--target-skill-path` separate. Its `scope=invoked` is path-based and does not
+include sibling worktrees; its `scope=all` means all projects, not this Git
+repository. Use the current docs and runner help as the contract.
 
-1. Use `git rev-parse --show-toplevel` for the exact project path.
-2. Use `git worktree list --porcelain` to enumerate every worktree of this Git
-   repository. Include all listed worktrees for a repository-wide request.
-3. Match provider transcripts by their recorded `cwd`, using the exact
-   worktree path for each harvest. Do not substitute the main checkout path for
-   a sibling worktree.
-4. Codex `archived_sessions` does not include the currently active session in
-   the live `sessions` tree. Report that boundary even in an all-worktree run.
-5. Do not use `scope=all`: it includes unrelated repositories. If the runner
-   lacks a repository-worktree scope, run the provider × worktree matrix and
-   merge the reviewed task files instead.
+1. Resolve the target repository with `git rev-parse --show-toplevel` and keep
+   the exact target skill path separate from history paths.
+2. Read transcript metadata first. Match each session's recorded `cwd` or
+   project path to the target repository's Git root/common directory when that
+   path is available. Preserve historical paths that no longer exist instead of
+   silently dropping them.
+3. Use `git worktree list --porcelain` only as a completeness check for current
+   paths and as context for reporting. It is not the source-of-truth session
+   inventory, because archived transcripts can outlive a worktree.
+4. Do not pass `scope=all` and treat its output as repository-scoped. If the
+   runner has no repository filter, harvest the provider transcript store with a
+   safe read-only path, then filter task records by their recorded project and
+   retain the provenance manifest.
+5. Codex `archived_sessions` does not include the currently active session in
+   the live `sessions` tree. Report that boundary separately from repository
+   scope.
 
-An exact target path and a session source path are different decisions. Keep the
-requested target in the active worktree while importing history from the other
-worktrees.
+An exact target path and a transcript source path are different decisions. Keep
+the requested target in the active worktree while importing history identified by
+transcript metadata.
+
+## Session evidence and checkpoints
+
+Never conclude “there are no sessions” from a single `dry-run` result.
+
+1. After resolving the repository identity, run the documented read-only
+   `harvest` path once per requested provider against the transcript store. Use
+   a bounded session/task limit and write the result to an explicit task file
+   when supported, then filter by each task's recorded project before replay.
+2. Inspect the runner state or `~/.skillopt-sleep/state.json` for the relevant
+   project's `last_harvest` checkpoint. This checkpoint is keyed by the
+   invoked project path, so it is not a complete repository history index.
+3. Treat `last_harvest` as a filter, not proof that history is absent. A
+   `lookback-hours=0` option scans all available history for the initial harvest
+   but does not reset an existing checkpoint; a stateful `dry-run` can report
+   zero after direct harvest found sessions.
+4. Before any stateful run, capture direct harvest evidence. For replay, pass
+   an explicit harvested and reviewed task file when the runner supports it.
+   Preserve provider, transcript project/cwd, session IDs, and task provenance.
+5. Classify the outcome precisely: no sessions, sessions with no mined tasks,
+   mined tasks rejected by the held-out gate, or the current session not yet
+   archived. Do not collapse these into “no evidence”.
+
+Mock validates the mechanics and makes no provider calls. It cannot prove model
+improvement. A real backend may send transcript or task content to its provider,
+so inspect and redact sensitive evidence and mark it reviewed first.
 
 ## Create a new skill
 
@@ -112,8 +150,9 @@ worktrees.
 
 1. Resolve exactly one target skill and read its current behavior.
 2. Define what must remain true and what failure the change addresses.
-3. Check every requested source independently. If all requested sources have no
-   usable evidence, ask: “There are no relevant sessions. Should I draft 3–5
+3. Check every requested source independently, using transcript metadata and
+   the direct harvest rules above. If all requested sources have no usable
+   evidence, ask: “There are no relevant sessions. Should I draft 3–5
    representative tasks with success criteria for your review?”
 4. Run a dry-run or mock pass first when supported. Session/task limits select
    evidence; they are not hard token, time, or cost budgets.
@@ -138,7 +177,9 @@ user adopts them. Report:
 
 - mode: new or improve;
 - exact target path and target harness;
+- evidence scope: current project path or transcript-derived repository scope;
 - source/backend for each run, including Claude/Codex provenance;
+- provider counts, transcript project/cwd coverage, and checkpoint status;
 - baseline and candidate scores with their split, or why no score exists;
 - gate result, rejected edits, staged diff, and evidence path;
 - source/runner version and any interface mismatch;
@@ -152,8 +193,12 @@ creation from generated changes.
 
 - Treating `source`, `backend`, target harness, and target path as the same thing.
 - Treating `source=auto` as Claude+Codex union.
+- Treating a sibling worktree as absent because `scope=invoked` searched only the
+  active project path. Inspect transcript metadata first.
+- Treating a stateful zero-session `dry-run` as proof that no history exists.
 - Claiming current-session evidence before Codex archives it.
-- Widening from a worktree to sibling worktrees or all projects without consent.
+- Passing `scope=all` without filtering its all-project output by transcript
+  project identity.
 - Passing a copied or unsupported flag such as `--source opencode`.
 - Calling a staged candidate an improvement before its held-out gate passes.
 - Running a real backend on unreviewed sensitive transcripts.

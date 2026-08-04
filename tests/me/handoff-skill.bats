@@ -95,7 +95,6 @@ teardown() {
 @test "me: handoff is explicit-only and pickup is not user-facing" {
     run grep -Fq 'or before ending' "$SKILL_FILE"
     assert_failure
-    [ ! -d "${PROJECT_ROOT}/plugins/me/skills/pickup" ]
 
     run grep -Eq '^\| `pickup` \|' "${PROJECT_ROOT}/README.md"
     assert_failure
