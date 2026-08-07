@@ -16,5 +16,5 @@ setup() {
 
 @test "marketplace contains the supported bstack plugins" {
     local manifest="${PROJECT_ROOT}/.claude-plugin/marketplace.json"
-    [ "$(jq -c '[.plugins[].name] | sort' "$manifest")" = '["atlassian","autoresearch","datadog","me","notion"]' ]
+    [ "$(jq -c '[.plugins[].name] | sort' "$manifest")" = '["atlassian","autoresearch","datadog","me"]' ]
 }
