@@ -6,14 +6,19 @@ Personal Claude Code workflow toolkit for git safety, session continuity, verifi
 
 ### Plan
 
-- `research` — Explore evidence before acting.
+- `grill-with-docs` — Sharpen a plan or design through an interview while creating docs.
+- `domain-modeling` — Build and sharpen the project's domain model.
+- `grilling` — Relentlessly stress-test a plan, decision, or idea.
+- `research` — Investigate questions against primary sources and save cited findings.
 - `writing-prds` — Write product requirements documents for feature planning.
 - `writing-rfcs` — Write technical RFCs for engineering decisions.
 - `competitive-agents` — Compare parallel approaches for architecture, API, or system decisions.
+- `to-tickets` — Break a plan, spec, or conversation into tracer-bullet tickets with blocking edges.
 
 ### Verify
 
 - `verify` — Verify implementation scope and report `PASS`, `PARTIAL`, or `FAIL` with evidence.
+- `code-review` — Review a diff against repository standards and its originating specification.
 - `e2e-scenario-testing` — Verify a running web UI, CLI, or TUI with reusable scenario cards and falsifiable assertions.
 - `story-loop` — Inventory repository capabilities and loop through scenario testing, fixes, and fresh verification.
 
@@ -24,7 +29,7 @@ Personal Claude Code workflow toolkit for git safety, session continuity, verifi
 
 ### Session
 
-- `handoff` — Write structured session handoff files.
+- `handoff` — Compact the current conversation into a handoff document for another agent.
 - `write-skill` — Write or fix a `SKILL.md`, prove it against a no-skill baseline, and tune it with SkillOpt.
 
 ## Agents
