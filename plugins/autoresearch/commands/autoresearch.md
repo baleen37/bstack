@@ -33,11 +33,11 @@ This is a resume. Do the following:
 
 1. Delete `.autoresearch/off` if it exists
 2. Read `.autoresearch/autoresearch.md` to understand the objective, constraints, and what's been tried
-3. Read `.autoresearch/autoresearch.jsonl` to reconstruct state:
+3. Read `.autoresearch/results.tsv` to reconstruct state:
    - Count total runs, kept, discarded, crashed
-   - Find baseline metric (first result in current segment)
-   - Find best metric and which run achieved it
-   - Identify which secondary metrics are being tracked
+   - Find the baseline metric (first data row)
+   - Find the best metric and which commit achieved it
+   - Note which secondary metric columns are being tracked
 4. Read recent git log: `git log --oneline -20`
 5. If `.autoresearch/ideas.md` exists, read it for experiment inspiration
 6. Continue the loop from where it left off — pick up the next experiment
