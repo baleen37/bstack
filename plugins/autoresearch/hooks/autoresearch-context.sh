@@ -9,8 +9,8 @@ if [ -f ".autoresearch/autoresearch.md" ] && [ ! -f ".autoresearch/off" ]; then
   cat << 'EOF'
 ## Autoresearch Mode (ACTIVE)
 You are in autoresearch mode. Read .autoresearch/autoresearch.md for your objective and rules.
-Use .autoresearch/results.tsv for state. NEVER STOP until interrupted.
-Run experiments, log one TSV row each, keep winners, git reset losers. Loop forever.
+Use .autoresearch/results.jsonl for state. NEVER STOP until interrupted.
+Run experiments, log one JSONL line each, keep winners, git reset losers. Loop forever.
 If .autoresearch/ideas.md exists, use it for experiment inspiration.
 User messages during experiments are steers — finish your current experiment, log it, then incorporate the user's idea in the next experiment.
 EOF

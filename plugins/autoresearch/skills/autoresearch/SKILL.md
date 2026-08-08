@@ -16,7 +16,7 @@ Modeled on [karpathy/autoresearch](https://github.com/karpathy/autoresearch), ge
 2. `git checkout -b autoresearch/<goal>-<date>`
 3. Read the source files. Understand the workload deeply before writing anything.
 4. `mkdir -p .autoresearch`, then write `.autoresearch/autoresearch.md` and `.autoresearch/run.sh`. Commit both.
-5. Run the baseline → log it as the first `results.tsv` row → start looping immediately.
+5. Run the baseline → log it as the first `results.jsonl` line → start looping immediately.
 
 ### `autoresearch.md`
 
@@ -62,7 +62,7 @@ Update it during the loop as needed.
 
 ## The Loop
 
-Each iteration: modify files in scope → run the benchmark → parse the metric → keep or revert → log a row.
+Each iteration: modify files in scope → run the benchmark → parse the metric → keep or revert → log a line.
 
 ### 1. Run the benchmark
 
@@ -102,7 +102,7 @@ degraded catastrophically, and say why in the description.
 
 ```bash
 git add -A && git commit -m "<description>"
-git rev-parse --short=7 HEAD    # hash for the log row
+git rev-parse --short=7 HEAD    # hash for the log line
 ```
 
 **If discard or crash** — reset back to where you started:
@@ -111,30 +111,36 @@ git rev-parse --short=7 HEAD    # hash for the log row
 git reset --hard HEAD && git clean -fd
 ```
 
-Use the current HEAD hash for the log row.
+Use the current HEAD hash for the log line.
 
-### 4. Log one row to `results.tsv`
+### 4. Log one line to `results.jsonl`
 
-Append to `.autoresearch/results.tsv` — tab-separated, NOT comma-separated (commas break in
-descriptions). This file is the source of truth for resuming.
+Append one JSON object per experiment to `.autoresearch/results.jsonl`. This file is the source of
+truth for resuming.
 
-Header row plus one row per experiment:
+**Every experiment ends with this append. No exceptions** — not for a revert, not for a crash, not
+when you're about to try the next idea immediately. An experiment that ran without a line is lost
+work: the next agent re-tries it.
 
-<!-- markdownlint-disable MD010 -->
-
-```tsv
-commit	<metric>	status	description
-a1b2c3d	0.997900	keep	baseline
-e4f5a6b	0.991200	keep	widen mlp, drop bias terms
-a1b2c3d	1.004500	discard	try rotary embeddings
+```bash
+echo '{"commit":"'"$COMMIT"'","metric":'"$METRIC"',"status":"'"$STATUS"'","description":"'"$DESCRIPTION"'"}' \
+  >> .autoresearch/results.jsonl
 ```
 
-<!-- markdownlint-enable MD010 -->
+```json
+{"commit":"a1b2c3d","metric":0.997900,"status":"keep","description":"baseline"}
+{"commit":"e4f5a6b","metric":0.991200,"status":"keep","description":"widen mlp, drop bias terms"}
+{"commit":"a1b2c3d","metric":1.004500,"status":"discard","description":"try rotary embeddings"}
+```
 
-The separators above are literal tab characters.
+Track secondary metrics under a `"metrics"` object — `"metrics":{"memory_gb":44.0}`. Adding one
+mid-session is fine and needs no rewrite of earlier lines; just include it from that point on.
 
-Add a column per secondary metric you track, right after the primary metric. Once a column exists,
-fill it on every subsequent row.
+Read the ledger back with `jq`:
+
+```bash
+jq -s 'map(select(.status=="keep")) | min_by(.metric) | {commit,metric}' .autoresearch/results.jsonl
+```
 
 ---
 
@@ -150,7 +156,7 @@ runs until the human interrupts you, period.
 - **Crashes:** fix if trivial, otherwise log and move on. Don't over-invest.
 - **Think longer when stuck.** Re-read the source, study the profiling data, reason about what the
   machine is actually doing. The best ideas come from deep understanding, not random variation.
-- **Resuming:** read `.autoresearch/autoresearch.md` + `.autoresearch/results.tsv` + git log, then
+- **Resuming:** read `.autoresearch/autoresearch.md` + `.autoresearch/results.jsonl` + git log, then
   continue looping.
 
 **NEVER STOP.** The user may be away for hours. Keep going until interrupted.
@@ -172,11 +178,13 @@ done
 ```
 
 **The loop is only useful if each iteration actually loads this skill** — otherwise the agent
-improvises without the keep/discard protocol and the ledger goes unwritten. Two things break it:
-`--bare` skips skill discovery entirely, and a prompt that doesn't name this skill may match a
-different one. So run a single iteration by hand first and confirm it appended a row to
-`.autoresearch/results.tsv` before leaving the loop unattended. If it didn't, name the skill
-explicitly in the prompt or pass `--plugin-dir <path-to-autoresearch-plugin>`.
+improvises without the keep/discard protocol and the ledger goes unwritten. The prompt has to read
+like this skill's trigger ("resume the autoresearch loop", "run the next experiment"); a neutral
+prompt that merely mentions the files may load nothing. `--bare` skips skill discovery outright, so
+don't add it.
+
+Run one iteration by hand before leaving the loop unattended, and check that it appended a line to
+`.autoresearch/results.jsonl` — a silent no-op looks identical to a working loop from the outside.
 
 ## Ideas Backlog
 

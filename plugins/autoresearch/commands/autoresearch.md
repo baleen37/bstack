@@ -33,7 +33,7 @@ This is a resume. Do the following:
 
 1. Delete `.autoresearch/off` if it exists
 2. Read `.autoresearch/autoresearch.md` to understand the objective, constraints, and what's been tried
-3. Read `.autoresearch/results.tsv` to reconstruct state:
+3. Read `.autoresearch/results.jsonl` to reconstruct state:
    - Count total runs, kept, discarded, crashed
    - Find the baseline metric (first data row)
    - Find the best metric and which commit achieved it
