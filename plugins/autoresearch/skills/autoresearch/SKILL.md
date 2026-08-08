@@ -112,11 +112,15 @@ Run the benchmark command, capturing timing and output:
 ```bash
 START_TIME=$(date +%s%N)
 bash -c "./.autoresearch/run.sh" 2>&1 | tee /tmp/autoresearch-output.txt
-EXIT_CODE=$?
+EXIT_CODE=${PIPESTATUS[0]}
 END_TIME=$(date +%s%N)
 DURATION=$(echo "scale=3; ($END_TIME - $START_TIME) / 1000000000" | bc)
 echo "Duration: ${DURATION}s, Exit code: ${EXIT_CODE}"
 ```
+
+`EXIT_CODE` must come from `${PIPESTATUS[0]}`, not `$?`. After a pipeline, `$?` holds
+`tee`'s status — which is 0 even when the benchmark crashed — so every crash would be
+logged as a valid result. Run this under `bash`; in zsh the equivalent is `${pipestatus[1]}`.
 
 After running:
 - Parse `METRIC name=number` lines from the output to extract metric values
@@ -138,6 +142,11 @@ After each experiment run, follow this exact protocol:
 **Noisy metrics:** If the metric is stochastic (LLM-judge scores, sampling-based benchmarks), a single run cannot distinguish signal from noise. Establish the metric's run-to-run variance early, then average N≥3 runs per experiment and only `keep` when the improvement clearly exceeds that noise band. A change within the noise band is a `discard`, not a `keep`.
 
 Secondary metrics are for monitoring only — they almost never affect keep/discard decisions. Only discard a primary improvement if a secondary metric degraded catastrophically, and explain why in the description.
+
+**Before any `keep`, confirm the metric improved because the work got faster/better — not because the
+work stopped happening.** A large unexplained win usually means the benchmark got weakened: cached
+results, skipped iterations, shrunk input, or a loosened check. If you can't explain *why* the number
+moved, `discard` it and investigate instead.
 
 ### 2. Git operations
 
@@ -235,11 +244,14 @@ Include delta percentages vs baseline for each metric value. Show ALL runs in th
 
 ## Ideas Backlog
 
-When you discover complex but promising optimizations that you decide not to pursue right now, **append them as bullet points to `.autoresearch/ideas.md`**. Don't let good ideas get lost.
+When you discover complex but promising optimizations that you decide not to pursue right now,
+**append them as checkbox bullets to `.autoresearch/ideas.md`**: `- [ ]` untried, `- [x]` tried.
+Mark an idea `- [x]` as soon as you try it, keep/discard either way. Don't let good ideas get lost,
+and don't retry one you already spent a run on.
 
 If the loop stops (context limit, crash, etc.) and `.autoresearch/ideas.md` exists, you'll be asked to:
-1. Read the ideas file and use it as inspiration for new experiment paths
-2. Prune ideas that are duplicated, already tried, or clearly bad
+1. Read the ideas file and use the unchecked (`- [ ]`) entries as inspiration for new experiment paths
+2. Prune ideas that are duplicated or clearly bad
 3. Create experiments based on the remaining ideas
 4. If nothing is left, try to come up with your own new ideas
 5. If all paths are exhausted, delete `.autoresearch/ideas.md` and write a final summary report
