@@ -13,6 +13,7 @@ Personal Claude Code workflow toolkit for git safety, session continuity, verifi
 - `writing-prds` — Write product requirements documents for feature planning.
 - `writing-rfcs` — Write technical RFCs for engineering decisions.
 - `competitive-agents` — Compare parallel approaches for architecture, API, or system decisions.
+- `codebase-design` — Design deep modules with small interfaces, clean seams, and testable adapters.
 - `to-tickets` — Break a plan, spec, or conversation into tracer-bullet tickets with blocking edges.
 
 ### Verify
