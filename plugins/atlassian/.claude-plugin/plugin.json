@@ -1,6 +1,6 @@
 {
   "name": "atlassian",
-  "version": "17.42.3",
+  "version": "17.43.0",
   "description": "Jira work guidance via the official Atlassian twg CLI",
   "author": {
     "name": "baleen37",
