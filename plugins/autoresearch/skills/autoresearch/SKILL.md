@@ -13,10 +13,10 @@ Modeled on [karpathy/autoresearch](https://github.com/karpathy/autoresearch), ge
 ## Setup
 
 1. Ask (or infer): **Goal**, **Command**, **Metric** (+ direction), **Files in scope**, **Constraints**.
-2. `git checkout -b autoresearch/<goal>-<date>`
+2. Check `git status` and the current branch. Preserve unrelated user changes, then create a fresh, unique branch such as `autoresearch/<goal>-<date>`; do not reuse an existing branch.
 3. Read the source files. Understand the workload deeply before writing anything.
-4. `mkdir -p .autoresearch`, then write `.autoresearch/autoresearch.md` and `.autoresearch/run.sh`. Commit both.
-5. Run the baseline → log it as the first `results.jsonl` line → start looping immediately.
+4. `mkdir -p .autoresearch`, then write `.autoresearch/autoresearch.md` and `.autoresearch/run.sh`. Commit only those setup files.
+5. Run the unchanged baseline first, record it as the first `results.jsonl` line, and only then start experimenting.
 
 ### `autoresearch.md`
 
@@ -58,6 +58,10 @@ Bash script (`set -euo pipefail`) that: pre-checks fast (syntax errors in <1s), 
 outputs `METRIC name=number` lines. Keep it fast — every second is multiplied by hundreds of runs.
 Update it during the loop as needed.
 
+The benchmark must have a bounded runtime. Prefer enforcing the limit in `run.sh` or the benchmark
+itself; if a run exceeds the agreed limit (upstream's reference uses 10 minutes), terminate it and
+record `crash`.
+
 ---
 
 ## The Loop
@@ -98,20 +102,32 @@ degraded catastrophically, and say why in the description.
 
 ### 3. Keep or revert
 
-**If keep** — advance the branch:
+**If keep** — advance the branch. Add only the files in scope and explicitly named session files.
+Never use `git add -A`: it can commit the ledger, logs, caches, or unrelated user work.
 
 ```bash
-git add -A && git commit -m "<description>"
+git add <files-in-scope>
+git diff --cached --name-only
+git commit -m "<description>"
 git rev-parse --short=7 HEAD    # hash for the log line
 ```
 
-**If discard or crash** — reset back to where you started:
+**If discard or crash** — preserve the ledger and any unrelated user changes, then revert only the
+experiment changes. Keep `.autoresearch/results.jsonl` untracked and never stage it. If the
+experiment was committed, use the pre-experiment commit as the target; if it was uncommitted,
+restore only the files in scope. Do not run a broad `git clean -fd`.
 
 ```bash
-git reset --hard HEAD && git clean -fd
+git reset --hard <pre-experiment-commit>  # only if the experiment was committed
+# or, for an uncommitted experiment:
+git restore --source=HEAD -- <files-in-scope>
 ```
 
-Use the current HEAD hash for the log line.
+Before a committed reset, confirm the ledger is untracked with `git ls-files --error-unmatch
+.autoresearch/results.jsonl` (it must fail). If it is tracked, preserve it separately and restore it
+after the reset. The ledger append is mandatory even for crashes.
+
+Use the experiment commit hash for a discarded or crashed run, recorded before reversion.
 
 ### 4. Log one line to `results.jsonl`
 
@@ -123,9 +139,18 @@ when you're about to try the next idea immediately. An experiment that ran witho
 work: the next agent re-tries it.
 
 ```bash
-echo '{"commit":"'"$COMMIT"'","metric":'"$METRIC"',"status":"'"$STATUS"'","description":"'"$DESCRIPTION"'"}' \
+jq -nc \
+  --arg commit "$COMMIT" \
+  --arg status "$STATUS" \
+  --arg description "$DESCRIPTION" \
+  --argjson metric "$METRIC" \
+  '{commit:$commit,metric:$metric,status:$status,description:$description}' \
   >> .autoresearch/results.jsonl
 ```
+
+Keep `.autoresearch/results.jsonl` and benchmark logs out of experiment commits unless the user
+explicitly puts them in scope. Append the ledger after keep/revert handling, then verify the new
+line with `jq -e . .autoresearch/results.jsonl` before starting the next experiment.
 
 ```json
 {"commit":"a1b2c3d","metric":0.997900,"status":"keep","description":"baseline"}
