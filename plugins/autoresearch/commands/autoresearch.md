@@ -1,6 +1,6 @@
 ---
-description: Start or resume autonomous experiment loop
-argument-hint: [off | goal description]
+description: Start or resume an autonomous experiment iteration
+argument-hint: [off | loop | goal description]
 allowed-tools:
   - Read
   - Write
@@ -13,7 +13,8 @@ allowed-tools:
 
 # Autoresearch Command
 
-You are starting or resuming an autonomous experiment loop.
+You are starting or resuming an autonomous experiment. The default is one iteration and then stop.
+Use `loop` only when the user explicitly requests repeated unattended iterations.
 
 ## Handle arguments
 
@@ -40,7 +41,8 @@ This is a resume. Do the following:
    - Note which secondary metric columns are being tracked
 4. Read recent git log: `git log --oneline -20`
 5. If `.autoresearch/ideas.md` exists, read it for experiment inspiration
-6. Continue the loop from where it left off — pick up the next experiment
+6. Perform exactly one next experiment, then stop. If the arguments explicitly include `loop`, use
+   `.autoresearch/loop.sh` with the requested runtime and iteration limit.
 
 ### If `.autoresearch/autoresearch.md` does NOT exist (fresh start)
 
