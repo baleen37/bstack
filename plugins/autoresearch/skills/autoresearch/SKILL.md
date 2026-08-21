@@ -5,7 +5,7 @@ description: Set up and run an autonomous experiment loop for any optimization t
 
 # Autoresearch
 
-Autonomous experiment loop: try ideas, keep what works, revert what doesn't, never stop.
+Autonomous experiment loop: try ideas, keep what works, revert what doesn't, and record every run.
 
 Modeled on [karpathy/autoresearch](https://github.com/karpathy/autoresearch), generalized from
 "optimize `val_bpb` in `train.py`" to any metric in any repo.
@@ -15,8 +15,10 @@ Modeled on [karpathy/autoresearch](https://github.com/karpathy/autoresearch), ge
 1. Ask (or infer): **Goal**, **Command**, **Metric** (+ direction), **Files in scope**, **Constraints**.
 2. Check `git status` and the current branch. Preserve unrelated user changes, then create a fresh, unique branch such as `autoresearch/<goal>-<date>`; do not reuse an existing branch.
 3. Read the source files. Understand the workload deeply before writing anything.
-4. `mkdir -p .autoresearch`, then write `.autoresearch/autoresearch.md` and `.autoresearch/run.sh`. Commit only those setup files.
-5. Run the unchanged baseline first, record it as the first `results.jsonl` line, and only then start experimenting.
+4. `mkdir -p .autoresearch`, then write `.autoresearch/autoresearch.md` and `.autoresearch/run.sh`. If looping was explicitly requested, copy the bundled `scripts/loop.sh` resource to `.autoresearch/loop.sh` and make it executable. Commit only those setup files. Keep `.autoresearch/results.jsonl` untracked.
+5. Run the unchanged baseline first. Append it as the first `results.jsonl` line, validate the JSONL, and only then start experimenting.
+
+The default operation is exactly one iteration: setup or resume, run one benchmark, keep or revert one change, append one ledger row, then stop. Repeat only when the user explicitly asks for a loop or starts `.autoresearch/loop.sh`.
 
 ### `autoresearch.md`
 
@@ -79,7 +81,7 @@ EXIT_CODE=${PIPESTATUS[0]}
 — which is 0 even when the benchmark crashed — so every crash would be logged as a valid result.
 Run this under `bash`; in zsh the equivalent is `${pipestatus[1]}`.
 
-Then parse the `METRIC name=number` lines from the output, and read the output to understand what happened.
+Then parse exactly one primary `METRIC name=number` line from the output, and read the output to understand what happened. A missing or non-numeric primary metric is a `crash`, even when the command exits zero.
 
 ### 2. Decide status
 
@@ -171,8 +173,9 @@ jq -s 'map(select(.status=="keep")) | min_by(.metric) | {commit,metric}' .autore
 
 ## Loop Rules
 
-**LOOP FOREVER.** Never ask "should I keep going?" or "is this a good stopping point?" — the loop
-runs until the human interrupts you, period.
+The default is one iteration and then stop. An explicit loop runs until its configured iteration
+limit, a benchmark failure, or human interruption. Never silently turn a one-shot request into an
+unbounded loop.
 
 - **Primary metric is king.** Improved → `keep`. Worse/equal → `discard`.
 - **Simpler is better.** A modest win from deleting code beats an equal win from adding complexity.
@@ -182,31 +185,20 @@ runs until the human interrupts you, period.
 - **Think longer when stuck.** Re-read the source, study the profiling data, reason about what the
   machine is actually doing. The best ideas come from deep understanding, not random variation.
 - **Resuming:** read `.autoresearch/autoresearch.md` + `.autoresearch/results.jsonl` + git log, then
-  continue looping.
-
-**NEVER STOP.** The user may be away for hours. Keep going until interrupted.
+  perform the next single iteration unless looping was explicitly requested.
 
 ### Who drives the loop
 
-By default *you* drive it: keep experimenting in this session until interrupted. The loop then ends
-when the context window fills up.
-
-For unattended runs longer than one context window, let the **shell** drive it instead — each
-iteration gets a fresh context, and the resume path above rebuilds state from `.autoresearch/` plus
-git log:
+For unattended runs, use the bundled controller so every iteration starts a fresh Codex or Claude
+context and reconstructs state from `.autoresearch/` and Git:
 
 ```bash
-while :; do
-  claude -p "Resume the autoresearch loop in .autoresearch/ and run the next experiment." \
-    --permission-mode acceptEdits
-done
+AR_RUNTIME=codex AR_MAX_ITERATIONS=10 ./.autoresearch/loop.sh
+AR_RUNTIME=claude AR_MAX_ITERATIONS=10 ./.autoresearch/loop.sh
 ```
 
-**The loop is only useful if each iteration actually loads this skill** — otherwise the agent
-improvises without the keep/discard protocol and the ledger goes unwritten. The prompt has to read
-like this skill's trigger ("resume the autoresearch loop", "run the next experiment"); a neutral
-prompt that merely mentions the files may load nothing. `--bare` skips skill discovery outright, so
-don't add it.
+The controller defaults to one iteration. Set `AR_MAX_ITERATIONS=0` only for an intentionally
+unbounded run. Set `AR_TIMEOUT` in seconds to bound each agent invocation.
 
 Run one iteration by hand before leaving the loop unattended, and check that it appended a line to
 `.autoresearch/results.jsonl` — a silent no-op looks identical to a working loop from the outside.
