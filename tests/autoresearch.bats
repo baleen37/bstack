@@ -8,11 +8,11 @@ load helpers/bats_helper
 }
 
 @test "autoresearch skill defaults to one iteration" {
-  run rg -q "one iteration" "$PROJECT_ROOT/plugins/autoresearch/skills/autoresearch/SKILL.md"
+  run grep -Eq "one iteration" "$PROJECT_ROOT/plugins/autoresearch/skills/autoresearch/SKILL.md"
   [ "$status" -eq 0 ]
-  run rg -q "explicit.*loop|loop.*explicit" "$PROJECT_ROOT/plugins/autoresearch/skills/autoresearch/SKILL.md" -i
+  run grep -Eiq "explicit.*loop|loop.*explicit" "$PROJECT_ROOT/plugins/autoresearch/skills/autoresearch/SKILL.md"
   [ "$status" -eq 0 ]
-  run rg -q "NEVER STOP|LOOP FOREVER" "$PROJECT_ROOT/plugins/autoresearch/skills/autoresearch/SKILL.md"
+  run grep -Eq "NEVER STOP|LOOP FOREVER" "$PROJECT_ROOT/plugins/autoresearch/skills/autoresearch/SKILL.md"
   [ "$status" -ne 0 ]
 }
 
@@ -47,8 +47,8 @@ load helpers/bats_helper
 }
 
 @test "autoresearch command distinguishes one run from explicit looping" {
-  run rg -q "one iteration" "$PROJECT_ROOT/plugins/autoresearch/commands/autoresearch.md"
+  run grep -Eq "one iteration" "$PROJECT_ROOT/plugins/autoresearch/commands/autoresearch.md"
   [ "$status" -eq 0 ]
-  run rg -q "loop" "$PROJECT_ROOT/plugins/autoresearch/commands/autoresearch.md" -i
+  run grep -Eiq "loop" "$PROJECT_ROOT/plugins/autoresearch/commands/autoresearch.md"
   [ "$status" -eq 0 ]
 }
