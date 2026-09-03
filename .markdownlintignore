@@ -7,3 +7,6 @@ docs/plans/
 # Mirrored upstream skill bodies — kept verbatim from DataDog/pup
 # (see plugins/datadog/SYNC.md for provenance and rationale)
 plugins/datadog/skills/
+
+# Mirrored upstream skill bodies — kept verbatim from mattpocock/skills
+plugins/me/skills/

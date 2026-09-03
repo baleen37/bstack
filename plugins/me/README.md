@@ -10,11 +10,16 @@ Personal Claude Code workflow toolkit for git safety, session continuity, verifi
 - `domain-modeling` — Build and sharpen the project's domain model.
 - `grilling` — Relentlessly stress-test a plan, decision, or idea.
 - `research` — Investigate questions against primary sources and save cited findings.
+- `prototype` — Build throwaway prototypes to answer UI or state-model questions.
+- `wayfinder` — Map huge, multi-session efforts as decision tickets.
 - `writing-prds` — Write product requirements documents for feature planning.
 - `writing-rfcs` — Write technical RFCs for engineering decisions.
 - `competitive-agents` — Compare parallel approaches for architecture, API, or system decisions.
 - `codebase-design` — Design deep modules with small interfaces, clean seams, and testable adapters.
+- `to-spec` — Turn the current conversation into a spec and publish it to the project tracker.
 - `to-tickets` — Break a plan, spec, or conversation into tracer-bullet tickets with blocking edges.
+- `implement` — Implement work described by a spec or set of tickets.
+- `tdd` — Build features or fixes with a red-green-refactor loop.
 
 ### Verify
 
