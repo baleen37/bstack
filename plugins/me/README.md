@@ -21,6 +21,17 @@ Personal Claude Code workflow toolkit for git safety, session continuity, verifi
 - `implement` — Implement work described by a spec or set of tickets.
 - `tdd` — Build features or fixes with a red-green-refactor loop.
 
+### Maintain
+
+- `diagnosing-bugs` — Diagnose hard bugs and performance regressions with a tight feedback loop.
+- `improve-codebase-architecture` — Find codebase deepening opportunities and present them as an HTML report.
+- `resolving-merge-conflicts` — Resolve merge or rebase conflicts by tracing each side's intent.
+
+### Intake and Operations
+
+- `triage` — Move incoming issues through a triage state machine.
+- `wizard` — Guide human-only infrastructure, credential, and one-off migration steps.
+
 ### Verify
 
 - `verify` — Verify implementation scope and report `PASS`, `PARTIAL`, or `FAIL` with evidence.
@@ -37,6 +48,7 @@ Personal Claude Code workflow toolkit for git safety, session continuity, verifi
 
 - `handoff` — Compact the current conversation into a handoff document for another agent.
 - `write-skill` — Write or fix a `SKILL.md`, prove it against a no-skill baseline, and tune it with SkillOpt.
+- `writing-for-agents` — Write skills, agent instructions, and other documents agents consume.
 
 ## Agents
 
