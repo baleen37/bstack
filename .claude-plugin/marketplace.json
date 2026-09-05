@@ -9,16 +9,16 @@
   "plugins": [
     {
       "name": "me",
-      "description": "AI coding assistant toolkit - git workflow protection, session handoff, context management, and development automation",
+      "description": "AI coding assistant toolkit - git workflow protection, verification, shipping, research, and development automation",
       "source": "./plugins/me",
       "category": "development",
       "tags": [
         "git",
         "workflow",
         "automation",
-        "tdd",
-        "debugging",
-        "handoff",
+        "verification",
+        "shipping",
+        "research",
         "memory",
         "context"
       ],

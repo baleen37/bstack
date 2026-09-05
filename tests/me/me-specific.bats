@@ -7,8 +7,8 @@ bats_require_minimum_version 1.5.0
 load ../helpers/bats_helper
 
 
-@test "me: code-reviewer agent exists with proper model" {
-    local agent_file="${PROJECT_ROOT}/plugins/me/agents/code-reviewer.md"
+@test "me: researcher agent exists with proper model" {
+    local agent_file="${PROJECT_ROOT}/plugins/me/agents/researcher.md"
     [ -f "$agent_file" ]
     has_frontmatter_field "$agent_file" "model"
 }
