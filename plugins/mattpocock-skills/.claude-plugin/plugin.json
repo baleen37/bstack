@@ -1,0 +1,47 @@
+{
+  "name": "mattpocock-skills",
+  "version": "1.2.3",
+  "description": "Matt Pocock's agent skills for real engineering: grilling, spec/ticket flows, TDD, code review, domain modelling and more. Plug-and-play, not vibe coding.",
+  "author": {
+    "name": "Matt Pocock"
+  },
+  "homepage": "https://www.aihero.dev/s/skills-newsletter",
+  "repository": "https://github.com/mattpocock/skills",
+  "license": "MIT",
+  "keywords": [
+    "engineering",
+    "skills",
+    "tdd",
+    "code-review",
+    "grilling",
+    "domain-modeling",
+    "productivity"
+  ],
+  "skills": [
+    "./skills/ask-matt",
+    "./skills/diagnosing-bugs",
+    "./skills/grill-with-docs",
+    "./skills/triage",
+    "./skills/improve-codebase-architecture",
+    "./skills/setup-matt-pocock-skills",
+    "./skills/tdd",
+    "./skills/to-spec",
+    "./skills/to-tickets",
+    "./skills/wayfinder",
+    "./skills/implement",
+    "./skills/prototype",
+    "./skills/research",
+    "./skills/domain-modeling",
+    "./skills/codebase-design",
+    "./skills/code-review",
+    "./skills/resolving-merge-conflicts",
+    "./skills/wizard",
+    "./skills/grill-me",
+    "./skills/grilling",
+    "./skills/handoff",
+    "./skills/teach",
+    "./skills/to-questionnaire",
+    "./skills/wait-what",
+    "./skills/writing-for-agents"
+  ]
+}
