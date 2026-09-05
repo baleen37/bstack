@@ -10,3 +10,4 @@ plugins/datadog/skills/
 
 # Mirrored upstream skill bodies — kept verbatim from mattpocock/skills
 plugins/me/skills/
+plugins/mattpocock-skills/skills/
