@@ -27,8 +27,8 @@ commands, data migrations.
 
 Fan-out is a tool, not a requirement.
 
-- **Delegate** when 2+ independent analyses can run in parallel, a specialist fits
-  (`me:security-auditor`, `me:test-engineer`, `Explore`), or output would pollute main context.
+- **Delegate** when 2+ independent analyses can run in parallel, a specialist fits, or output would
+  pollute main context.
 - **Run directly** when a single command answers it, the result must be reasoned about immediately,
   or blast radius is small.
 
@@ -143,8 +143,8 @@ output that failed. Do not claim success without evidence.
 
 For the heavy categories, delegate rather than re-implement:
 
-- **Code quality** — tests pass, lint/type/build clean, code reviewed (use `me:code-reviewer`, `me:test-engineer`)
-- **Security** — no secrets, audit clean, auth/CORS/rate limits in place (use `me:security-auditor`)
+- **Code quality** — tests pass, lint/type/build clean, code reviewed
+- **Security** — no secrets, audit clean, auth/CORS/rate limits in place
 - **Performance / a11y** — budgets met, no regressions, keyboard/screen-reader paths work
 - **Infra / docs** — env vars set, migrations ready, health endpoint exists, docs/changelog updated
 

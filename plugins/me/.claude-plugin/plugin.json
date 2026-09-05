@@ -1,7 +1,7 @@
 {
   "name": "me",
   "version": "17.48.0",
-  "description": "AI coding assistant toolkit - git workflow protection, session handoff, context management, and development automation",
+  "description": "AI coding assistant toolkit - git workflow protection, verification, shipping, research, and development automation",
   "author": {
     "name": "baleen37",
     "email": "git@baleen.me"
@@ -11,9 +11,9 @@
     "git",
     "workflow",
     "automation",
-    "tdd",
-    "debugging",
-    "handoff",
+    "verification",
+    "shipping",
+    "research",
     "memory",
     "context",
     "compacting"
