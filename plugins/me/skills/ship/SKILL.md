@@ -8,11 +8,6 @@ description: >-
 
 # Ship
 
-## Overview
-
-Deploy safely, observably, reversibly. Every launch goes through three phases: **pre-deploy → deploy →
-post-deploy**. Don't skip phases.
-
 ## Automation Policy
 
 Run safe read-only checks and local reversible work automatically (git/CI status, tests, lint, audits,
@@ -22,17 +17,6 @@ or `READY_FOR_SHIP_REVIEW`.
 Ask for approval before anything that changes shared or external state: pushes, PR creation/merge,
 releases, deploys, infra/flag/config/secret/DB changes, external notifications, rollbacks, destructive
 commands, data migrations.
-
-### When to Delegate to Subagents
-
-Fan-out is a tool, not a requirement.
-
-- **Delegate** when 2+ independent analyses can run in parallel, a specialist fits, or output would
-  pollute main context.
-- **Run directly** when a single command answers it, the result must be reasoned about immediately,
-  or blast radius is small.
-
-When delegating, batch independent calls in one message so they run in parallel.
 
 ## Execution Workflow
 
@@ -53,7 +37,7 @@ If unsure, ask the user once. Don't invent a deploy step for a doc change.
 2. **Read the deploy convention** — see "Reading Deploy Convention" below. If the project has none,
    ask once and offer to record the answer.
 3. **Run checks** — local verification (tests, lint, type, build), CI/PR status, dependency/security
-   audits, docs. For non-trivial changes consider fanning out per "When to Delegate".
+   audits, docs.
 4. **Draft artifacts** — rollout stages, rollback triggers/procedure, monitoring targets, owners,
    post-deploy checks.
 5. **Classify and decide** — mark each item `AUTO-COMPLETED`, `NEEDS_APPROVAL`, `BLOCKED`, or
@@ -67,8 +51,7 @@ If unsure, ask the user once. Don't invent a deploy step for a doc change.
 
 ### Phase 3 — Post-deploy (배포 후 점검)
 
-1. **Verify** — run the checks from "Post-Deploy Verification" below. Delegate to subagents only when
-   criteria in "When to Delegate" are met.
+1. **Verify** — run the checks from "Post-Deploy Verification" below.
 2. **On failure** — collect evidence, draft the rollback command from the deploy convention, present
    as `NEEDS_APPROVAL`. Do not auto-rollback.
 3. **Report** — what shipped, what was verified, what to watch.
@@ -131,17 +114,7 @@ Run these checks immediately after deploy. Each is `AUTO-COMPLETED` on success; 
 Report each as `OK` with evidence (status code, log excerpt, screenshot path) or `FAIL` with the exact
 output that failed. Do not claim success without evidence.
 
-## When to Use
-
-- Deploying a feature to production for the first time
-- Releasing a significant change to users
-- Migrating data or infrastructure
-- Opening a beta or early access program
-- Any deployment that carries risk (all of them)
-
 ## Pre-Launch Checklist
-
-For the heavy categories, delegate rather than re-implement:
 
 - **Code quality** — tests pass, lint/type/build clean, code reviewed
 - **Security** — no secrets, audit clean, auth/CORS/rate limits in place
@@ -171,26 +144,6 @@ Never auto-rollback. On verification failure: **collect evidence → draft rollb
 deploy convention → present as `NEEDS_APPROVAL`**. Rollback changes production state and warrants the
 same approval gate as the deploy itself. Database migrations may need their own rollback path —
 check before deploying, not after.
-
-## Common Rationalizations
-
-| Rationalization | Reality |
-|---|---|
-| "It works in staging, it'll work in production" | Production has different data, traffic patterns, and edge cases. Monitor after deploy. |
-| "We don't need feature flags for this" | Every feature benefits from a kill switch. Even "simple" changes can break things. |
-| "Monitoring is overhead" | Not having monitoring means you discover problems from user complaints instead of dashboards. |
-| "We'll add monitoring later" | Add it before launch. You can't debug what you can't see. |
-| "Rolling back is admitting failure" | Rolling back is responsible engineering. Shipping a broken feature is the failure. |
-
-## Red Flags
-
-- Deploying without a rollback plan
-- No monitoring or error reporting in production
-- Big-bang releases (everything at once, no staging)
-- Feature flags with no expiration or owner
-- No one monitoring the deploy for the first hour
-- Production environment configuration done by memory, not code
-- "It's Friday afternoon, let's ship it"
 
 ## Verification
 

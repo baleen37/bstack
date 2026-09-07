@@ -5,7 +5,6 @@ description: |
   documentation, APIs, registries, standards, papers, releases, GitHub sources,
   and reputable web sources. Do not use for codebase exploration or local bug
   investigation.
-model: inherit
 ---
 
 # External Researcher
