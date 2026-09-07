@@ -20,7 +20,6 @@ in context. It does not act as a release-readiness gate and it does not fix code
 
 - `/verify` — does one change behave as intended (default path)
 - `/e2e-scenario-testing` — drive a running app through its real interface, one scenario
-- `/story-loop` — catalog the whole repository as scenarios, then loop to green
 
 ## What `/verify` checks
 
@@ -151,11 +150,8 @@ but never present "수정 후 재검증" options.
 
 ### PARTIAL / FAIL
 
-Ask how to proceed:
+Ask whether to fix and re-verify, or stop with the report only:
 
-> "검증 결과는 PARTIAL/FAIL입니다. 수정 후 다시 검증하시겠습니까?"
-> A) Subagent-driven — 수정 후 재검증 (`superpowers:subagent-driven-development`)
-> B) Inline — 순차 수정 후 재검증 (`superpowers:executing-plans`)
-> C) 아니오 — 리포트만 남기고 종료
+> "검증 결과는 PARTIAL/FAIL입니다. 수정 후 다시 검증할까요, 아니면 리포트만 남기고 끝낼까요?"
 
-If C: end.
+If the user declines, end.

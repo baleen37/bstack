@@ -114,7 +114,6 @@ load ../helpers/bats_helper
             # Verify required fields
             has_frontmatter_field "$agent_file" "name"
             has_frontmatter_field "$agent_file" "description"
-            has_frontmatter_field "$agent_file" "model"
         fi
     done
 

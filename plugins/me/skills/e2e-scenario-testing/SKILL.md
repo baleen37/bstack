@@ -20,7 +20,6 @@ when the unit tests pass.
 
 - `/verify` — does one change behave as intended (default path)
 - `/e2e-scenario-testing` — drive a running app through its real interface, one scenario
-- `/story-loop` — catalog the whole repository as scenarios, then loop to green
 
 ## When to use this
 

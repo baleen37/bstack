@@ -18,7 +18,7 @@ description: Use when ... # third person, names the trigger, <=1024 chars
 The description is the whole trigger mechanism — it is all the model sees
 before deciding to load the skill. Say when to use it, using the words someone
 would actually type, and cover both failure directions ("triggers too rarely or
-too often", not just one). Never write "I help you..." .
+too often", not just one).
 
 For the body: include only what the model gets wrong without you. It knows the
 domain; it does not know your conventions or the traps. Cut anything else — a
@@ -65,7 +65,7 @@ empty metadata, so `/skill-name` works while auto-triggering never does.
 If the description looks truncated, the skill listing budget is full. It is 1%
 of the context window and drops least-used skills first; raise
 `skillListingBudgetFraction` or set noisy skills to `"name-only"` in
-`skillOverrides`. `/doctor` shows the worst offenders.
+`skillOverrides`. `/skill-doctor` shows the worst offenders.
 
 If it fires when it should not, narrow the description or set
 `disable-model-invocation: true`.

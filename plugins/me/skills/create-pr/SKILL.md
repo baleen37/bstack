@@ -3,7 +3,7 @@ name: create-pr
 description: Create PR — commit, push, PR, wait for merge.
 ---
 
-Execute each line literally (scripts MUST be run, not reimplemented):
+Run these lines as written. The scripts carry the tested sync and merge-wait logic; do not reimplement them:
 
 ```bash
 S="${CLAUDE_PLUGIN_ROOT}/skills/create-pr/scripts"
@@ -14,7 +14,7 @@ git push -u origin HEAD
 gh pr create --title "$(git log -1 --pretty=%s)" --body "<body>"
 # Auto merge: only if user explicitly requests it
 # gh pr merge --auto --squash
-# REQUIRED: invoke via Monitor tool — streams per-check events + terminal event.
+# Invoke via the Monitor tool so per-check events and the terminal event stream as notifications.
 # Monitor({command: "\"$S/wait-for-merge.sh\"", description: "PR checks", timeout_ms: 1800000, persistent: false})
 ```
 

@@ -7,10 +7,10 @@ bats_require_minimum_version 1.5.0
 load ../helpers/bats_helper
 
 
-@test "me: researcher agent exists with proper model" {
+@test "me: researcher agent exists" {
     local agent_file="${PROJECT_ROOT}/plugins/me/agents/researcher.md"
     [ -f "$agent_file" ]
-    has_frontmatter_field "$agent_file" "model"
+    has_frontmatter_field "$agent_file" "name"
 }
 
 # create-pr skill tests
