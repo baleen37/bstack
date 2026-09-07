@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# create-pr e2e test - intentionally failing to test CI recovery flow
+# create-pr e2e test - wait-for-merge.sh contract against stubbed git/gh
 
 bats_require_minimum_version 1.5.0
 
@@ -94,6 +94,7 @@ case "$*" in
     fi
     ;;
   "pr view --json headRefOid --jq .headRefOid") echo "${GH_MERGED_HEAD_OID:-headoid000}" ;;
+  "pr view --json autoMergeRequest --jq .autoMergeRequest != null") echo "${GH_AUTO_MERGE:-false}" ;;
   "pr view --json url") pr_visible || exit 1 ;;
   "pr checks --json name,bucket,link")
     if [[ "${GH_CHECKS:-pass}" == "fail" ]]; then
@@ -158,14 +159,26 @@ assert_log_excludes() {
   assert_log_excludes "gh pr merge --squash"
 }
 
-@test "create-pr: wait-for-merge reports awaiting review when squash merge is blocked" {
+@test "create-pr: wait-for-merge reports awaiting review after checks pass and never merges" {
   local script="${BATS_TEST_DIRNAME}/../../plugins/me/skills/create-pr/scripts/wait-for-merge.sh"
 
-  run env GH_EXISTING_PR=open GH_SQUASH_FAIL=1 "$script"
+  run env GH_EXISTING_PR=open "$script"
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"check: CI: pass"* ]]
   [[ "$output" == *"AWAITING_REVIEW: https://example.test/pr/1"* ]]
+  assert_log_excludes "gh pr merge"
+}
+
+@test "create-pr: wait-for-merge reports merged once GitHub auto-merge lands" {
+  local script="${BATS_TEST_DIRNAME}/../../plugins/me/skills/create-pr/scripts/wait-for-merge.sh"
+
+  run env GH_EXISTING_PR=open GH_AUTO_MERGE=true GH_MERGE_AFTER_FIRST_STATE=1 "$script"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"check: CI: pass"* ]]
+  [[ "$output" == *"MERGED: https://example.test/pr/1"* ]]
+  assert_log_excludes "gh pr merge"
 }
 
 @test "create-pr: wait-for-merge stops on closed PR" {

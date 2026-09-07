@@ -8,6 +8,7 @@ set -uo pipefail
 #   CI_FAILED: <url> run-id=<id>
 #   CLOSED: <url>
 # Exit 0 on MERGED/AWAITING_REVIEW, 1 on CI_FAILED/CLOSED/no-PR.
+# Observes only: this script never runs `gh pr merge`.
 
 gh pr view --json url >/dev/null 2>&1 || { echo "ERROR: No PR" >&2; exit 1; }
 URL=$(gh pr view --json url --jq .url)
@@ -36,8 +37,13 @@ while true; do
   sleep 30
 done
 
-state=$(gh pr view --json state --jq .state 2>/dev/null || echo "")
-[[ "$state" == "MERGED" ]] && { echo "MERGED: $URL"; exit 0; }
-gh pr merge --squash >/dev/null 2>&1 && { echo "MERGED: $URL"; exit 0; }
+# Never merge from here. If auto-merge is enabled GitHub merges once checks pass;
+# give it up to a minute to land before reporting.
+auto=$(gh pr view --json autoMergeRequest --jq '.autoMergeRequest != null' 2>/dev/null || echo false)
+for _ in 1 2 3 4 5 6; do
+  [[ $(gh pr view --json state --jq .state 2>/dev/null || echo "") == "MERGED" ]] && { echo "MERGED: $URL"; exit 0; }
+  [[ "$auto" == "true" ]] || break
+  sleep 10
+done
 echo "AWAITING_REVIEW: $URL"
 exit 0

@@ -9,7 +9,9 @@ git fetch origin "$BASE" >/dev/null 2>&1 || { echo "ERROR: fetch failed" >&2; ex
 
 if [[ $(git rev-list HEAD..origin/"$BASE" --count 2>/dev/null || echo 0) -gt 0 ]]; then
   echo "Behind base — syncing..."
-  git merge "origin/$BASE" --no-edit || { git diff --name-only --diff-filter=U >&2; exit 1; }
+  git merge "origin/$BASE" --no-edit || {
+    echo "ERROR: merge with origin/$BASE failed (commit local changes first; conflicted files below, if any)" >&2
+    git diff --name-only --diff-filter=U >&2; exit 1; }
   git push -u origin HEAD || { echo "Push failed" >&2; exit 1; }
 fi
 
