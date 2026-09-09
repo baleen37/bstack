@@ -109,3 +109,23 @@ load ../helpers/bats_helper
     run bash -c "set -o pipefail; echo '$json_input' | ${PROJECT_ROOT}/plugins/me/hooks/commit-guard.sh"
     [ "$status" -eq 2 ]
 }
+
+# Live PreToolUse payload shape: the command is nested under .tool_input.
+# The flat {"command": ...} form above is the legacy/test shape; both must work
+# or the guard is registered but silently inert in a real session.
+@test "git-guard: commit-guard blocks --no-verify in nested tool_input payload" {
+    run bash -c "set -o pipefail; echo '{\"tool_input\":{\"command\":\"git commit --no-verify -m \\\"test\\\"\"}}' | '${PROJECT_ROOT}/plugins/me/hooks/commit-guard.sh'"
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"not allowed"* ]]
+}
+
+@test "git-guard: commit-guard blocks HUSKY=0 in nested tool_input payload" {
+    run bash -c "set -o pipefail; echo '{\"tool_input\":{\"command\":\"HUSKY=0 git commit -m \\\"test\\\"\"}}' | '${PROJECT_ROOT}/plugins/me/hooks/commit-guard.sh'"
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"not allowed"* ]]
+}
+
+@test "git-guard: commit-guard allows normal commit in nested tool_input payload" {
+    run bash -c "set -o pipefail; echo '{\"tool_input\":{\"command\":\"git commit -m \\\"normal commit\\\"\"}}' | '${PROJECT_ROOT}/plugins/me/hooks/commit-guard.sh'"
+    [ "$status" -eq 0 ]
+}
