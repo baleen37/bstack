@@ -184,7 +184,9 @@ validate_git_command() {
 # Extract git command from JSON input
 extract_command_from_json() {
     local json_input="$1"
-    echo "$json_input" | jq -r '.command // empty'
+    # Live PreToolUse payloads nest the command under .tool_input; older flat
+    # payloads (and the BATS suite) put it at the top level.
+    echo "$json_input" | jq -r '.tool_input.command // .command // empty'
 }
 
 # Main execution
