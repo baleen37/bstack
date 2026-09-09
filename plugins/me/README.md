@@ -6,6 +6,8 @@ Personal Claude Code workflow toolkit for git safety, session continuity, verifi
 
 ### Plan
 
+- `ask-matt` — Route a situation to the skill or flow that fits.
+- `setup-matt-pocock-skills` — Configure issue tracking, triage labels, and domain docs for the engineering skills.
 - `grill-with-docs` — Sharpen a plan or design through an interview while creating docs.
 - `domain-modeling` — Build and sharpen the project's domain model.
 - `grilling` — Relentlessly stress-test a plan, decision, or idea.
@@ -47,8 +49,34 @@ Personal Claude Code workflow toolkit for git safety, session continuity, verifi
 ### Session
 
 - `handoff` — Compact the current conversation into a handoff document for another agent.
+- `claude-handoff` — Hand the current conversation to a fresh background agent.
+- `pickup` — Resume work from a handoff document.
 - `write-skill` — Write or fix a `SKILL.md`, prove it against a no-skill baseline, and tune it with SkillOpt.
 - `writing-for-agents` — Write skills, agent instructions, and other documents agents consume.
+
+### In Progress
+
+- `implement-spec` — Implement a specification in code.
+- `loop-me` — Grill through the specifications for workflows to build.
+- `retro` — Conduct a retrospective on a coding session.
+- `setup-ts-deep-modules` — Wire dependency-cruiser into a TypeScript repo's package boundaries.
+- `writing-beats` — Assemble raw material into a journey of beats.
+- `writing-fragments` — Mine raw fragments without imposing structure.
+- `writing-shape` — Shape raw material into an article, paragraph by paragraph.
+
+### Productivity
+
+- `grill-me` — Sharpen a plan or design through a stateless interview.
+- `teach` — Learn a skill or concept across multiple sessions in the workspace.
+- `to-questionnaire` — Turn an unanswered decision into a questionnaire for someone else.
+- `wait-what` — Re-pitch a message that did not land.
+
+### Miscellaneous
+
+- `git-guardrails-claude-code` — Set up Claude Code hooks that block dangerous Git commands.
+- `migrate-to-shoehorn` — Replace test type assertions with `@total-typescript/shoehorn`.
+- `scaffold-exercises` — Create exercise directories with problems, solutions, and explainers.
+- `setup-pre-commit` — Set up Husky, lint-staged, type checking, and tests at commit time.
 
 ## Agents
 
