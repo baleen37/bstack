@@ -76,7 +76,7 @@ console.log(openTabs.map((tab) => ({ targetId: tab.targetId, active: tab.active,
 
 ### Snapshot
 
-ALWAYS use `snapshot()` as the primary way to read a webpage.
+Use `snapshot()` as the primary way to read a webpage.
 
 ```ts
 async function snapshot(
@@ -93,12 +93,12 @@ async function snapshot(
 
 - Snapshot returns a compact accessibility tree with unique ref IDs such as `e12` or `f1e1`.
 - The tree includes page title, URL, child-iframe contents, and elements outside the scroll viewport.
-- Ref IDs are virtual locator IDs, not actual DOM properties. Safe to pass them directly to `page.locator('e31')`. NEVER treat ref IDs as DOM properties or mix them into CSS selectors.
+- Ref IDs are virtual locator IDs, not actual DOM properties. Safe to pass them directly to `page.locator('e31')`. Don't treat ref IDs as DOM properties or mix them into CSS selectors.
 - Each new snapshot invalidates all earlier ref IDs. Take a new snapshot after each action.
 - Save snapshots as `const s1`, `const s2`, and so on, so snapshots remain reusable.
-- Start with printing `tree`. After an action, ALWAYS print `diff` to capture the changes only.
-- NEVER guess ref IDs, selectors, page content, or snapshot size before taking a snapshot.
-- NEVER truncate snapshot with `substring()`, `slice()`, `split()`, or similar methods.
+- Start with printing `tree`. After an action, print `diff` to capture the changes only.
+- Don't guess ref IDs, selectors, page content, or snapshot size before taking a snapshot.
+- Don't truncate snapshot with `substring()`, `slice()`, `split()`, or similar methods.
 
 ### Reading Escalation
 
@@ -114,8 +114,8 @@ Avoid `page.content()` and `page.evaluate()` unless you know the exact selector.
 ### Navigation and Actions
 
 - Use Playwright APIs through the global `page` object in REPL.
-- ALWAYS use `openTab()` and `closeTab()` for tab management. NEVER use `page.context().newPage()` or `page.close()`; they leak memory.
-- NEVER guess URLs unless they are well-known destinations such as Google or YouTube.
+- Use `openTab()` and `closeTab()` for tab management, not `page.context().newPage()` or `page.close()`; those leak memory.
+- Don't guess URLs unless they are well-known destinations such as Google or YouTube.
 - Use locator actions with ref IDs over `page.evaluate()` for UI interaction.
 - Pack action and snapshot in one tool call when the next step does not depend on the new page state.
 - Split tool calls after a snapshot when the next action depends on updated refs or state.
@@ -123,7 +123,7 @@ Avoid `page.content()` and `page.evaluate()` unless you know the exact selector.
 - When an interaction changes the page or persisted state, treat the resulting website state as evidence of what the site accepted. Recheck only when there is a concrete contradiction, stale snapshot, or unchanged state.
 - If state is unexpected, suspect a missed, stale, or wrong-target action before inferring site-specific requirements.
 - `openTab()` and `click()` already wait for interactivity and DOM stability.
-- NEVER add redundant `sleep()` immediately after navigation or action. Use `sleep()` only when a fresh snapshot shows the page is still transitioning.
+- Don't add redundant `sleep()` immediately after navigation or action. Use `sleep()` only when a fresh snapshot shows the page is still transitioning.
 - No scroll needed. Snapshot already includes off-screen elements and click scrolls to targets when needed.
 
 ### Forms, Autofill, and Login
