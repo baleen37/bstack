@@ -15,7 +15,7 @@ thread.
 | --- | --- |
 | **Continue** | Stay in the session. No context switch at all. |
 | **`/clear`** | Empty the context window and start from nothing. |
-| **Handoff** | Write a portable Markdown file and seed a session anywhere with it. |
+| **`me:handoff`** | Write a portable state handover and seed a session anywhere with it. |
 | **Subagent** | Send the task to its own context window and get a report back. |
 | **`/compact`** | Compress this context and seed a fresh session with the summary. |
 

@@ -64,6 +64,7 @@ proceeds without asking.
 
 ### Session
 
+- `handoff` — Hand this session's state to the next one, verifiable and resumable.
 - `write-skill` — Write or fix a `SKILL.md`, prove it against a no-skill baseline, and tune it with SkillOpt.
 
 ## Agents
