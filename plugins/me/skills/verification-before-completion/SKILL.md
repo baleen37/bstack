@@ -7,19 +7,28 @@ description: Use when about to claim work is complete, fixed, or passing, before
 
 ## Overview
 
-**Core principle:** Evidence before claims, always.
+**Core principle:** Evidence before claims.
 
-**Violating the letter of this rule is violating the spirit of this rule.**
+A completion claim is a factual report about the state of the code. Reporting it without having
+looked misstates that state to the person relying on it — which is the cost this skill exists to
+avoid, whatever wording the claim arrives in.
 
-## The Iron Law
+## Which skill to use
 
-```
-NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE
-```
+- `verification-before-completion` — the gate you pass before *claiming* anything is done. Applies
+  to every completion claim, in any wording.
+- `/verify` — the task of checking whether one change behaves as intended, producing a
+  PASS/PARTIAL/FAIL report. That report is itself a claim, so this gate applies to it.
+- `/e2e-scenario-testing` — drive a running app through its real interface, one scenario.
 
-If you haven't run the verification command in this message, you cannot claim it passes.
+## The rule
 
-## The Gate Function
+Do not claim something passes until you have run its verification in this message.
+
+A previous run does not carry over: the code has changed since, which is the reason you are
+claiming anything at all.
+
+## The gate function
 
 ```
 BEFORE claiming any status or expressing satisfaction:
@@ -31,13 +40,11 @@ BEFORE claiming any status or expressing satisfaction:
    - If NO: State actual status with evidence
    - If YES: State claim WITH evidence
 5. ONLY THEN: Make the claim
-
-Skip any step = lying, not verifying
 ```
 
-## Common Failures
+## Common failures
 
-| Claim | Requires | Not Sufficient |
+| Claim | Requires | Not sufficient |
 |-------|----------|----------------|
 | Tests pass | Test command output: 0 failures | Previous run, "should pass" |
 | Linter clean | Linter output: 0 errors | Partial check, extrapolation |
@@ -47,31 +54,28 @@ Skip any step = lying, not verifying
 | Agent completed | VCS diff shows changes | Agent reports "success" |
 | Requirements met | Line-by-line checklist | Tests passing |
 
-## Red Flags - STOP
+## Signals you are about to skip the gate
 
-- Using "should", "probably", "seems to"
-- Expressing satisfaction before verification ("Great!", "Perfect!", "Done!", etc.)
-- About to commit/push/PR without verification
-- Trusting agent success reports
-- Relying on partial verification
-- Thinking "just this once"
-- Tired and wanting work over
-- **ANY wording implying success without having run verification**
+- Reaching for "should", "probably", "seems to"
+- Expressing satisfaction before verification ("Great!", "Perfect!", "Done!")
+- About to commit, push, or open a PR without running anything
+- Taking an agent's success report at face value
+- Leaning on a partial check to cover the whole claim
+- Any wording that implies success when nothing has been run
 
-## Rationalization Prevention
+## Reasons that do not hold
 
-| Excuse | Reality |
-|--------|---------|
-| "Should work now" | RUN the verification |
-| "I'm confident" | Confidence ≠ evidence |
-| "Just this once" | No exceptions |
-| "Linter passed" | Linter ≠ compiler |
+| Reason | Why it doesn't hold |
+|--------|---------------------|
+| "Should work now" | Run the verification |
+| "I'm confident" | Confidence isn't evidence |
+| "Just this once" | The claim is wrong in exactly the same way |
+| "Linter passed" | A linter doesn't check compilation |
 | "Agent said success" | Verify independently |
-| "I'm tired" | Exhaustion ≠ excuse |
-| "Partial check is enough" | Partial proves nothing |
-| "Different words so rule doesn't apply" | Spirit over letter |
+| "Partial check is enough" | A partial check proves only its part |
+| "Different words, so the rule doesn't apply" | The claim is what matters, not its phrasing |
 
-## Key Patterns
+## Key patterns
 
 **Tests:**
 ```
@@ -79,16 +83,16 @@ Skip any step = lying, not verifying
 ❌ "Should pass now" / "Looks correct"
 ```
 
-**Regression tests (TDD Red-Green):**
+**Regression tests (TDD red-green):**
 ```
-✅ Write → Run (pass) → Revert fix → Run (MUST FAIL) → Restore → Run (pass)
+✅ Write → Run (pass) → Revert fix → Run (must fail) → Restore → Run (pass)
 ❌ "I've written a regression test" (without red-green verification)
 ```
 
 **Build:**
 ```
 ✅ [Run build] [See: exit 0] "Build passes"
-❌ "Linter passed" (linter doesn't check compilation)
+❌ "Linter passed" (a linter doesn't check compilation)
 ```
 
 **Requirements:**
@@ -100,21 +104,18 @@ Skip any step = lying, not verifying
 **Agent delegation:**
 ```
 ✅ Agent reports success → Check VCS diff → Verify changes → Report actual state
-❌ Trust agent report
+❌ Trust the agent's report
 ```
 
-## When To Apply
+## When to apply
 
-**ALWAYS before:**
-- ANY variation of success/completion claims
-- ANY expression of satisfaction
-- ANY positive statement about work state
-- Committing, PR creation, task completion
-- Moving to next task
-- Delegating to agents
+Before:
 
-**Rule applies to:**
-- Exact phrases
-- Paraphrases and synonyms
-- Implications of success
-- ANY communication suggesting completion/correctness
+- any claim of success or completion, in any wording
+- any expression of satisfaction about the work's state
+- committing, opening a PR, or calling a task done
+- moving to the next task
+- delegating to agents
+
+The rule tracks what the claim asserts, not the words it uses — a paraphrase or an implication of
+success carries the same weight as the exact phrase.

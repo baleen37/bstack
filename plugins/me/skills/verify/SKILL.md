@@ -20,6 +20,8 @@ in context. It does not act as a release-readiness gate and it does not fix code
 
 - `/verify` — does one change behave as intended (default path)
 - `/e2e-scenario-testing` — drive a running app through its real interface, one scenario
+- `verification-before-completion` — not a task you run, but the gate you pass before *claiming*
+  anything is done. It applies to every completion claim, including the report this skill produces.
 
 ## What `/verify` checks
 
@@ -28,7 +30,7 @@ Focus on the current work context:
 - the intended golden path
 - the most relevant edge cases
 - obvious regressions near the changed behavior
-- all risk surfaces identified in Phase 0 (외부 시스템 접점은 항상 직접 검증)
+- all risk surfaces identified in Phase 0 — always exercise an external touchpoint directly
 
 `/verify` is the default verification path. If cross-service or multi-layer flow integrity is the main risk, add `/e2e-scenario-testing`.
 
@@ -57,19 +59,21 @@ Always report the scope source as one of:
 
 ### Phase 0: Risk surface
 
-변경된 코드가 외부 시스템 접점(OpenSearch, DB, message queue, 외부 API, 파일 시스템 등)과 상호작용하는지 식별한다.
+Identify whether the changed code touches an external system: a search cluster, a database, a
+message queue, a third-party API, the file system.
 
-식별 단서:
+Signals:
 
-- diff에 외부 클라이언트/리포지토리/게이트웨이 호출이 포함됨
-- 계획서나 Rollout 메모에 "배포 전 ~ 확인 권장" 같은 항목이 있음
+- the diff calls an external client, repository, or gateway
+- the plan or a rollout note carries an item like "confirm before deploying"
 
-각 risk surface에 대해 다음을 결정한다:
+For each risk surface, decide:
 
-1. 어떤 호출/조회로 검증할 것인가
-2. 지금 접근 가능한가 (SSO, 권한, 터널 등)
+1. which call or query verifies it
+2. whether you can reach it right now (SSO, permissions, tunnel)
 
-접근 불가능한 risk surface가 있으면 검증을 시작하기 전에 사용자에게 알리고, 접근 방법을 제공받거나 그 항목을 제외해도 되는지 명시적으로 확인받는다. 사용자 확인 없이 건너뛰지 않는다.
+If a risk surface is unreachable, say so before starting verification and ask the user either for a
+way in or for permission to leave it out. Never drop one silently.
 
 ### Phase 1: Scope
 
@@ -119,9 +123,9 @@ Those belong to `/ship`.
 
 Always choose one:
 
-- **PASS** — Phase 0에서 식별된 모든 risk surface와 scenario가 검증되었고, 문제가 없음
-- **PARTIAL** — 검증되지 않은 risk surface가 있거나, 일부 scenario가 실패/불완전/불확실
-- **FAIL** — 핵심 scenario가 실패했거나 의도한 동작과 명백히 다름
+- **PASS** — every risk surface from Phase 0 and every scenario was verified, and nothing is wrong
+- **PARTIAL** — a risk surface went unverified, or some scenario failed, was incomplete, or was inconclusive
+- **FAIL** — a core scenario failed, or behavior clearly departs from what was intended
 
 ## Report structure
 
@@ -146,7 +150,7 @@ Branch on the verdict:
 Report the verdict and end. Do not ask whether to fix anything — there is nothing to fix.
 
 Optionally point to the natural next step (for example `/ship` for release-readiness review),
-but never present "수정 후 재검증" options.
+but never offer to fix and re-verify.
 
 ### PARTIAL / FAIL
 
