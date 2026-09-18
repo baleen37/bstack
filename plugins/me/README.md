@@ -12,7 +12,7 @@ each stage commits an artifact the next stage reads.
 | Plan / Design | `docs/specs/*.md` | `brainstorming` → `writing-spec` |
 | Build | `docs/plans/*.md` + code | `writing-plans` → `subagent-driven-development`, `tdd` |
 | Test | test results | `verify`, `e2e-scenario-testing`, `diagnosing-bugs` |
-| Deploy | PR, release | `requesting-code-review`, `create-pr`, `ship` |
+| Deploy | PR, release | `code-review`, `requesting-code-review`, `create-pr`, `ship` |
 | Maintain | — | not yet implemented |
 
 Each link is a hard gate on its input artifact: `writing-plans` needs a spec,
@@ -53,6 +53,7 @@ proceeds without asking.
 
 ### Review and completion
 
+- `code-review` — Review a range on two axes: Standards and Spec, in parallel subagents.
 - `requesting-code-review` / `receiving-code-review` — Request and rigorously process code review.
 - `finishing-a-development-branch` — Verify tests and choose how to integrate completed work.
 
