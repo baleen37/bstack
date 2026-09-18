@@ -2,6 +2,24 @@
 
 Personal Claude Code workflow toolkit for git safety, verification, shipping, research, and development automation.
 
+## SDLC stages
+
+The chain follows the [AI-native SDLC](https://claude.com/blog/the-ai-native-sdlc-playbook):
+each stage commits an artifact the next stage reads.
+
+| Stage | Artifact | Skills |
+| ----- | -------- | ------ |
+| Plan / Design | `docs/specs/*.md` | `brainstorming` → `writing-spec` |
+| Build | `docs/plans/*.md` + code | `writing-plans` → `subagent-driven-development` |
+| Test | test results | `verify`, `e2e-scenario-testing` |
+| Deploy | PR, release | `requesting-code-review`, `create-pr`, `ship` |
+| Maintain | — | not yet implemented |
+
+Each link is a hard gate on its input artifact: `writing-plans` needs a spec,
+`subagent-driven-development` needs a plan. A spec's `## Open questions`
+section carries what is still undecided; when it is empty, the next stage
+proceeds without asking.
+
 ## Lifecycle
 
 ### Plan
@@ -14,6 +32,7 @@ Personal Claude Code workflow toolkit for git safety, verification, shipping, re
 ### Development workflow
 
 - `brainstorming` — Explore intent and requirements before implementation.
+- `writing-spec` — Write the approved design as a spec document.
 - `writing-plans` — Create detailed, executable implementation plans.
 - `using-git-worktrees` — Create or verify isolated workspaces.
 - `dispatching-parallel-agents` — Run independent tasks in parallel.
