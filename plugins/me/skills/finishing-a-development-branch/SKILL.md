@@ -166,7 +166,7 @@ Step 2, from before that directory change.
 
 **If `GIT_DIR == GIT_COMMON`:** Normal repo, no worktree to clean up. Done.
 
-**If `WORKTREE_PATH` is under `.worktrees/` or `worktrees/`:** Superpowers
+**If `WORKTREE_PATH` is under `.worktrees/` or `worktrees/`:** The `using-git-worktrees` skill
 created this worktree — we own cleanup:
 
 ```bash
