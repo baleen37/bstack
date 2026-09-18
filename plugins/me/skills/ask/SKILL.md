@@ -137,8 +137,9 @@ decision here:
 
 - **Continue**: stay put. Costs nothing, loses nothing.
 - **`/clear`**: empty the window, when nothing here matters to what's next.
-- **Handoff**: write a portable file. Narrow — only for a different harness, a
-  different directory, someone else, or forking a side task mid-phase.
+- **`me:handoff`**: write a portable state handover. Narrow — only for a
+  different harness, a different directory, someone else, or forking a side
+  task mid-phase.
 - **Subagent**: send a tightly-scoped task to its own window, get a report back.
 - **`/compact`**: compress and reseed. The **default**, at the bottom of the
   tree rather than the first reach.
@@ -193,8 +194,6 @@ out with `me:code-review`.
   hunk, resolving by intent rather than by picking lines. Never `--abort`.
 - **`wizard`** — generates an interactive bash script for steps only a human can
   do: provisioning, credentials, CI secrets, a third-party dashboard.
-- **`handoff`** — compacts this conversation into a portable file for another
-  agent. See Phase boundaries above for when a handoff is the right move.
 - **`to-questionnaire`** — the blocker is in *someone else's* head; writes them
   a questionnaire to fill in.
 - **`wait-what`** — fire it the moment a message doesn't land; the agent

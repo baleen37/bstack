@@ -1,5 +1,5 @@
 interface:
   display_name: "Handoff"
-  short_description: "Compact a conversation into a handoff"
+  short_description: "Hand this session's state to the next"
 policy:
   allow_implicit_invocation: false
