@@ -78,9 +78,16 @@ A starting situation that generates work, then joins the main flow.
 
 ## Review
 
-- **`me:requesting-code-review`** dispatches a reviewer subagent with
-  purpose-built context rather than your session history, so the diff and the
-  evaluation live in its window and only findings come back.
+Two scopes, and the scope picks the skill:
+
+- **`me:code-review`** reviews a **range** — a branch, a PR, everything since a
+  tag — on two axes in parallel subagents: **Standards** (does it follow the
+  repo's documented rules, plus a Fowler smell baseline) and **Spec** (does it
+  do what the spec asked). Reported side by side and never merged, because a
+  change can pass one axis and fail the other.
+- **`me:requesting-code-review`** dispatches a single reviewer against two SHAs
+  with purpose-built context rather than your session history. The per-task
+  case, and what `me:subagent-driven-development` calls after each task.
 - **`me:receiving-code-review`** is for the other side: processing feedback
   with technical rigour instead of performative agreement. Verify each claim
   before implementing it, and push back with reasoning when a reviewer is
@@ -161,10 +168,9 @@ the process, are the problem:
 
 **Tracker-based flow** — the alternative to the main flow, for work tracked as
 issues rather than files: `to-tickets` splits a spec into tracer-bullet tickets
-carrying blocking edges, `implement` builds one ticket (driving `me:tdd`, then
-`code-review`), `implement-spec` builds a whole spec across parallel
-implementers, and `code-review` reviews a diff on two axes — Standards and Spec
-— in parallel subagents.
+carrying blocking edges, `implement` builds one ticket, and `implement-spec`
+builds a whole spec across parallel implementers. Both drive `me:tdd` and close
+out with `me:code-review`.
 
 **Big or messy starting points:**
 

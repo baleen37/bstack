@@ -10,7 +10,12 @@ Two-axis review of the diff between `HEAD` and a fixed point the user supplies:
 
 Both axes run as **parallel sub-agents** so they don't pollute each other's context, then this skill aggregates their findings.
 
-The issue tracker should have been provided to you. If `docs/agents/issue-tracker.md` is missing, tell the user to run `/setup-matt-pocock-skills`.
+**Announce at start:** "I'm using the code-review skill to review this on both axes."
+
+Use this when the review target is a **range** — a branch, a PR, everything
+since a tag. For the narrower case of reviewing the task you just finished,
+`me:requesting-code-review` dispatches a single reviewer against two SHAs and
+is what `me:subagent-driven-development` calls per task.
 
 ## Process
 
@@ -26,14 +31,14 @@ Before going further, confirm the fixed point resolves (`git rev-parse <fixed-po
 
 Look for the originating spec, in this order:
 
-1. Issue references in the commit messages (`#123`, `Closes #45`, GitLab `!67`, etc.), fetched via the workflow in `docs/agents/issue-tracker.md`.
-2. A path the user passed as an argument.
-3. A spec file under `docs/`, `specs/`, or `.scratch/` matching the branch name or feature.
-4. If nothing is found, ask the user where the spec is. If they say there isn't one, the **Spec** sub-agent will skip and report "no spec available".
+1. A path the user passed as an argument.
+2. A spec under `docs/specs/` or a plan under `docs/plans/` matching the branch name or feature — this repo's convention, and the artifact `me:writing-spec` and `me:writing-plans` commit. A plan carries a `**Spec:**` header field pointing at its spec; follow it and review against both.
+3. Issue references in the commit messages (`#123`, `Closes #45`), fetched with `gh issue view`.
+4. If nothing is found, ask where the spec is. If there isn't one, the **Spec** sub-agent skips and reports "no spec available".
 
 ### 3. Identify the standards sources
 
-Anything in the repo that documents how code should be written, such as `CODING_STANDARDS.md` or `CONTRIBUTING.md`.
+Anything in the repo that documents how code should be written: `CLAUDE.md` or `AGENTS.md` (including per-directory ones covering the files in the diff), `CODING_STANDARDS.md`, `CONTRIBUTING.md`. Project instructions count as documented standards — a rule in `CLAUDE.md` is as binding as one in a file named for the purpose.
 
 On top of whatever the repo documents, the Standards axis always carries the **smell baseline** below: a fixed set of Fowler code smells (_Refactoring_, ch.3) that applies even when a repo documents nothing. Two rules bind it:
 

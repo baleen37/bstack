@@ -28,7 +28,7 @@ Communication to and from subagents should be sparse. Communicate primarily thro
 
 6. If this changes the **frontier** of available tickets, kick off more **implementer subagents** to work on the new tickets. This allows for maximum concurrency.
 
-7. Once all tickets are complete, run /code-review on the PR branch. Fix all issues raised by the code review in a single **implementer subagent**.
+7. Once all tickets are complete, run `me:code-review` on the PR branch. Fix all issues raised by the code review in a single **implementer subagent**.
 
 8. Mark the PR as ready for review.
 
