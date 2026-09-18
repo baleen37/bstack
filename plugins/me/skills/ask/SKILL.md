@@ -141,17 +141,65 @@ questions, why the primary-source cost makes **Continue** the one to rule out
 first, and where the boundaries fall in the main flow above. Decide **at** a
 boundary; mid-phase, continue or split the rest into subagents.
 
-## Sibling plugins
+## The mattpocock-skills plugin
 
-`me` is not the only plugin installed. When the question is about a module's
-*shape* rather than a process, reach across:
+Also installed, and this router covers it too. Its flows are built around an
+**issue tracker** where `me`'s are built around files in `docs/`, so they are an
+alternative to the main flow above rather than a part of it. Most need
+`/setup-matt-pocock-skills` run once per repo first.
 
-- **`mattpocock-skills:codebase-design`** — the deep-module vocabulary
-  (module, interface, depth, seam, adapter, leverage, locality).
-- **`mattpocock-skills:domain-modeling`** — sharpen the project's domain
-  language; keeps a `CONTEXT.md` glossary and ADRs.
-- **`mattpocock-skills:ask-matt`** — the router over that plugin's own flows,
-  which are built around an issue tracker rather than files.
+**Vocabulary** — references, not sessions. Reach for them when the *words*, not
+the process, are the problem:
+
+- **`codebase-design`** — the deep-module vocabulary: module, interface, depth,
+  seam, adapter, leverage, locality. `me:tdd` speaks it when deciding which
+  seam to test at.
+- **`domain-modeling`** — sharpen the project's domain language: challenge a
+  fuzzy term, resolve an overloaded word, record a hard-to-reverse decision as
+  an ADR. Keeps a `CONTEXT.md` glossary. Note this repo has neither
+  `CONTEXT.md` nor `docs/adr/`, so it would start both.
+
+**Tracker-based flow** — the alternative to the main flow, for work tracked as
+issues rather than files: `to-tickets` splits a spec into tracer-bullet tickets
+carrying blocking edges, `implement` builds one ticket (driving `me:tdd`, then
+`code-review`), `implement-spec` builds a whole spec across parallel
+implementers, and `code-review` reviews a diff on two axes — Standards and Spec
+— in parallel subagents.
+
+**Big or messy starting points:**
+
+- **`wayfinder`** — a greenfield project or feature build too large for one
+  session. Charts a map of decision tickets and resolves them one at a time,
+  producing **decisions, not deliverables**. Where `me:brainstorming` sharpens
+  an idea you can hold in one session, this is for the one you can't.
+- **`triage`** — bug reports and feature requests piling up. Moves issues
+  through triage roles and emits agent-ready ones. Only for issues you did
+  *not* create.
+- **`improve-codebase-architecture`** — spare-time upkeep. Surveys the codebase
+  for deepening opportunities and reports them as HTML; picking one generates an
+  idea to take into `me:brainstorming`.
+
+**Standalone:**
+
+- **`prototype`** — throwaway code answering one design question: does this
+  state model feel right, what should this UI look like.
+- **`resolving-merge-conflicts`** — works an in-progress merge or rebase hunk by
+  hunk, resolving by intent rather than by picking lines. Never `--abort`.
+- **`wizard`** — generates an interactive bash script for steps only a human can
+  do: provisioning, credentials, CI secrets, a third-party dashboard.
+- **`handoff`** — compacts this conversation into a portable file for another
+  agent. See Phase boundaries above for when a handoff is the right move.
+- **`to-questionnaire`** — the blocker is in *someone else's* head; writes them
+  a questionnaire to fill in.
+- **`wait-what`** — fire it the moment a message doesn't land; the agent
+  re-pitches in plainer language.
+- **`teach`** — learn a concept over several sessions, using the current
+  directory as a stateful workspace.
+- **`writing-for-agents`** — the reference for writing documents agents consume.
+  Deeper on information design than `me:write-skill`, which is stronger on
+  proving a skill against a baseline. Read both when writing a skill.
+- **`setup-matt-pocock-skills`** — run once per repo to configure the issue
+  tracker, triage labels, and doc layout the flows above assume.
 
 ## When nothing here fits
 
