@@ -20,6 +20,11 @@ Each link is a hard gate on its input artifact: `writing-plans` needs a spec,
 section carries what is still undecided; when it is empty, the next stage
 proceeds without asking.
 
+## Start here
+
+- `ask` — Router over these skills: which one fits the situation, and where the
+  phase boundaries fall. User-invoked (`/me:ask`).
+
 ## Lifecycle
 
 ### Plan
