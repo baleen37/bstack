@@ -159,3 +159,7 @@ Ask whether to fix and re-verify, or stop with the report only:
 > "검증 결과는 PARTIAL/FAIL입니다. 수정 후 다시 검증할까요, 아니면 리포트만 남기고 끝낼까요?"
 
 If the user declines, end.
+
+If they want a fix but the cause is not obvious from the failure, use
+`me:diagnosing-bugs` — it builds a loop that goes red on the bug before
+theorising, rather than guessing from the report.

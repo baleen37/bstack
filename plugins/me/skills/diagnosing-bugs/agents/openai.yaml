@@ -1,0 +1,3 @@
+interface:
+  display_name: "Diagnosing Bugs"
+  short_description: "Feedback-loop-first debugging for hard bugs"

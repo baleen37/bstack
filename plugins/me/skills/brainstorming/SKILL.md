@@ -45,7 +45,7 @@ override it:
 - **Architectural** — new projects, new subsystems, changes that
   restructure how components fit together or alter interfaces others
   depend on. Follow the full process: questions, approaches, sectioned
-  design, written spec, then the writing-plans skill.
+  design, written spec, then the to-plan skill.
 
 When in doubt between two paths, take the heavier one. The ratchet is
 one-way: hidden complexity discovered mid-task upgrades the path —
@@ -97,7 +97,7 @@ your path and complete them in order.
 3. **Interview in rounds** — ask the whole frontier per round, each question with your recommended answer (see Rounds below)
 4. **Propose 2-3 approaches** — with trade-offs and your recommendation
 5. **Present design** — in sections scaled to their complexity, get user approval after each section
-6. **Write the spec** — invoke `me:writing-spec` to write and commit the spec document
+6. **Write the spec** — tell the user to run `/to-spec` to write and commit the spec document
 
 ## Process Flow
 
@@ -116,7 +116,7 @@ digraph brainstorming {
     "Propose 2-3 approaches" [shape=box];
     "Present design sections" [shape=box];
     "User approves design?" [shape=diamond];
-    "Invoke writing-spec skill" [shape=doublecircle];
+    "Invoke to-spec skill" [shape=doublecircle];
     "Hidden complexity? Upgrade path" [shape=box];
 
     "Classify: spike / bounded / architectural" -> "Present question + probe (2-3 sentences)" [label="spike"];
@@ -135,12 +135,12 @@ digraph brainstorming {
     "Propose 2-3 approaches" -> "Present design sections";
     "Present design sections" -> "User approves design?";
     "User approves design?" -> "Present design sections" [label="no, revise"];
-    "User approves design?" -> "Invoke writing-spec skill" [label="yes"];
+    "User approves design?" -> "Invoke to-spec skill" [label="yes"];
 }
 ```
 
 **Terminal states are path-bound.** Architectural: the ONLY skill you
-invoke after brainstorming is writing-spec — never writing-plans
+invoke after brainstorming is to-spec — never to-plan
 directly, never frontend-design, mcp-builder, or any other
 implementation skill. Bounded: after
 approval, implementation proceeds directly through the normal
@@ -207,7 +207,7 @@ design tree visited, nothing left silently assumed. Only then move on to
 approaches.
 
 If you compressed or skipped the interview, remember which mode you were
-in — you report it to writing-spec later. See "After the Design".
+in — you report it to to-spec later. See "After the Design".
 
 **Exploring approaches:**
 
@@ -239,16 +239,17 @@ in — you report it to writing-spec later. See "After the Design".
 
 ## After the Design (architectural path)
 
-Once the user approves the design, hand off to `me:writing-spec`. That
+Once the user approves the design, hand off to `me:to-spec`. That
 skill owns the spec document: the template, the `Discovery:` line, the
 Open questions rows, the self-review, and the user review gate.
 
-- Invoke `me:writing-spec` to write and commit the spec
-- Do NOT invoke any other skill. writing-spec is the next step.
+- `to-spec` is user-invoked — you cannot call it yourself. End your turn
+  by telling the user to run `/to-spec` to write and commit the spec.
+- Do not write the spec inline, and do not invoke any other skill.
 - Do NOT write the spec file yourself, and do NOT skip ahead to
-  writing-plans — the plan argues from a spec that exists.
+  to-plan — the plan argues from a spec that exists.
 
-Tell writing-spec which discovery mode the interview actually ran in, so
+Tell to-spec which discovery mode the interview actually ran in, so
 it can record the right `Discovery:` value:
 
 - `full` — the frontier emptied; nothing left silently assumed
