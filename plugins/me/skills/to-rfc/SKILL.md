@@ -1,9 +1,10 @@
 ---
-name: writing-rfcs
+name: to-rfc
 description: >-
   Use when writing, reviewing, or improving RFCs, requests for comments,
   technical design docs, architecture proposals, engineering decision records,
   API proposals, migration plans, or cross-team technical decisions.
+disable-model-invocation: true
 ---
 
 # Writing RFCs

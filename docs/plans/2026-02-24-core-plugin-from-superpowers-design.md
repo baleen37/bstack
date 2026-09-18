@@ -52,7 +52,7 @@ plugins/core/
     ├── using-core/SKILL.md          ← renamed from using-superpowers
     ├── using-git-worktrees/SKILL.md
     ├── verification-before-completion/SKILL.md
-    ├── writing-plans/SKILL.md
+    ├── to-plan/SKILL.md
     └── writing-skills/
         ├── SKILL.md
         └── (supporting files)

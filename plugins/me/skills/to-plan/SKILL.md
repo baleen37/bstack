@@ -1,6 +1,7 @@
 ---
-name: writing-plans
+name: to-plan
 description: Use when you have a spec or requirements for a multi-step task, before touching code
+disable-model-invocation: true
 ---
 
 # Writing Plans
@@ -11,7 +12,7 @@ Write comprehensive implementation plans assuming the engineer has zero context 
 
 Assume they are a skilled developer, but know almost nothing about our toolset or problem domain. Assume they don't know good test design very well.
 
-**Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
+**Announce at start:** "I'm using the to-plan skill to create the implementation plan."
 
 **Context:** If working in an isolated worktree, it should have been created via the `me:using-git-worktrees` skill at execution time.
 
@@ -25,7 +26,7 @@ this plan implements — its path goes in the header, and its requirements
 become the Global Constraints.
 
 If there is no spec and no written requirements to work from, stop and
-use `me:writing-spec` first (or `me:brainstorming` if the design itself
+use `me:to-spec` first (or `me:brainstorming` if the design itself
 is not settled). A plan built on an unwritten spec has nothing to be
 checked against, and its `Spec:` field is a lie.
 
