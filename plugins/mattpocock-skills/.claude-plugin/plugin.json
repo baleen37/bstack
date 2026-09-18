@@ -17,30 +17,5 @@
     "domain-modeling",
     "productivity"
   ],
-  "skills": [
-    "./skills/ask-matt",
-    "./skills/diagnosing-bugs",
-    "./skills/grill-with-docs",
-    "./skills/triage",
-    "./skills/improve-codebase-architecture",
-    "./skills/setup-matt-pocock-skills",
-    "./skills/tdd",
-    "./skills/to-spec",
-    "./skills/to-tickets",
-    "./skills/wayfinder",
-    "./skills/implement",
-    "./skills/prototype",
-    "./skills/domain-modeling",
-    "./skills/codebase-design",
-    "./skills/code-review",
-    "./skills/resolving-merge-conflicts",
-    "./skills/wizard",
-    "./skills/grill-me",
-    "./skills/grilling",
-    "./skills/handoff",
-    "./skills/teach",
-    "./skills/to-questionnaire",
-    "./skills/wait-what",
-    "./skills/writing-for-agents"
-  ]
+  "skills": "./skills/"
 }
