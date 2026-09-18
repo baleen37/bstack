@@ -1,7 +1,6 @@
 ---
-name: to-spec
+name: writing-spec
 description: Use when you have an approved design and need to write it as a spec document, before creating an implementation plan
-disable-model-invocation: true
 ---
 
 # Writing Spec
@@ -9,7 +8,7 @@ disable-model-invocation: true
 Write the approved design as a spec document. The spec is the binding authority
 downstream: the plan argues from it, and implementers read both.
 
-**Announce at start:** "I'm using the to-spec skill to write the spec document."
+**Announce at start:** "I'm using the writing-spec skill to write the spec document."
 
 **Save specs to:** `docs/specs/YYYY-MM-DD-<topic>-design.md`
 - (User preferences for spec location override this default)
@@ -49,13 +48,13 @@ exactly this shape:
 ```
 
 Writing the default as prose ("Proposal: repo-local, because…") reads fine and
-is **not enough** — `me:to-plan` greps this section for unchecked rows
+is **not enough** — `me:writing-plans` greps this section for unchecked rows
 whose `due` has arrived. A row it cannot parse is a decision that silently
 never gets made.
 
 - **`Default now:`** — what happens if nobody answers. Keeps the chain moving.
 - **`owner:`** — who decides. "me", a role, a team.
-- **`due:`** — a later stage name (`to-plan`, `implementation`) or a date.
+- **`due:`** — a later stage name (`writing-plans`, `implementation`) or a date.
   A stage name means: this must close before that stage runs.
 
 Keep the reasoning — the options table, the trade-offs, your recommendation —
@@ -109,10 +108,6 @@ Commit the spec to git.
 
 ## Handoff
 
-`to-plan` is the next step, and it is user-invoked — you cannot call it
-yourself. End your turn by telling the user to run it:
+Invoke `me:writing-plans` to create the implementation plan.
 
-> "Spec is committed. Run `/to-plan` when you're ready for the
-> implementation plan."
-
-Do not start planning inline, and do not invoke any other skill.
+Do NOT invoke any other skill. writing-plans is the next step.

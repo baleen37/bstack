@@ -60,7 +60,7 @@ Source: `~/.claude/plugins/cache/superpowers-marketplace/superpowers/4.3.1/skill
 - `using-git-worktrees/SKILL.md`
 - `using-superpowers/SKILL.md` ← will be renamed to `using-core/` in Task 4
 - `verification-before-completion/SKILL.md`
-- `to-plan/SKILL.md`
+- `writing-plans/SKILL.md`
 - `writing-skills/SKILL.md` + supporting files (anthropic-best-practices.md, graphviz-conventions.dot, persuasion-principles.md, render-graphs.js, testing-skills-with-subagents.md, examples/CLAUDE_MD_TESTING.md)
 
 **Step 1: Copy all skills**
@@ -408,37 +408,37 @@ Expected: `All assertions passed`
 
 ---
 
-### Task 11: Update to-plan SKILL.md header template
+### Task 11: Update writing-plans SKILL.md header template
 
-The `to-plan` skill contains a plan header template that references `superpowers:executing-plans`. Update it to reference `core:executing-plans`.
+The `writing-plans` skill contains a plan header template that references `superpowers:executing-plans`. Update it to reference `core:executing-plans`.
 
 **Files:**
-- Modify: `plugins/core/skills/to-plan/SKILL.md`
+- Modify: `plugins/core/skills/writing-plans/SKILL.md`
 
 **Step 1: Check current content**
 
 ```bash
-grep "superpowers:" plugins/core/skills/to-plan/SKILL.md
+grep "superpowers:" plugins/core/skills/writing-plans/SKILL.md
 ```
 
 **Step 2: Replace**
 
 ```bash
-sed -i '' 's/superpowers:/core:/g' plugins/core/skills/to-plan/SKILL.md
+sed -i '' 's/superpowers:/core:/g' plugins/core/skills/writing-plans/SKILL.md
 ```
 
 **Step 3: Verify**
 
 ```bash
-grep "superpowers:" plugins/core/skills/to-plan/SKILL.md
+grep "superpowers:" plugins/core/skills/writing-plans/SKILL.md
 ```
 Expected: no output
 
 **Step 4: Commit**
 
 ```bash
-git add plugins/core/skills/to-plan/SKILL.md
-git commit -m "fix(core): update to-plan skill to use core: prefix"
+git add plugins/core/skills/writing-plans/SKILL.md
+git commit -m "fix(core): update writing-plans skill to use core: prefix"
 ```
 
 ---

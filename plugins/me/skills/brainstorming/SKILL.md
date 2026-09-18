@@ -36,16 +36,18 @@ override it:
   this repo: a new flag, a small endpoint, a one-file fix.
   Understanding the kind of app is not enough — bounded means the flow
   you are changing is already here to read. If there is no existing
-  flow to change, the task is not bounded. Ask the clarifying
-  questions that matter, present a short design IN CHAT (a few
-  sentences to a few short paragraphs), and STOP. Implementation
+  flow to change, the task is not bounded. Interview in rounds until
+  the frontier is empty (see Rounds below) — fewer rounds than an
+  architectural task, but the same stopping condition. Then present a
+  short design IN CHAT (a few sentences to a few short paragraphs),
+  and STOP. Implementation
   starts only after your human partner says yes to that design — a
   bounded task's approval is as hard a gate as an architectural
   one. No spec file, no implementation plan document.
 - **Architectural** — new projects, new subsystems, changes that
   restructure how components fit together or alter interfaces others
   depend on. Follow the full process: questions, approaches, sectioned
-  design, written spec, then the to-plan skill.
+  design, written spec, then the writing-plans skill.
 
 When in doubt between two paths, take the heavier one. The ratchet is
 one-way: hidden complexity discovered mid-task upgrades the path —
@@ -70,6 +72,8 @@ artifact, never the approval.
 | "I understand this kind of app, so it's bounded" | Bounded measures the repo, not your familiarity. A new project has no existing flow — it is architectural. |
 | "The spike works, so I'll keep the code" | A spike's output is an answer. Keeping the code is a new request — classify it. |
 | "It grew, but I'm almost done — no need to re-classify" | Hidden complexity upgrades the path mid-task. Stop and say so. |
+| "It's bounded, so one question is enough" | The frontier decides when questions end, not the path. A small tree still gets emptied. |
+| "I'll ask this one first, then see what they say" | Drip-feeding questions is not a round. Ask the whole frontier at once, then wait. |
 | "They approved the spike, so the follow-up change is approved too" | Each task gets its own classification and its own approval. |
 
 ## Checklist
@@ -86,7 +90,7 @@ your path and complete them in order.
 
 **Bounded:**
 1. **Explore project context** — check files, docs, recent commits
-2. **Ask clarifying questions** — one at a time, the ones that matter
+2. **Interview in rounds** — ask the whole frontier per round, each question with your recommended answer (see Rounds below); stop only when the frontier is empty
 3. **Present short design in chat** — approach, files touched, testing
 4. **Get approval** — STOP and wait for an explicit yes; presenting the design and starting in the same breath is skipping the gate
 5. **Implement** — proceed with the normal development workflow (TDD applies); no plan document
@@ -97,7 +101,7 @@ your path and complete them in order.
 3. **Interview in rounds** — ask the whole frontier per round, each question with your recommended answer (see Rounds below)
 4. **Propose 2-3 approaches** — with trade-offs and your recommendation
 5. **Present design** — in sections scaled to their complexity, get user approval after each section
-6. **Write the spec** — tell the user to run `/to-spec` to write and commit the spec document
+6. **Write the spec** — invoke `me:writing-spec` to write and commit the spec document
 
 ## Process Flow
 
@@ -105,7 +109,8 @@ your path and complete them in order.
 digraph brainstorming {
     "Classify: spike / bounded / architectural" [shape=diamond];
     "Present question + probe (2-3 sentences)" [shape=box];
-    "Ask clarifying questions (bounded)" [shape=box];
+    "Bounded interview round:\nask whole frontier" [shape=box];
+    "Bounded frontier empty?" [shape=diamond];
     "Present short design in chat" [shape=box];
     "Human approves?" [shape=diamond];
     "Investigate; report recommendation" [shape=doublecircle];
@@ -116,14 +121,16 @@ digraph brainstorming {
     "Propose 2-3 approaches" [shape=box];
     "Present design sections" [shape=box];
     "User approves design?" [shape=diamond];
-    "Invoke to-spec skill" [shape=doublecircle];
+    "Invoke writing-spec skill" [shape=doublecircle];
     "Hidden complexity? Upgrade path" [shape=box];
 
     "Classify: spike / bounded / architectural" -> "Present question + probe (2-3 sentences)" [label="spike"];
-    "Classify: spike / bounded / architectural" -> "Ask clarifying questions (bounded)" [label="bounded"];
+    "Classify: spike / bounded / architectural" -> "Bounded interview round:\nask whole frontier" [label="bounded"];
     "Classify: spike / bounded / architectural" -> "Explore project context" [label="architectural"];
     "Present question + probe (2-3 sentences)" -> "Human approves?";
-    "Ask clarifying questions (bounded)" -> "Present short design in chat";
+    "Bounded interview round:\nask whole frontier" -> "Bounded frontier empty?";
+    "Bounded frontier empty?" -> "Bounded interview round:\nask whole frontier" [label="no, recompute"];
+    "Bounded frontier empty?" -> "Present short design in chat" [label="yes"];
     "Present short design in chat" -> "Human approves?";
     "Human approves?" -> "Investigate; report recommendation" [label="spike: yes"];
     "Human approves?" -> "Implement via normal workflow (no plan doc)" [label="bounded: yes"];
@@ -135,12 +142,12 @@ digraph brainstorming {
     "Propose 2-3 approaches" -> "Present design sections";
     "Present design sections" -> "User approves design?";
     "User approves design?" -> "Present design sections" [label="no, revise"];
-    "User approves design?" -> "Invoke to-spec skill" [label="yes"];
+    "User approves design?" -> "Invoke writing-spec skill" [label="yes"];
 }
 ```
 
 **Terminal states are path-bound.** Architectural: the ONLY skill you
-invoke after brainstorming is to-spec — never to-plan
+invoke after brainstorming is writing-spec — never writing-plans
 directly, never frontend-design, mcp-builder, or any other
 implementation skill. Bounded: after
 approval, implementation proceeds directly through the normal
@@ -152,8 +159,8 @@ reported recommendation.
 The subsections below serve the bounded and architectural paths (a
 spike stops at "present the probe, get a nod"). Sections from
 **Exploring approaches** onward are architectural-path depth — for
-bounded work, context plus a few questions plus a short in-chat design
-is the whole process.
+bounded work, context plus rounds until the frontier empties plus a
+short in-chat design is the whole process.
 
 **Understanding the idea:**
 
@@ -164,7 +171,7 @@ is the whole process.
 - Prefer multiple choice questions when possible, but open-ended is fine too
 - Focus on understanding: purpose, constraints, success criteria
 
-**Interview in rounds (architectural path):**
+**Interview in rounds (bounded and architectural paths):**
 
 Map the work as a **design tree**: every decision branches into the
 decisions that hang off it. Work the tree in **rounds**.
@@ -176,6 +183,12 @@ question and give your recommended answer. Then wait.
 
 A question whose answer depends on another question still open in this
 round belongs to a *later* round, not this one.
+
+**What scales with the path is the tree's size, not the rule.** A
+bounded task's tree is small — often one round, sometimes two — but you
+still ask the whole frontier at once, and you still stop only when it is
+empty. "It's bounded, so one question is enough" is the frontier talking
+you out of a branch you haven't visited.
 
 Each round of answers reshapes the tree: settled decisions push the
 frontier outward and unblock what depended on them. Recompute the
@@ -207,7 +220,7 @@ design tree visited, nothing left silently assumed. Only then move on to
 approaches.
 
 If you compressed or skipped the interview, remember which mode you were
-in — you report it to to-spec later. See "After the Design".
+in — you report it to writing-spec later. See "After the Design".
 
 **Exploring approaches:**
 
@@ -239,17 +252,16 @@ in — you report it to to-spec later. See "After the Design".
 
 ## After the Design (architectural path)
 
-Once the user approves the design, hand off to `me:to-spec`. That
+Once the user approves the design, hand off to `me:writing-spec`. That
 skill owns the spec document: the template, the `Discovery:` line, the
 Open questions rows, the self-review, and the user review gate.
 
-- `to-spec` is user-invoked — you cannot call it yourself. End your turn
-  by telling the user to run `/to-spec` to write and commit the spec.
-- Do not write the spec inline, and do not invoke any other skill.
+- Invoke `me:writing-spec` to write and commit the spec
+- Do NOT invoke any other skill. writing-spec is the next step.
 - Do NOT write the spec file yourself, and do NOT skip ahead to
-  to-plan — the plan argues from a spec that exists.
+  writing-plans — the plan argues from a spec that exists.
 
-Tell to-spec which discovery mode the interview actually ran in, so
+Tell writing-spec which discovery mode the interview actually ran in, so
 it can record the right `Discovery:` value:
 
 - `full` — the frontier emptied; nothing left silently assumed
