@@ -9,13 +9,13 @@ each stage commits an artifact the next stage reads.
 
 | Stage | Artifact | Skills |
 | ----- | -------- | ------ |
-| Plan / Design | `docs/specs/*.md` | `brainstorming` → `to-spec` |
-| Build | `docs/plans/*.md` + code | `to-plan` → `subagent-driven-development` |
+| Plan / Design | `docs/specs/*.md` | `brainstorming` → `writing-spec` |
+| Build | `docs/plans/*.md` + code | `writing-plans` → `subagent-driven-development` |
 | Test | test results | `verify`, `e2e-scenario-testing`, `diagnosing-bugs` |
 | Deploy | PR, release | `requesting-code-review`, `create-pr`, `ship` |
 | Maintain | — | not yet implemented |
 
-Each link is a hard gate on its input artifact: `to-plan` needs a spec,
+Each link is a hard gate on its input artifact: `writing-plans` needs a spec,
 `subagent-driven-development` needs a plan. A spec's `## Open questions`
 section carries what is still undecided; when it is empty, the next stage
 proceeds without asking.
@@ -25,15 +25,15 @@ proceeds without asking.
 ### Plan
 
 - `research` — Investigate questions against primary sources and save cited findings.
-- `to-prd` — Write product requirements documents for feature planning.
-- `to-rfc` — Write technical RFCs for engineering decisions.
+- `writing-prds` — Write product requirements documents for feature planning.
+- `writing-rfcs` — Write technical RFCs for engineering decisions.
 - `competitive-agents` — Compare parallel approaches for architecture, API, or system decisions.
 
 ### Development workflow
 
 - `brainstorming` — Explore intent and requirements before implementation.
-- `to-spec` — Write the approved design as a spec document.
-- `to-plan` — Create detailed, executable implementation plans.
+- `writing-spec` — Write the approved design as a spec document.
+- `writing-plans` — Create detailed, executable implementation plans.
 - `using-git-worktrees` — Create or verify isolated workspaces.
 - `dispatching-parallel-agents` — Run independent tasks in parallel.
 - `executing-plans` / `subagent-driven-development` — Execute plans with checkpoints and reviews.

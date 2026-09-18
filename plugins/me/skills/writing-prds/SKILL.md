@@ -1,10 +1,9 @@
 ---
-name: to-prd
+name: writing-prds
 description: >-
   Use when writing, reviewing, or improving PRDs, product requirements
   documents, product specs, feature requirements, launch requirements, or
   product discovery writeups before product or engineering work begins.
-disable-model-invocation: true
 ---
 
 # Writing PRDs
@@ -18,7 +17,7 @@ for, why it matters, and how success will be verified**.
 - Focus on user value and product outcomes, not implementation.
 - Mark unknowns as assumptions or open questions.
 - Give every meaningful requirement a metric, test, demo path, or launch check.
-- If the main question is technical architecture, use `to-rfc`.
+- If the main question is technical architecture, use `writing-rfcs`.
 
 ## Template
 
