@@ -71,3 +71,6 @@ htmlcov/
 
 # Local research-skill evaluation traces
 .research-eval/
+
+# SDD / brainstorm runtime workspaces
+.bstack/
