@@ -94,13 +94,10 @@ your path and complete them in order.
 **Architectural:**
 1. **Explore project context** — check files, docs, recent commits
 2. **Offer the visual companion just-in-time** — NOT upfront. The first time a question would genuinely be clearer shown than described, offer it then (its own message); on approval its browser tab opens for you. If no visual question ever arises, never offer it. See the Visual Companion section below.
-3. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
+3. **Interview in rounds** — ask the whole frontier per round, each question with your recommended answer (see Rounds below)
 4. **Propose 2-3 approaches** — with trade-offs and your recommendation
 5. **Present design** — in sections scaled to their complexity, get user approval after each section
-6. **Write design doc** — save to `docs/specs/YYYY-MM-DD-<topic>-design.md` and commit
-7. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
-8. **User reviews written spec** — ask user to review the spec file before proceeding
-9. **Transition to implementation** — invoke writing-plans skill to create implementation plan
+6. **Write the spec** — invoke `me:writing-spec` to write and commit the spec document
 
 ## Process Flow
 
@@ -114,14 +111,12 @@ digraph brainstorming {
     "Investigate; report recommendation" [shape=doublecircle];
     "Implement via normal workflow (no plan doc)" [shape=doublecircle];
     "Explore project context" [shape=box];
-    "Ask clarifying questions" [shape=box];
+    "Interview round:\nask whole frontier" [shape=box];
+    "Frontier empty?" [shape=diamond];
     "Propose 2-3 approaches" [shape=box];
     "Present design sections" [shape=box];
     "User approves design?" [shape=diamond];
-    "Write design doc" [shape=box];
-    "Spec self-review\n(fix inline)" [shape=box];
-    "User reviews spec?" [shape=diamond];
-    "Invoke writing-plans skill" [shape=doublecircle];
+    "Invoke writing-spec skill" [shape=doublecircle];
     "Hidden complexity? Upgrade path" [shape=box];
 
     "Classify: spike / bounded / architectural" -> "Present question + probe (2-3 sentences)" [label="spike"];
@@ -133,22 +128,21 @@ digraph brainstorming {
     "Human approves?" -> "Investigate; report recommendation" [label="spike: yes"];
     "Human approves?" -> "Implement via normal workflow (no plan doc)" [label="bounded: yes"];
     "Hidden complexity? Upgrade path" -> "Classify: spike / bounded / architectural";
-    "Explore project context" -> "Ask clarifying questions";
-    "Ask clarifying questions" -> "Propose 2-3 approaches";
+    "Explore project context" -> "Interview round:\nask whole frontier";
+    "Interview round:\nask whole frontier" -> "Frontier empty?";
+    "Frontier empty?" -> "Interview round:\nask whole frontier" [label="no, recompute"];
+    "Frontier empty?" -> "Propose 2-3 approaches" [label="yes"];
     "Propose 2-3 approaches" -> "Present design sections";
     "Present design sections" -> "User approves design?";
     "User approves design?" -> "Present design sections" [label="no, revise"];
-    "User approves design?" -> "Write design doc" [label="yes"];
-    "Write design doc" -> "Spec self-review\n(fix inline)";
-    "Spec self-review\n(fix inline)" -> "User reviews spec?";
-    "User reviews spec?" -> "Write design doc" [label="changes requested"];
-    "User reviews spec?" -> "Invoke writing-plans skill" [label="approved"];
+    "User approves design?" -> "Invoke writing-spec skill" [label="yes"];
 }
 ```
 
 **Terminal states are path-bound.** Architectural: the ONLY skill you
-invoke after brainstorming is writing-plans — never frontend-design,
-mcp-builder, or any other implementation skill. Bounded: after
+invoke after brainstorming is writing-spec — never writing-plans
+directly, never frontend-design, mcp-builder, or any other
+implementation skill. Bounded: after
 approval, implementation proceeds directly through the normal
 development workflow; no plan document. Spike: the terminal state is a
 reported recommendation.
@@ -166,10 +160,54 @@ is the whole process.
 - Check out the current project state first (files, docs, recent commits)
 - Before asking detailed questions, assess scope: if the request describes multiple independent subsystems (e.g., "build a platform with chat, file storage, billing, and analytics"), flag this immediately. Don't spend questions refining details of a project that needs to be decomposed first.
 - If the project is too large for a single spec, help the user decompose into sub-projects: what are the independent pieces, how do they relate, what order should they be built? Then brainstorm the first sub-project through the normal design flow. Each sub-project gets its own spec → plan → implementation cycle.
-- For appropriately-scoped projects, ask questions one at a time to refine the idea
+- For appropriately-scoped projects, interview in rounds (below)
 - Prefer multiple choice questions when possible, but open-ended is fine too
-- Only one question per message - if a topic needs more exploration, break it into multiple questions
 - Focus on understanding: purpose, constraints, success criteria
+
+**Interview in rounds (architectural path):**
+
+Map the work as a **design tree**: every decision branches into the
+decisions that hang off it. Work the tree in **rounds**.
+
+The **frontier** is every decision whose prerequisites are already
+settled — the questions you can ask *now* without guessing at answers
+you haven't heard yet. Ask the whole frontier in one round. Number each
+question and give your recommended answer. Then wait.
+
+A question whose answer depends on another question still open in this
+round belongs to a *later* round, not this one.
+
+Each round of answers reshapes the tree: settled decisions push the
+frontier outward and unblock what depended on them. Recompute the
+frontier and ask the next round.
+
+Format each round like this:
+
+```
+❓ **Q1** - **<question title>**: <question body, may include options>
+
+➡️ <your recommended answer>
+
+---
+
+❓ **Q2** - **<question title>**: <question body>
+
+➡️ <your recommended answer>
+```
+
+**Facts are your job; decisions are theirs.** When a frontier question
+needs a fact from the environment — what a file contains, what version
+is pinned, whether an API exists — find it yourself rather than asking.
+Dispatch a subagent if the lookup is broad. Don't block on it: a running
+lookup is just an unsettled prerequisite, so only the questions
+downstream of it wait. Ask the rest of the frontier now.
+
+**The session is done when the frontier is empty:** every branch of the
+design tree visited, nothing left silently assumed. Only then move on to
+approaches.
+
+If you compressed or skipped the interview, remember which mode you were
+in — you report it to writing-spec later. See "After the Design".
 
 **Exploring approaches:**
 
@@ -201,34 +239,27 @@ is the whole process.
 
 ## After the Design (architectural path)
 
-**Documentation:**
+Once the user approves the design, hand off to `me:writing-spec`. That
+skill owns the spec document: the template, the `Discovery:` line, the
+Open questions rows, the self-review, and the user review gate.
 
-- Write the validated design (spec) to `docs/specs/YYYY-MM-DD-<topic>-design.md`
-  - (User preferences for spec location override this default)
-- Use elements-of-style:writing-clearly-and-concisely skill if available
-- Commit the design document to git
+- Invoke `me:writing-spec` to write and commit the spec
+- Do NOT invoke any other skill. writing-spec is the next step.
+- Do NOT write the spec file yourself, and do NOT skip ahead to
+  writing-plans — the plan argues from a spec that exists.
 
-**Spec Self-Review:**
-After writing the spec document, look at it with fresh eyes:
+Tell writing-spec which discovery mode the interview actually ran in, so
+it can record the right `Discovery:` value:
 
-1. **Placeholder scan:** Any "TBD", "TODO", incomplete sections, or vague requirements? Fix them.
-2. **Internal consistency:** Do any sections contradict each other? Does the architecture match the feature descriptions?
-3. **Scope check:** Is this focused enough for a single implementation plan, or does it need decomposition?
-4. **Ambiguity check:** Could any requirement be interpreted two different ways? If so, pick one and make it explicit.
+- `full` — the frontier emptied; nothing left silently assumed
+- `rapid-direct` — the input was already clear, so few rounds were needed.
+  Not degraded
+- `rapid-inferred` — you were instructed to skip questions. Degraded; name
+  what you inferred and from where
 
-Fix any issues inline. No need to re-review — just fix and move on.
-
-**User Review Gate:**
-After the spec review loop passes, ask the user to review the written spec before proceeding:
-
-> "Spec written and committed to `<path>`. Please review it and let me know if you want to make any changes before we start writing out the implementation plan."
-
-Wait for the user's response. If they request changes, make them and re-run the spec review loop. Only proceed once the user approves.
-
-**Implementation:**
-
-- Invoke the writing-plans skill to create a detailed implementation plan
-- Do NOT invoke any other skill. writing-plans is the next step.
+`rapid-direct` and `rapid-inferred` are different states. One is a fast
+path through clear input; the other is a design settled without the
+answers it wanted. Never report the second as the first.
 
 ## Visual Companion
 

@@ -18,6 +18,31 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 **Save plans to:** `docs/plans/YYYY-MM-DD-<feature-name>.md`
 - (User preferences for plan location override this default)
 
+## Input Gate
+
+The plan argues from a spec. Before writing anything, know which spec
+this plan implements — its path goes in the header, and its requirements
+become the Global Constraints.
+
+If there is no spec and no written requirements to work from, stop and
+use `me:writing-spec` first (or `me:brainstorming` if the design itself
+is not settled). A plan built on an unwritten spec has nothing to be
+checked against, and its `Spec:` field is a lie.
+
+The user handing you requirements directly is a spec for this purpose —
+write them down as one before planning.
+
+### Open questions
+
+If the spec has an `## Open questions` section, read it before planning.
+
+For each unchecked row whose `due` is this stage or earlier, tell the
+user before you write the plan — name the question and its `Default now:`
+value, and ask whether to proceed on the default or close it first.
+
+**An empty Open questions section means proceed.** Ask nothing, say
+nothing, just plan. The section's emptiness is the signal.
+
 ## Scope Check
 
 If the spec covers multiple independent subsystems, it should have been broken into sub-project specs during brainstorming. If it wasn't, suggest breaking this into separate plans — one per subsystem. Each plan should produce working, testable software on its own.
@@ -68,6 +93,10 @@ independently testable deliverable.
 
 **Spec:** [path to the spec/design doc this plan implements — the plan
 argues from the spec, so the spec travels with it; executors read both]
+
+**Risks:** [what could fail during implementation and what to do when it
+does — one line each. Name the specific step or task at risk, not a
+generic worry. Write "None" if there genuinely are none.]
 
 ## Global Constraints
 
@@ -143,6 +172,8 @@ Every step must contain the actual content an engineer needs. These are **plan f
 After writing the complete plan, look at the spec with fresh eyes and check the plan against it. This is a checklist you run yourself — not a subagent dispatch.
 
 **1. Spec coverage:** Skim each section/requirement in the spec. Can you point to a task that implements it? List any gaps.
+
+**1b. Orphan tasks:** Go the other direction — for each task, point to the spec requirement it serves. A task with no requirement behind it is unrequested work. Cut it, or if it is genuinely needed, the spec was incomplete: say so.
 
 **2. Placeholder scan:** Search your plan for red flags — any of the patterns from the "No Placeholders" section above. Fix them.
 
