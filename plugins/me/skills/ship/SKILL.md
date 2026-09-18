@@ -31,7 +31,7 @@ Three phases: **pre-deploy → deploy → post-deploy**. Do not skip phases.
 
 If unsure, ask the user once. Don't invent a deploy step for a doc change.
 
-### Phase 1 — Pre-deploy (배포 전 점검)
+### Phase 1 — Pre-deploy
 
 1. **Identify scope** — launch type, changed files, blast radius, production systems touched.
 2. **Read the deploy convention** — see "Reading Deploy Convention" below. If the project has none,
@@ -44,12 +44,12 @@ If unsure, ask the user once. Don't invent a deploy step for a doc change.
    `READY_FOR_SHIP_REVIEW`. Stop and report evidence if anything is `BLOCKED`. Present GO/NO-GO with
    the rollback plan.
 
-### Phase 2 — Deploy (배포)
+### Phase 2 — Deploy
 
 1. **Execute deploy** — run the command from the deploy convention. This is `NEEDS_APPROVAL`; never
    run without the user's explicit go-ahead.
 
-### Phase 3 — Post-deploy (배포 후 점검)
+### Phase 3 — Post-deploy
 
 1. **Verify** — run the checks from "Post-Deploy Verification" below.
 2. **On failure** — collect evidence, draft the rollback command from the deploy convention, present

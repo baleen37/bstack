@@ -12,7 +12,7 @@
 
 ## Risk Surface
 
-- {외부 시스템 접점} — verified / skipped (reason) / inaccessible
+- {external touchpoint} — verified / skipped (reason) / inaccessible
 
 ## Verification Summary
 
