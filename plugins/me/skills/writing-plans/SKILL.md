@@ -76,6 +76,11 @@ independently testable deliverable.
 - "Run the tests and make sure they pass" - step
 - "Commit" - step
 
+That sequence is the red → green loop. `me:tdd` is the reference behind it —
+what makes a test worth keeping, which seam to test at, and the anti-patterns
+that make a passing test meaningless. Consult it when a task's test strategy
+is not obvious, rather than restating its rules inside the plan.
+
 ## Plan Document Header
 
 **Every plan MUST start with this header:**

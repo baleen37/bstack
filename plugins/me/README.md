@@ -10,7 +10,7 @@ each stage commits an artifact the next stage reads.
 | Stage | Artifact | Skills |
 | ----- | -------- | ------ |
 | Plan / Design | `docs/specs/*.md` | `brainstorming` → `writing-spec` |
-| Build | `docs/plans/*.md` + code | `writing-plans` → `subagent-driven-development` |
+| Build | `docs/plans/*.md` + code | `writing-plans` → `subagent-driven-development`, `tdd` |
 | Test | test results | `verify`, `e2e-scenario-testing`, `diagnosing-bugs` |
 | Deploy | PR, release | `requesting-code-review`, `create-pr`, `ship` |
 | Maintain | — | not yet implemented |
@@ -37,6 +37,7 @@ proceeds without asking.
 - `using-git-worktrees` — Create or verify isolated workspaces.
 - `dispatching-parallel-agents` — Run independent tasks in parallel.
 - `executing-plans` / `subagent-driven-development` — Execute plans with checkpoints and reviews.
+- `tdd` — Build features and fix bugs test-first through the red-green loop.
 
 ### Verify
 
