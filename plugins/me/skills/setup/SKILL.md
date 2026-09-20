@@ -1,12 +1,12 @@
 ---
-name: setup-matt-pocock-skills
-description: "Configure this repo for the engineering skills: set up its issue tracker, triage label vocabulary, and domain doc layout. Run once before first use of the other engineering skills."
+name: setup
+description: "Configure this repo for the tracker-based engineering skills: set up its issue tracker, triage label vocabulary, and domain doc layout. Run once before first use of me:wayfinder, to-tickets, triage, or implement."
 disable-model-invocation: true
 ---
 
-# Setup Matt Pocock's Skills
+# Setup
 
-Scaffold the per-repo configuration that the engineering skills assume:
+Scaffold the per-repo configuration that the tracker-based engineering skills assume:
 
 - **Issue tracker**: where issues live (GitHub by default; local markdown is also supported out of the box)
 - **Triage labels**: the strings used for the five canonical triage roles
@@ -26,7 +26,7 @@ Look at the current repo to understand its starting state. Read whatever exists;
 - `docs/adr/` and any `src/*/docs/adr/` directories
 - `docs/agents/`: does this skill's prior output already exist?
 - `.scratch/`: a sign that a local-markdown issue tracker convention is already in use
-- Is the `triage` skill installed? (a `triage` skill folder alongside this one, or `triage` in your available skills.) This decides whether Section B runs at all.
+- Is the `triage` skill installed? (`triage` in your available skills; it ships with the mattpocock-skills plugin.) This decides whether Section B runs at all.
 - Monorepo signals: a `pnpm-workspace.yaml`, a `workspaces` field in `package.json`, or a populated `packages/*` with its own `src/`. These are present only in a genuinely large multi-package repo; their absence means single-context, which is almost every repo.
 
 ### 2. Present findings and ask
@@ -113,4 +113,4 @@ For "other" issue trackers, write `docs/agents/issue-tracker.md` from scratch us
 
 ### 5. Done
 
-Tell the user the setup is complete and which engineering skills will now read from these files. Mention they can edit `docs/agents/*.md` directly later; re-running this skill is only necessary if they want to switch issue trackers or restart from scratch.
+Tell the user the setup is complete and which skills will now read from these files (`me:wayfinder`, plus the tracker-based mattpocock skills such as `to-tickets`, `triage`, and `implement` where installed). Mention they can edit `docs/agents/*.md` directly later; re-running this skill is only necessary if they want to switch issue trackers or restart from scratch.
