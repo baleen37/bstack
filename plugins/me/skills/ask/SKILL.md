@@ -122,6 +122,25 @@ brainstorming.
 - **`me:using-git-worktrees`** — isolate a workspace before either of the
   above, or before executing a plan.
 
+## Too big for one session
+
+- **`me:wayfinder`** — a greenfield project or feature build too large for one
+  session. Charts a map of decision tickets on the repo's issue tracker and
+  resolves them one at a time, producing **decisions, not deliverables**. Where
+  `me:brainstorming` sharpens an idea you can hold in one session, this is for
+  the one you can't. Needs `me:setup` run once per repo to configure the
+  tracker.
+- **`me:prototype`** — throwaway code answering one design question: does this
+  state model feel right, what should this UI look like. `me:wayfinder` calls
+  it for prototype tickets.
+- **`me:domain-modeling`** — sharpen the project's domain language: challenge a
+  fuzzy term, resolve an overloaded word, record a hard-to-reverse decision as
+  an ADR. Keeps a `CONTEXT.md` glossary. Note this repo has neither
+  `CONTEXT.md` nor `docs/adr/`, so it would start both.
+- **`me:setup`** — run once per repo to configure the issue tracker, triage
+  labels, and domain doc layout into `docs/agents/`. `me:wayfinder` reads
+  these, and so do the tracker-based mattpocock skills below.
+
 ## Also here
 
 - **`me:browser`** — browser automation, and anything needing your logged-in
@@ -154,7 +173,7 @@ boundary; mid-phase, continue or split the rest into subagents.
 Also installed, and this router covers it too. Its flows are built around an
 **issue tracker** where `me`'s are built around files in `docs/`, so they are an
 alternative to the main flow above rather than a part of it. Most need
-`/setup-matt-pocock-skills` run once per repo first.
+`/me:setup` run once per repo first.
 
 **Vocabulary** — references, not sessions. Reach for them when the *words*, not
 the process, are the problem:
@@ -162,10 +181,6 @@ the process, are the problem:
 - **`codebase-design`** — the deep-module vocabulary: module, interface, depth,
   seam, adapter, leverage, locality. `me:tdd` speaks it when deciding which
   seam to test at.
-- **`domain-modeling`** — sharpen the project's domain language: challenge a
-  fuzzy term, resolve an overloaded word, record a hard-to-reverse decision as
-  an ADR. Keeps a `CONTEXT.md` glossary. Note this repo has neither
-  `CONTEXT.md` nor `docs/adr/`, so it would start both.
 
 **Tracker-based flow** — the alternative to the main flow, for work tracked as
 issues rather than files: `to-tickets` splits a spec into tracer-bullet tickets
@@ -175,10 +190,6 @@ out with `me:code-review`.
 
 **Big or messy starting points:**
 
-- **`wayfinder`** — a greenfield project or feature build too large for one
-  session. Charts a map of decision tickets and resolves them one at a time,
-  producing **decisions, not deliverables**. Where `me:brainstorming` sharpens
-  an idea you can hold in one session, this is for the one you can't.
 - **`triage`** — bug reports and feature requests piling up. Moves issues
   through triage roles and emits agent-ready ones. Only for issues you did
   *not* create.
@@ -188,8 +199,6 @@ out with `me:code-review`.
 
 **Standalone:**
 
-- **`prototype`** — throwaway code answering one design question: does this
-  state model feel right, what should this UI look like.
 - **`resolving-merge-conflicts`** — works an in-progress merge or rebase hunk by
   hunk, resolving by intent rather than by picking lines. Never `--abort`.
 - **`wizard`** — generates an interactive bash script for steps only a human can
@@ -203,8 +212,6 @@ out with `me:code-review`.
 - **`writing-for-agents`** — the reference for writing documents agents consume.
   Deeper on information design than `me:write-skill`, which is stronger on
   proving a skill against a baseline. Read both when writing a skill.
-- **`setup-matt-pocock-skills`** — run once per repo to configure the issue
-  tracker, triage labels, and doc layout the flows above assume.
 
 ## When nothing here fits
 

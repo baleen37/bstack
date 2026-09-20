@@ -1,0 +1,5 @@
+interface:
+  display_name: "Setup"
+  short_description: "Configure a repo's issue tracker, triage labels, and domain docs"
+policy:
+  allow_implicit_invocation: false
