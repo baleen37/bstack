@@ -11,12 +11,36 @@ Start by classifying how much process the request needs, then work
 through your path: understand the context, refine the idea, present a
 design, and get your human partner's approval.
 
+## Establish Shared Understanding
+
+The outcome is an understanding your human partner can recognize and correct,
+grounded in what they want to accomplish.
+
+1. Identify the intended outcome, who it is for, and what success looks like.
+   When this is missing, ask one focused question before proposing features or
+   an approach.
+2. Reflect the intended outcome, relevant constraints, and success criteria
+   briefly. Separate what your partner said from assumptions and invite
+   correction.
+3. Carry the agreed understanding into the design or recommendation and check
+   proposed choices against it.
+
+When the request already supplies the purpose and constraints, reflect that
+understanding instead of asking the same questions again. Gathering missing
+requirements does not ask your partner to authorize the task again.
+
 <HARD-GATE>
-Do NOT invoke any implementation skill, write any code, scaffold any
-project, or take any implementation action until you have told your
-human partner what you intend and they have approved it. This applies
-to EVERY task on EVERY path below — the ceremony scales with the task;
-the approval gate never does.
+Before implementation, complete the selected path's prerequisites:
+
+- Spike: your partner approves the question and probe.
+- Bounded: your partner approves the short in-chat design.
+- Architectural: your partner approves the written spec, then reviews and
+  approves the implementation plan and selects its execution method.
+
+A reply approves the stage actually presented. Approval of an idea or feature
+scope does not approve an artifact that does not exist yet. Resume at the
+earliest incomplete stage. Read-only project exploration is allowed while
+these prerequisites remain incomplete.
 </HARD-GATE>
 
 ## Three Paths
@@ -55,18 +79,16 @@ stop, say so, and step up. Nothing downgrades mid-task.
 
 ## Anti-Pattern: "Too Simple To Need Approval"
 
-Every path ends with your human partner approving your intent before
-implementation. A todo list, a single-function utility, a config
-change — the design may be two sentences in chat, but you MUST present
-it and get approval. "Simple" tasks are where unexamined assumptions
-cause the most wasted work. What scales with simplicity is the
-artifact, never the approval.
+Every path ends with approval of the artifact required by that path before
+implementation. A bounded change may need only a short chat design; an
+architectural change needs an approved spec and implementation plan. Scale the
+artifact to the path and complete its reviews before implementation.
 
 ## Red Flags
 
 | Thought | Reality |
 |---------|---------|
-| "This is too simple to need a design" | Simple means a short design, not no design. Two sentences in chat, then approval. |
+| "This is too simple to need a design" | Follow the selected path: a bounded change gets a short chat design; an architectural change gets an approved spec and plan. |
 | "I'll call it bounded and skip the spec" | Reaching for a label to skip work IS the doubt — take the heavier path. |
 | "It's bounded and the design is obvious — I'll start while they read it" | The gate is the approval, not the design's length. Present, then stop until you hear yes. |
 | "I understand this kind of app, so it's bounded" | Bounded measures the repo, not your familiarity. A new project has no existing flow — it is architectural. |

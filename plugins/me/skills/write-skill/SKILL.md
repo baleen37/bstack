@@ -79,6 +79,11 @@ ask if both could apply. Confirm any other harness's path from its own docs.
 Show the diff before changing a skill that is already in use. A new file needs
 no diff.
 
+Invoke bundled scripts through their interpreter in skill prose
+(`bash scripts/tool.sh`, `node scripts/tool.js`), never by bare path. Some
+harness plugin packagers strip executable bits, which makes bare script calls
+fail with `Permission denied`.
+
 ## SkillOpt
 
 Ignore this section unless SkillOpt or SkillOpt-Sleep came up. It automates the

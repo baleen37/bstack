@@ -40,3 +40,11 @@ When the shape of that interface is itself in question (how deep the module is, 
 - **Red before green.** Write the failing test first, then only enough code to pass it. Don't anticipate future tests or add speculative features.
 - **One slice at a time.** One seam, one test, one minimal implementation per cycle.
 - **Refactoring is not part of the loop.** It belongs to the review stage (see `me:requesting-code-review`), not the red → green implementation cycle.
+
+## Full-suite check
+
+Before calling the change done, run the project's test command (`pytest`,
+`npm test`, `cargo test`, or the command this repo uses), even when the task
+named one test file. The task scope bounds the deliverable, not verification.
+Report every failure from that run by name, including failures you did not
+cause.

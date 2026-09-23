@@ -33,8 +33,38 @@ slug=$(basename "$plan" .md)
   || { echo "cannot derive a workspace name from: $plan" >&2; exit 2; }
 
 root=$(git rev-parse --show-toplevel)
+root=$(CDPATH= cd -- "$root" && pwd -P)
 base="$root/.bstack/sdd"
+
+# Basename slugs collide when plans in different directories share a name.
+# Record the owning plan path and disambiguate collisions rather than letting
+# one plan overwrite another plan's brief or progress ledger.
+plan_dir=$(CDPATH= cd -- "$(dirname "$plan")" && pwd -P)
+plan_abs="$plan_dir/$(basename "$plan")"
+case "$plan_abs" in
+  "$root"/*) plan_id=${plan_abs#"$root"/} ;;
+  *)         plan_id=$plan_abs ;;
+esac
+
+owns() {
+  if [ -e "$1/plan-path" ]; then
+    [ "$(cat "$1/plan-path")" = "$plan_id" ]
+  else
+    mkdir -p "$1"
+    printf '%s\n' "$plan_id" > "$1/plan-path"
+  fi
+}
+
 dir="$base/$slug"
-mkdir -p "$dir"
+if ! owns "$dir"; then
+  parent=$(basename "$plan_dir")
+  dir="$base/$slug-$parent"
+  if ! owns "$dir"; then
+    n=2
+    while ! owns "$base/$slug-$parent-$n"; do n=$((n + 1)); done
+    dir="$base/$slug-$parent-$n"
+  fi
+fi
+
 printf '*\n' > "$base/.gitignore"
-cd "$dir" && pwd
+CDPATH= cd -- "$dir" && pwd

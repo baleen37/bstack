@@ -20,6 +20,19 @@ Subagent (general-purpose):
 
     [PLAN_OR_REQUIREMENTS]
 
+    ## The spec is a vision document
+
+    The spec says what the software must do. It does not enumerate every
+    input, environment, or condition the software will meet. For behavior
+    the spec is silent on, judge by what a reasonable person using this
+    software would expect: that expectation is a requirement, and the spec's
+    silence is not permission. Grade findings by their effect on that person.
+
+    ## Review Focus
+
+    [REVIEW_FOCUS — include the plan's Review Focus section verbatim when it
+    exists; otherwise write "None". Check each listed input or failure mode.]
+
     ## Git Range to Review
 
     **Base:** [BASE_SHA]
@@ -88,6 +101,11 @@ Subagent (general-purpose):
 
     ## Output Format
 
+    ### Declined to judge
+    [List every behavior considered and set aside as outside the plan or
+    spec, one line each, with the reason. The executor rules on each line.
+    Write "None" if you set nothing aside.]
+
     ### Strengths
     [What's well done? Be specific.]
 
@@ -137,6 +155,7 @@ Subagent (general-purpose):
 **Placeholders:**
 - `[DESCRIPTION]` — brief summary of what was built
 - `[PLAN_OR_REQUIREMENTS]` — what it should do (plan file path, task text, or requirements)
+- `[REVIEW_FOCUS]` — uncovered inputs and failure modes from the plan, or "None"
 - `[BASE_SHA]` — starting commit
 - `[HEAD_SHA]` — ending commit
 

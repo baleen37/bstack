@@ -110,6 +110,14 @@ naming and copy rules, platform requirements — one line each, with exact
 values copied verbatim from the spec. Every task's requirements implicitly
 include this section.]
 
+## Review Focus
+
+[Up to five input classes or failure modes the spec implies but no task's
+tests exercise, ordered by likelihood to affect a person using the software.
+Name the input or condition and the expected behavior. Add a test for each
+item to the task that owns the code. An empty section means the review was
+done and found no uncovered cases.]
+
 ---
 ```
 
@@ -184,24 +192,43 @@ After writing the complete plan, look at the spec with fresh eyes and check the 
 
 **3. Type consistency:** Do the types, method signatures, and property names you used in later tasks match what you defined in earlier tasks? A function called `clearLayers()` in Task 3 but `clearFullLayers()` in Task 7 is a bug.
 
+**4. Review Focus:** Check which likely user inputs and failure modes implied by the spec are not exercised by any task. Add the highest-risk uncovered cases to `Review Focus` and add each test to its owning task. An empty section records that you checked and found none.
+
 If you find issues, fix them inline. No need to re-review — just fix and move on. If you find a spec requirement with no task, add the task.
 
 ## Execution Handoff
 
-After saving the plan, offer execution choice:
+After saving and self-reviewing the plan, link it for your human partner to
+review. If they already supplied an execution method, ask them to confirm the
+plan before implementation and preserve that method. Otherwise, ask them to
+review the plan and choose an execution method. Do not start implementation
+until the plan has been reviewed and approved.
 
-**"Plan complete and saved to `docs/plans/<filename>.md`. Two execution options:**
+**When no execution method has already been supplied:**
 
-**1. Subagent-Driven (recommended)** - I dispatch a fresh subagent per task, review between tasks, fast iteration
+> Plan complete and saved to `docs/plans/<filename>.md`. Please review it.
+> Which execution approach would you prefer?
 
-**2. Inline Execution** - Execute tasks in this session using `me:executing-plans`, batch execution with checkpoints
+- **Subagent-driven** — a fresh implementer and reviewer per task, then a
+  whole-branch review. Recommend this when task boundaries or correctness
+  risks benefit from per-task independent review.
+- **Native** — implement each task in this session and run one fresh
+  whole-branch review at the end. Recommend this when the plan is detailed and
+  cost or speed matters more than per-task independent review.
 
-**Which approach?"**
+Ask whether the plan captures the intended work and which approach to use.
 
-**If Subagent-Driven chosen:**
+**When an execution method has already been supplied:**
+
+> Plan complete and saved to `docs/plans/<filename>.md`. Please review it and
+> confirm it captures what you want.
+
+Wait for approval, then use the preserved execution method.
+
+**If Subagent-driven is chosen:**
 - **REQUIRED SUB-SKILL:** Use `me:subagent-driven-development`
 - Fresh subagent per task + two-stage review
 
-**If Inline Execution chosen:**
+**If Native is chosen:**
 - **REQUIRED SUB-SKILL:** Use `me:executing-plans`
-- Batch execution with checkpoints for review
+- Inline execution with a shared task ledger and one whole-branch review

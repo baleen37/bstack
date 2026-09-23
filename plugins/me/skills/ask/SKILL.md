@@ -33,13 +33,15 @@ that fires on its own.
    with exact file paths and a red-green step list. It is gated on the spec
    existing, because a plan with nothing to be checked against is unreviewable.
 
-4. **Pick an executor.** Both read the plan and hand off to
-   `me:finishing-a-development-branch`:
-   - **`me:subagent-driven-development`** stays in this session and dispatches
-     one implementer subagent per task, reviewing each before moving on. The
-     default.
-   - **`me:executing-plans`** runs the plan in a separate session with review
-     checkpoints. Reach for it when the work wants its own context window.
+4. **Review the plan, then pick an executor.** `me:writing-plans` waits for
+   approval before implementation. Both executors run in this session and
+   share a plan workspace and ledger:
+   - **`me:subagent-driven-development`** dispatches one implementer and
+     reviewer per task, then runs a whole-branch review. Choose it when task
+     boundaries or correctness risks need independent review.
+   - **`me:executing-plans`** implements tasks inline and runs one fresh
+     whole-branch review. Choose it when the plan is detailed and cost or speed
+     matters more than per-task review.
 
 5. **`me:finishing-a-development-branch`** verifies tests, then offers exactly
    three choices: merge locally, push and open a PR, or leave the branch. It
@@ -58,6 +60,11 @@ A starting situation that generates work, then joins the main flow.
   regression between two known-good states. It refuses to theorise until it has
   one command that goes red on *this* bug, then fixes with a regression test.
   `me:verify` hands off here when a FAIL has no obvious cause.
+
+- **An agent session went wrong** → **`me:diagnosing-agent-sessions`**. It
+  reconstructs what happened from transcript evidence: repeated work, ignored
+  plans, a skill that did not fire, stumbles, or unexpected cost. It reports
+  involvement without claiming a plugin root cause.
 
 - **You need facts before you can decide** → **`me:research`**. Delegates the
   reading to a background agent, which investigates against primary sources and
