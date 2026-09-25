@@ -12,6 +12,14 @@ The destination varies per effort, and naming it is the first act of charting: i
 
 Wayfinder is **planning** by default: each ticket resolves a decision, and the map is done when the way is clear, with nothing left to decide before someone goes and does the thing. The pull to just do the work is usually the signal you've reached the edge of the map and it's time to hand off. An effort can override this in its **Notes**, carrying execution into the map itself, but absent that, produce decisions, not deliverables.
 
+## Spec destinations
+
+When the destination is an engineering spec, Wayfinder resolves the decisions that inform it; the map is not the spec document. Once the map's decisions are settled, hand them to `me:writing-spec`. Follow that skill's repository document path, commit, and user-review gate (`docs/specs/YYYY-MM-DD-<topic>-design.md` by default).
+
+Do not pass a spec to `me:writing-plans` until the user approves it. If review is held because a decision remains open, return to the map, add or reopen that decision ticket, resolve it under the one-ticket-per-session rule, update the spec, and request approval again. If approval is simply pending, remain at the `me:writing-spec` review gate. In either case, do not advance to planning without approval. After approval, `me:writing-spec` hands off to `me:writing-plans`, which creates a plan for the user to review and approve before they choose an execution method.
+
+This is the `me` file-based flow. Do not automatically chain Matt Pocock's `to-tickets` or `implement-spec` into it; those are separate tracker-based workflows.
+
 ## Refer by name
 
 Every map and ticket is an issue, so it has a **name**: its title. In everything the human reads (narration, the map's Decisions-so-far), refer to it by that name, never by a bare id, number, or slug. A wall of `#42, #43, #44` is illegible; names read at a glance. The id and URL don't vanish; a name wraps its link, but they ride _inside_ the name, never stand in for it.
@@ -22,7 +30,7 @@ The map is a single issue on this repo's issue tracker, labelled `wayfinder:map`
 
 The map is an **index**, not a store. It lists the decisions made and points at the tickets that hold their detail; a decision lives in exactly one place, its ticket, so the map never restates it, only gists it and links.
 
-**Where the map, its child tickets, blocking, and frontier queries physically live is tracker-specific.** The issue tracker should have been provided to you. If not, tell the user to run `/me:setup`. Consult the tracker doc's "Wayfinding operations" section for how _this_ repo expresses them. If no tracker has been provided, default to the local-markdown tracker.
+**Where the map, its child tickets, blocking, and frontier queries physically live is tracker-specific.** Before any tracker operation, read this repo's `docs/agents/issue-tracker.md` and follow its "Wayfinding operations" section. `me:setup` records the per-repo choice, normally GitHub Issues or local Markdown. Do not infer a tracker from the remote or default to local Markdown. If the configuration is missing or has no Wayfinding operations, stop and ask the user to run `/me:setup`.
 
 ### The map body
 

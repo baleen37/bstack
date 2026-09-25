@@ -184,6 +184,23 @@ spike stops at "present the probe, get a nod"). Sections from
 bounded work, context plus rounds until the frontier empties plus a
 short in-chat design is the whole process.
 
+**Project language and decisions:**
+
+- For a repository-specific design, follow `CONTEXT-MAP.md` when present
+  to find the relevant `CONTEXT.md`; otherwise locate the context that
+  covers the work. Read related ADRs before proposing domain terms or
+  decisions.
+- Compare the terms in the request and proposed design with the glossary.
+  If a term conflicts or is ambiguous, surface it and resolve its meaning
+  with the user before the design proceeds.
+- When a new term is agreed, use `me:domain-modeling` to update the
+  relevant `CONTEXT.md` as it crystallizes. Keep that file to domain
+  language; create it only when there is a resolved term to record.
+- Propose an ADR only when a decision is hard to reverse, would be
+  surprising without its rationale, and has genuine alternatives and
+  trade-offs. Explain the alternatives and get the user's approval before
+  recording it. Create ADR files only when an approved decision needs one.
+
 **Understanding the idea:**
 
 - Check out the current project state first (files, docs, recent commits)

@@ -22,11 +22,17 @@ that fires on its own.
    task goes straight to implementation with no plan document, and only
    architectural work continues down this list.
 
+   If architectural work is too large for one session, use `me:wayfinder`
+   first to settle its decision map. When the map is clear, continue at Step 2.
+
 2. **`me:writing-spec`** writes the approved design to
    `docs/specs/YYYY-MM-DD-<topic>-design.md` and commits it. It owns the spec:
    the template, the `Discovery:` line recording how the interview actually
-   went, the `## Open questions` rows, and the review gate. It will not invent
-   a design — with no approved one, it sends you back to brainstorming.
+   went, the `## Open questions` rows, and the review gate. This is the
+   repository's spec-document step after Wayfinder decisions are settled; the
+   map itself is not the spec. It will not invent a design — with no approved
+   one, it sends you back to brainstorming. Only a user-approved spec proceeds
+   to Step 3.
 
 3. **`me:writing-plans`** turns the spec into
    `docs/plans/YYYY-MM-DD-<feature>.md`: tasks sized to one test cycle, each
@@ -37,11 +43,11 @@ that fires on its own.
    approval before implementation. Both executors run in this session and
    share a plan workspace and ledger:
    - **`me:subagent-driven-development`** dispatches one implementer and
-     reviewer per task, then runs a whole-branch review. Choose it when task
-     boundaries or correctness risks need independent review.
+     reviewer per task, then runs a whole-branch review. Recommend it when
+     tasks are independent and per-task review is worth the added context cost.
    - **`me:executing-plans`** implements tasks inline and runs one fresh
-     whole-branch review. Choose it when the plan is detailed and cost or speed
-     matters more than per-task review.
+     whole-branch review. Recommend it when tasks are sequential and cost or
+     speed matters more than per-task isolation.
 
 5. **`me:finishing-a-development-branch`** verifies tests, then offers exactly
    three choices: merge locally, push and open a PR, or leave the branch. It
@@ -132,11 +138,12 @@ brainstorming.
 ## Too big for one session
 
 - **`me:wayfinder`** — a greenfield project or feature build too large for one
-  session. Charts a map of decision tickets on the repo's issue tracker and
-  resolves them one at a time, producing **decisions, not deliverables**. Where
-  `me:brainstorming` sharpens an idea you can hold in one session, this is for
-  the one you can't. Needs `me:setup` run once per repo to configure the
-  tracker.
+  session. Charts a map of decision tickets on the repo's configured issue
+  tracker and resolves them one at a time, producing **decisions, not
+  deliverables**. If its destination is a spec, hand the settled decisions to
+  Step 2 for the repository's spec-document and review process. Small work stays
+  in the main flow without a map. Needs `me:setup` run once per repo to choose
+  the tracker.
 - **`me:prototype`** — throwaway code answering one design question: does this
   state model feel right, what should this UI look like. `me:wayfinder` calls
   it for prototype tickets.
@@ -193,7 +200,8 @@ the process, are the problem:
 issues rather than files: `to-tickets` splits a spec into tracer-bullet tickets
 carrying blocking edges, `implement` builds one ticket, and `implement-spec`
 builds a whole spec across parallel implementers. Both drive `me:tdd` and close
-out with `me:code-review`.
+out with `me:code-review`. This is separate from the `me` spec-and-plan flow;
+Wayfinder does not automatically chain into `to-tickets` or `implement-spec`.
 
 **Big or messy starting points:**
 
