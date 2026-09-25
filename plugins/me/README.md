@@ -9,16 +9,23 @@ each stage commits an artifact the next stage reads.
 
 | Stage | Artifact | Skills |
 | ----- | -------- | ------ |
-| Plan / Design | `docs/specs/*.md` | `brainstorming` → `writing-spec` |
+| Plan / Design | `docs/specs/*.md` | Small: `brainstorming` → `writing-spec`; large: `wayfinder` → `writing-spec` |
 | Build | `docs/plans/*.md` + code | `writing-plans` → `executing-plans` or `subagent-driven-development`, `tdd` |
 | Test | test results | `verify`, `e2e-scenario-testing`, `diagnosing-bugs` |
 | Deploy | PR, release | `code-review`, `requesting-code-review`, `create-pr`, `ship` |
 | Maintain | — | not yet implemented |
 
-Each link is a hard gate on its input artifact: `writing-plans` needs a spec,
-`subagent-driven-development` needs a plan. A spec's `## Open questions`
-section carries what is still undecided; when it is empty, the next stage
-proceeds without asking.
+Each link is a hard gate on its input artifact: `writing-plans` needs a
+user-approved spec, and both execution skills need an approved plan.
+Wayfinder is for work too large for one session; it resolves decisions, then
+hands a spec destination to `writing-spec` to create and review the repository's
+`docs/specs/*.md` document. A spec held for review stays at that gate; new
+decisions return to the map. After spec approval, `writing-plans` creates an
+implementation plan for user review and approval. Recommend
+`subagent-driven-development` when independent task reviews are worth the added
+context cost, or `executing-plans` for sequential work where cost or speed
+matters more than per-task isolation; the user makes the final choice. Small
+work stays in the main flow without a Wayfinder map.
 
 ## Start here
 
@@ -30,6 +37,7 @@ proceeds without asking.
 ### Plan
 
 - `research` — Investigate questions against primary sources and save cited findings.
+- `wayfinder` — Resolve decisions for work too large for one session; spec destinations continue to `writing-spec`.
 - `writing-prds` — Write product requirements documents for feature planning.
 - `writing-rfcs` — Write technical RFCs for engineering decisions.
 - `competitive-agents` — Compare parallel approaches for architecture, API, or system decisions.

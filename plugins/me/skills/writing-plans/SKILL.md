@@ -47,6 +47,18 @@ nothing, just plan. The section's emptiness is the signal.
 
 If the spec covers multiple independent subsystems, it should have been broken into sub-project specs during brainstorming. If it wasn't, suggest breaking this into separate plans — one per subsystem. Each plan should produce working, testable software on its own.
 
+## Domain Context
+
+Before defining tasks, follow `CONTEXT-MAP.md` when present to find the
+`CONTEXT.md` that covers the work, and read related ADRs. Use the approved
+glossary terms and applicable decisions consistently in the plan; name the
+source documents when they constrain the implementation.
+
+If the spec conflicts with the glossary or an applicable ADR, or leaves a
+domain term unresolved, surface the conflict and resolve it with the user
+before writing the plan. Keep `CONTEXT.md` to domain language. If planning
+settles a new term, use `me:domain-modeling` to record it there.
+
 ## File Structure
 
 Before defining tasks, map out which files will be created or modified and what each one is responsible for. This is where decomposition decisions get locked in.
@@ -88,7 +100,7 @@ is not obvious, rather than restating its rules inside the plan.
 ```markdown
 # [Feature Name] Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use `me:subagent-driven-development` (recommended) or `me:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use the execution method chosen at handoff: `me:subagent-driven-development` or `me:executing-plans`. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** [One sentence describing what this builds]
 
@@ -209,12 +221,18 @@ until the plan has been reviewed and approved.
 > Plan complete and saved to `docs/plans/<filename>.md`. Please review it.
 > Which execution approach would you prefer?
 
-- **Subagent-driven** — a fresh implementer and reviewer per task, then a
-  whole-branch review. Recommend this when task boundaries or correctness
-  risks benefit from per-task independent review.
-- **Native** — implement each task in this session and run one fresh
-  whole-branch review at the end. Recommend this when the plan is detailed and
-  cost or speed matters more than per-task independent review.
+- **Subagent-driven** (`me:subagent-driven-development`) — a fresh
+  implementer and reviewer per task, then a fresh-context whole-branch
+  review. Recommend this when tasks are independent and task-level
+  implementation and review are worth the added context cost.
+- **Inline** (`me:executing-plans`) — implement each task in this session
+  and run one fresh-context whole-branch review at the end. Recommend this
+  when tasks are sequential and the plan is specific enough to execute
+  directly, and cost or speed matters more than per-task isolation.
+
+Both paths retain their execution skill's isolated-worktree setup and final
+whole-branch review. Recommend a path based on task structure and review
+needs, then leave the choice to the user.
 
 Ask whether the plan captures the intended work and which approach to use.
 
@@ -229,6 +247,6 @@ Wait for approval, then use the preserved execution method.
 - **REQUIRED SUB-SKILL:** Use `me:subagent-driven-development`
 - Fresh subagent per task + two-stage review
 
-**If Native is chosen:**
+**If Inline is chosen:**
 - **REQUIRED SUB-SKILL:** Use `me:executing-plans`
 - Inline execution with a shared task ledger and one whole-branch review
