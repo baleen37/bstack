@@ -1,16 +1,19 @@
-# Core Plugin Migration from Superpowers
+# Core Plugin Migration from Upstream Skills
+
+> Historical migration record: `upstream` names, namespaces, and cache paths below are generic source placeholders.
+> Current workflow skills use `me:`.
 
 **Date:** 2026-02-24
-**Branch:** feat/good-bye-superpower
+**Branch:** feat/core-plugin-migration
 **Status:** Approved
 
 ## Goal
 
-Migrate the `superpowers` marketplace plugin's skills and hooks into a self-owned `core` plugin within this repository. This removes the external dependency on `github.com/obra/superpowers` and gives full ownership of these foundational skills.
+Migrate the `upstream` marketplace plugin's skills and hooks into a self-owned `core` plugin within this repository. This removes the external dependency on the upstream repository and gives full ownership of these foundational skills.
 
 ## What We're Migrating
 
-Source: `~/.claude/plugins/cache/superpowers-marketplace/superpowers/4.3.1/`
+Source: `~/.claude/plugins/cache/upstream-marketplace/upstream/4.3.1/`
 
 - 14 skills (with subdirectories for some)
 - `hooks/session-start` script
@@ -49,7 +52,7 @@ plugins/core/
     ├── test-driven-development/
     │   ├── SKILL.md
     │   └── testing-anti-patterns.md
-    ├── using-core/SKILL.md          ← renamed from using-superpowers
+    ├── using-core/SKILL.md          ← renamed from using-upstream
     ├── using-git-worktrees/SKILL.md
     ├── verification-before-completion/SKILL.md
     ├── writing-plans/SKILL.md
@@ -61,16 +64,16 @@ plugins/core/
 ## Files Requiring Modification
 
 ### 1. `plugins/core/.claude-plugin/plugin.json`
-- `name`: `"superpowers"` → `"core"`
+- `name`: `"upstream"` → `"core"`
 - Remove external `author`, `homepage`, `repository` fields
 
 ### 2. `plugins/core/hooks/session-start`
-- Reference to `skills/using-superpowers/SKILL.md` → `skills/using-core/SKILL.md`
-- Output message: remove "superpowers" branding, update to "core"
-- `<EXTREMELY_IMPORTANT>` block: update skill prefix references from `superpowers:` to `core:`
+- Reference to `skills/using-upstream/SKILL.md` → `skills/using-core/SKILL.md`
+- Output message: remove "upstream" branding, update to "core"
+- `<EXTREMELY_IMPORTANT>` block: update skill prefix references from `upstream:` to `core:`
 
 ### 3. `plugins/core/skills/using-core/SKILL.md`
-- All `superpowers:skill-name` references → `core:skill-name`
+- All `upstream:skill-name` references → `core:skill-name`
 - Title/description updated to reflect `core` plugin
 
 ## marketplace.json Update
@@ -90,7 +93,7 @@ Add `core` plugin entry to `.claude-plugin/marketplace.json`:
 
 ## Post-Migration
 
-Remove `superpowers` from `~/.claude/settings.json` plugins list (manual step after verifying `core` works).
+Remove `upstream` from `~/.claude/settings.json` plugins list (manual step after verifying `core` works).
 
 ## Out of Scope
 

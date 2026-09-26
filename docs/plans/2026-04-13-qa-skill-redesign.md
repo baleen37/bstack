@@ -1,6 +1,6 @@
 # QA Skill Redesign Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use me:subagent-driven-development (recommended) or me:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Rewrite `/qa` skill as a lean, project-agnostic explore+report tool (~80 lines SKILL.md) with heavy content in references.
 
@@ -299,12 +299,12 @@ Save `baseline.json`:
 After the report:
 
 > "N개 이슈를 발견했습니다. 수정하시겠습니까?
-> A) Subagent-driven — 이슈별 병렬 수정 (`superpowers:subagent-driven-development`)
-> B) Inline — 순차 수정 (`superpowers:executing-plans`)
+> A) Subagent-driven — 이슈별 병렬 수정 (`me:subagent-driven-development`)
+> B) Inline — 순차 수정 (`me:executing-plans`)
 > C) 아니오 — 리포트만 남기고 종료"
 
-If A: invoke `superpowers:subagent-driven-development` with the report as input.
-If B: invoke `superpowers:executing-plans` with the report as input.
+If A: invoke `me:subagent-driven-development` with the report as input.
+If B: invoke `me:executing-plans` with the report as input.
 If C: end.
 
 ## Completion Status
@@ -363,5 +363,5 @@ Expected: SKILL.md ~80 lines, references ~120 lines, template ~45 lines
 
 - [ ] **Step 4: Verify no orphan references**
 
-Run: `grep -rn 'mcp__plugin_superpowers\|bootstrap\|Phase 3: Fix\|Phase 4: Final\|--quick\|--exhaustive' plugins/me/skills/qa/`
+Run: `grep -rn 'legacy browser tool\|bootstrap\|Phase 3: Fix\|Phase 4: Final\|--quick\|--exhaustive' plugins/me/skills/qa/`
 Expected: No matches in any file

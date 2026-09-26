@@ -19,7 +19,7 @@ auto-updater에 config 개념을 도입하여 여러 마켓플레이스와 특�
       "name": "baleen-plugins"
     },
     {
-      "name": "superpowers-marketplace",
+      "name": "upstream-marketplace",
       "plugins": ["episodic-memory"]
     }
   ]

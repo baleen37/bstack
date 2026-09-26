@@ -1,8 +1,8 @@
 # Story Loop Skills Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use
-> superpowers:subagent-driven-development (recommended) or
-> superpowers:executing-plans to implement this plan task-by-task. Steps use
+> me:subagent-driven-development (recommended) or
+> me:executing-plans to implement this plan task-by-task. Steps use
 > checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add provider-neutral `e2e-scenario-testing` and `story-loop` skills
@@ -145,6 +145,6 @@ Confirm `git diff --stat HEAD^` contains only both new skills, the README, and
 the approved design/plan artifacts. Then run:
 
 ```bash
-git add plugins/me/skills/story-loop/SKILL.md plugins/me/README.md docs/superpowers/plans/2026-07-18-story-loop-skills.md
+git add plugins/me/skills/story-loop/SKILL.md plugins/me/README.md docs/plans/2026-07-18-story-loop-skills.md
 git commit -m "feat(me): add story loop skill"
 ```

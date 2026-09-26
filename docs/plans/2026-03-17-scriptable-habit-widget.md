@@ -1,6 +1,6 @@
 # Scriptable Habit Tracker Widget Implementation Plan
 
-> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED: Use me:subagent-driven-development (if subagents available) or me:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build a single Scriptable JavaScript file that renders a Small widget showing last week and this week's habit data as a dot grid, fetched from a Google Apps Script endpoint.
 

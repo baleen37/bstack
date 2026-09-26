@@ -1,6 +1,6 @@
 # QA Skill Generalization Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use me:subagent-driven-development (recommended) or me:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Generalize the `/qa` skill from web-only to support any project type (web, CLI, API, library) with a simplified 5-phase universal flow.
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** Markdown skill files, no code dependencies.
 
-**Spec:** `docs/superpowers/specs/2026-03-26-qa-generalization-design.md`
+**Spec:** `docs/specs/2026-03-26-qa-generalization-design.md`
 
 ---
 
@@ -56,7 +56,7 @@ allowed-tools:
   - Glob
   - Grep
   - Agent
-  - mcp__plugin_superpowers-chrome_chrome__use_browser
+  # Add the available browser automation tool identifier for this environment.
 ---
 
 # /qa: Explore → Fix → Verify → Report
@@ -65,7 +65,7 @@ You are a QA engineer AND a bug-fix engineer. Test projects like a real user —
 
 ## Browser Tool (Web Projects)
 
-When testing web projects, use `mcp__plugin_superpowers-chrome_chrome__use_browser` for all browser interactions:
+When testing web projects, use the available browser automation tool for all browser interactions:
 
 | Operation | Action | Example |
 |-----------|--------|---------|

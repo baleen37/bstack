@@ -1,6 +1,6 @@
 # QA Verification Redesign Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use me:subagent-driven-development (recommended) or me:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Rework `/qa` so it validates whether an implementation behaves correctly in context, using verdict-first output (`PASS / PARTIAL / FAIL`) instead of bug-hunt-first reporting.
 
@@ -139,8 +139,8 @@ Use `references/issue-taxonomy.md` only as a supporting classification system, n
 After the report:
 
 > "검증 결과는 PASS/PARTIAL/FAIL입니다. 수정 후 다시 검증하시겠습니까?"
-> A) Subagent-driven — 수정 후 재검증 (`superpowers:subagent-driven-development`)
-> B) Inline — 순차 수정 후 재검증 (`superpowers:executing-plans`)
+> A) Subagent-driven — 수정 후 재검증 (`me:subagent-driven-development`)
+> B) Inline — 순차 수정 후 재검증 (`me:executing-plans`)
 > C) 아니오 — 리포트만 남기고 종료
 
 If C: end.

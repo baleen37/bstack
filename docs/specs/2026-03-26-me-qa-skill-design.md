@@ -2,7 +2,7 @@
 
 ## Summary
 
-Port gstack's `/qa` skill into the `me` plugin as an independent skill, replacing gstack-specific binaries and telemetry with `superpowers-chrome` browser control.
+Port gstack's `/qa` skill into the `me` plugin as an independent skill, replacing gstack-specific binaries and telemetry with browser automation.
 
 ## Problem
 
@@ -13,9 +13,9 @@ gstack's `/qa` is a comprehensive QA skill (test → fix → verify loop) but re
 
 The `me` plugin should provide this capability without gstack dependency.
 
-## Decision: Independent version using superpowers-chrome
+## Decision: Independent version using browser automation
 
-Remove all gstack-specific infrastructure. Replace the `$B` browse binary with `mcp__plugin_superpowers-chrome_chrome__use_browser` tool calls.
+Remove all gstack-specific infrastructure. Replace the `$B` browse binary with calls to the available browser automation tool.
 
 ## What's Removed
 

@@ -89,6 +89,6 @@ work stays in the main flow without a Wayfinder map.
 
 Most detailed references live next to the skill that uses them, such as `skills/verify/references/`.
 
-Selected workflow changes are adapted from [obra/superpowers v6.4.1](https://github.com/obra/superpowers/commit/5bf4e78011075bcfc0dc295f0724994cd123ee71).
+Selected workflow changes are adapted from an upstream workflow release (v6.4.1).
 They are adapted to `me` routing, `.bstack` workspaces, and Claude Code/Codex;
 upstream hooks and platform-specific plugin files are intentionally excluded.

@@ -22,8 +22,8 @@
 1. **Analyze** — 프로젝트 파악 (README, 구조, 엔트리포인트, 테스트 유무, 빌드 시스템) → QA 전략 수립
 2. **Explore + Report** — 전략대로 테스트, 이슈 발견 즉시 기록 + evidence 저장, 리포트 생성
 3. **Transition** — "N개 이슈를 발견했습니다. 수정하시겠습니까?"
-   - A) Subagent-driven → `superpowers:subagent-driven-development` 호출
-   - B) Inline → `superpowers:executing-plans` 호출
+   - A) Subagent-driven → `me:subagent-driven-development` 호출
+   - B) Inline → `me:executing-plans` 호출
    - C) 아니오 → 종료
 
 ## File Structure
@@ -52,7 +52,7 @@ plugins/me/skills/qa/
 
 ## Removed from Current Skill
 
-- Browser tool section (`mcp__plugin_superpowers-chrome_chrome__use_browser`)
+- Browser tool section (`browser automation tool`)
 - Test framework bootstrap
 - Fix Loop (Phase 3), Final QA (Phase 4)
 - WTF-likelihood, self-regulation

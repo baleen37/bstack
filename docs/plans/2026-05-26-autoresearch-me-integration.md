@@ -1,6 +1,6 @@
 # autoresearch → me plugin 통합 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use me:subagent-driven-development (recommended) or me:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** `plugins/autoresearch/`를 폐기하고, `plugins/me/skills/autoresearch/SKILL.md` 단일 파일로 통합하면서 `/goal` Claude Code 명령어를 종료 조건 평가 메커니즘으로 채택한다.
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** Bash, Markdown, JSON, BATS (테스트), jq (검증)
 
-**Spec:** `docs/superpowers/specs/2026-05-26-autoresearch-me-integration-design.md`
+**Spec:** `docs/specs/2026-05-26-autoresearch-me-integration-design.md`
 
 ---
 

@@ -1,7 +1,7 @@
 # Research Delegation Fallback Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use
-> superpowers:subagent-driven-development to implement this plan task-by-task.
+> me:subagent-driven-development to implement this plan task-by-task.
 > Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Keep `me:research` usable when a researcher subagent cannot be

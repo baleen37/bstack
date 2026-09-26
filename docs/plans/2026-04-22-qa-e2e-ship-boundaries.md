@@ -1,6 +1,6 @@
 # QA / E2E / Ship Boundary Clarification Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use me:subagent-driven-development (recommended) or me:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Update the `qa`, `e2e`, and `ship` skill docs and their content tests so the boundary is explicit: `qa` is the default verification path, `e2e` is a narrower cross-boundary verification skill, and `ship` is a release-readiness gate.
 

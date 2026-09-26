@@ -1,6 +1,6 @@
 # create-pr Skill Improvement Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use me:subagent-driven-development (recommended) or me:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace `check-conflicts.sh` with a broader `preflight-check.sh`, add `wait-for-merge.sh`, and simplify SKILL.md from 8 steps to 5.
 

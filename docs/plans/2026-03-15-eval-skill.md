@@ -1,6 +1,6 @@
 # Eval Skill Implementation Plan
 
-> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED: Use me:subagent-driven-development (if subagents available) or me:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build an `eval` skill that compares two AI prompts (A vs B) by running them as parallel subagents and using a judge subagent to declare a winner.
 

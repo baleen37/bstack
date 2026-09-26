@@ -1,6 +1,6 @@
 # evolve `--recent` 멀티세션 검토 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use me:subagent-driven-development (recommended) or me:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** `build-index.ts`에 `--recent [N]` 플래그를 추가해, 최근 N개 세션의 transcript를 모아 skill별로 신호를 집계하되 "세션 호출 이후 본문이 이미 바뀐 skill"(stale)은 본문 해시 비교로 가려 제외하는 멀티세션 인덱스를 출력한다.
 

@@ -1,6 +1,6 @@
 # Plugin Consolidation Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> **For Claude:** REQUIRED SUB-SKILL: Use me:executing-plans to implement this plan task-by-task.
 
 **Goal:** Merge 12 separate plugins into a single monolithic plugin at the root level, removing `jira` and `databricks-devtools` entirely.
 

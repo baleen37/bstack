@@ -3,7 +3,7 @@
 > **Current behavior:** The delegation fallback plan supersedes this plan's
 > unconditional delegation path while preserving its evidence contract.
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use me:subagent-driven-development (recommended) or me:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make `me:research` a compact, external-source-only workflow that delegates source discovery to one token-efficient researcher subagent.
 
@@ -28,7 +28,7 @@
 **Files:**
 - Modify: `plugins/me/skills/research/SKILL.md`
 - Modify: `plugins/me/agents/researcher.md`
-- Modify: `docs/superpowers/specs/2026-07-25-external-research-subagent-design.md`
+- Modify: `docs/specs/2026-07-25-external-research-subagent-design.md`
 - Test: `tests/frontmatter_tests.bats`
 - Test: `tests/integration/cross_plugin_interactions.bats`
 - Test: `tests/me/me-specific.bats`
@@ -210,7 +210,7 @@ Expected:
 git add \
   plugins/me/skills/research/SKILL.md \
   plugins/me/agents/researcher.md \
-  docs/superpowers/specs/2026-07-25-external-research-subagent-design.md
+  docs/specs/2026-07-25-external-research-subagent-design.md
 git commit -m "feat(me): focus research on external sources"
 ```
 

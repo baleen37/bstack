@@ -1,7 +1,7 @@
 # Shipping Launch Safe Automation Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended)
-> or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax
+> **For agentic workers:** REQUIRED SUB-SKILL: Use me:subagent-driven-development (recommended)
+> or me:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax
 > for tracking.
 
 **Goal:** Improve `shipping-and-launch` so agents automatically perform safe launch-preparation work while
@@ -129,7 +129,7 @@ Expected: The workflow, category definitions, and `/ship` relationship are prese
 
 - [ ] **Step 1: Run markdownlint for the changed skill and plan**
 
-Run: `pre-commit run markdownlint --files plugins/me/skills/shipping-and-launch/SKILL.md docs/superpowers/plans/2026-05-13-shipping-launch-safe-automation.md`
+Run: `pre-commit run markdownlint --files plugins/me/skills/shipping-and-launch/SKILL.md docs/plans/2026-05-13-shipping-launch-safe-automation.md`
 Expected: PASS. If it fails for line length or blank-line formatting, fix only formatting in those files and rerun.
 
 - [ ] **Step 2: Run project tests**
@@ -139,7 +139,7 @@ Expected: PASS. If BATS is unavailable or tests fail, report the exact failure a
 
 - [ ] **Step 3: Check diff scope**
 
-Run: `git diff -- plugins/me/skills/shipping-and-launch/SKILL.md docs/superpowers/plans/2026-05-13-shipping-launch-safe-automation.md`
+Run: `git diff -- plugins/me/skills/shipping-and-launch/SKILL.md docs/plans/2026-05-13-shipping-launch-safe-automation.md`
 Expected: Diff only contains the shipping-and-launch safe automation policy/workflow and this implementation plan.
 
 ## Self-Review
