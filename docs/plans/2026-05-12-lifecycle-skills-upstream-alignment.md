@@ -1,7 +1,7 @@
 # Lifecycle Skills Upstream Alignment Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or
-> superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use me:subagent-driven-development (recommended) or
+> me:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Strengthen the existing `test`, `review`, and `ship` skills with upstream-aligned test/review/launch practices
 while preserving the current bstack lifecycle workflow.
@@ -139,7 +139,7 @@ If a description is stale, make the smallest wording-only edit. If descriptions 
 - [ ] **Step 3: Run focused markdown validation**
 
 Run: `pre-commit run markdownlint --files plugins/me/skills/test/SKILL.md plugins/me/skills/review/SKILL.md
-plugins/me/skills/ship/SKILL.md docs/superpowers/plans/2026-05-12-lifecycle-skills-upstream-alignment.md`
+plugins/me/skills/ship/SKILL.md docs/plans/2026-05-12-lifecycle-skills-upstream-alignment.md`
 Expected: PASS, or only actionable markdown issues that should be fixed.
 
 - [ ] **Step 4: Run project-required verification if available**
@@ -151,7 +151,7 @@ verification.
 - [ ] **Step 5: Check git diff**
 
 Run: `git diff -- plugins/me/skills/test/SKILL.md plugins/me/skills/review/SKILL.md plugins/me/skills/ship/SKILL.md
-plugins/me/README.md docs/superpowers/plans/2026-05-12-lifecycle-skills-upstream-alignment.md`
+plugins/me/README.md docs/plans/2026-05-12-lifecycle-skills-upstream-alignment.md`
 Expected: Diff only contains the planned lifecycle skill alignment changes.
 
 ## Self-Review

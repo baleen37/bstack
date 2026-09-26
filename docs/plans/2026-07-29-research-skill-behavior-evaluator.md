@@ -1,6 +1,6 @@
 # Research Skill Behavior Evaluator Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use me:subagent-driven-development (recommended) or me:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build a reproducible Codex/Claude behavior evaluator, capture the current research skill baseline, and rewrite the dispatcher and researcher contract only when the same scenarios prove better source behavior without an accuracy regression.
 
@@ -37,7 +37,7 @@
 | `tests/me/research-eval.bats` | Executable CLI tests with fake Codex and Claude binaries |
 | `plugins/me/skills/research/SKILL.md` | Thin request classifier and dispatcher |
 | `plugins/me/agents/researcher.md` | Complete external research and evidence contract |
-| `docs/superpowers/evals/2026-07-29-research-improvement.md` | Generated baseline-versus-candidate evidence report |
+| `docs/evals/2026-07-29-research-improvement.md` | Generated baseline-versus-candidate evidence report |
 | `.gitignore` | Excludes local `.research-eval/` raw run artifacts |
 
 The evaluator files are split by stable boundaries: pure logic, runtime I/O,
@@ -1272,7 +1272,7 @@ failure signature.
 ### Task 5: Verify the Repository and Publish the Evidence Report
 
 **Files:**
-- Create: `docs/superpowers/evals/2026-07-29-research-improvement.md`
+- Create: `docs/evals/2026-07-29-research-improvement.md`
 - Test: `tests/me/research-evaluator.test.ts`
 - Test: `tests/me/research-eval.bats`
 - Test: repository-wide Bats suite
@@ -1287,10 +1287,10 @@ failure signature.
 Run:
 
 ```bash
-mkdir -p docs/superpowers/evals
+mkdir -p docs/evals
 bun plugins/me/skills/research/scripts/evaluate.ts \
   --compare .research-eval/baseline .research-eval/candidate/accepted \
-  --report docs/superpowers/evals/2026-07-29-research-improvement.md
+  --report docs/evals/2026-07-29-research-improvement.md
 ```
 
 The generated Markdown must include:
@@ -1338,7 +1338,7 @@ Expected:
 Run:
 
 ```bash
-git add docs/superpowers/evals/2026-07-29-research-improvement.md
+git add docs/evals/2026-07-29-research-improvement.md
 git diff --cached --check
 git commit -m "docs(research): record behavior improvement evidence"
 ```

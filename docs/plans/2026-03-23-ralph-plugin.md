@@ -1,7 +1,7 @@
 # Ralph Plugin Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development
-> (recommended) or superpowers:executing-plans to implement this plan task-by-task.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use me:subagent-driven-development
+> (recommended) or me:executing-plans to implement this plan task-by-task.
 > Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build a standalone `plugins/ralph/` plugin that ports OMC's Ralph Loop into bstack — a
@@ -15,7 +15,7 @@ create a cancel signal file to exit the loop.
 
 **Tech Stack:** Bun (TypeScript runtime), Claude Code hooks API (Stop event), BATS (tests), JSON state files
 
-**Spec:** `docs/superpowers/specs/2026-03-23-ralph-plugin-design.md`
+**Spec:** `docs/specs/2026-03-23-ralph-plugin-design.md`
 
 ---
 

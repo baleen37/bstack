@@ -1,6 +1,6 @@
 # browse Chrome 쿠키 재활용 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use me:subagent-driven-development (recommended) or me:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** browse 스킬에 macOS Chrome의 로그인 쿠키를 복호화해 playwright-cli 세션으로 주입하는 스크립트 2개와 사용법 문서를 추가한다.
 

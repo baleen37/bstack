@@ -1,6 +1,6 @@
 # Evolve Observed Bodies Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use me:subagent-driven-development (recommended) or me:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make `/me:evolve --recent` and `--skill` analyze only sessions whose injected SKILL.md body matches the current SKILL.md body, while showing simple hash/version diagnostics for excluded sessions.
 
@@ -376,7 +376,7 @@ Expected: only these files changed:
  M plugins/me/skills/evolve/SKILL.md
  M plugins/me/skills/evolve/scripts/build-index.ts
  M tests/me/evolve-build-index.bats
-?? docs/superpowers/plans/2026-06-01-evolve-hash-clusters.md
+?? docs/plans/2026-06-01-evolve-hash-clusters.md
 ```
 
 - [ ] **Step 4: Commit**
@@ -384,7 +384,7 @@ Expected: only these files changed:
 Run:
 
 ```bash
-git add plugins/me/skills/evolve/SKILL.md plugins/me/skills/evolve/scripts/build-index.ts tests/me/evolve-build-index.bats docs/superpowers/plans/2026-06-01-evolve-hash-clusters.md
+git add plugins/me/skills/evolve/SKILL.md plugins/me/skills/evolve/scripts/build-index.ts tests/me/evolve-build-index.bats docs/plans/2026-06-01-evolve-hash-clusters.md
 git commit -m "feat(evolve): explain stale sessions with observed bodies"
 ```
 

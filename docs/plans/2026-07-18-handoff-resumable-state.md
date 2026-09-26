@@ -1,6 +1,6 @@
 # Handoff Resumable State Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use me:subagent-driven-development (recommended) or me:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Reshape `me:handoff` so every handoff clearly separates completed work, current state, and verified next actions without duplicating resume guidance.
 
@@ -99,6 +99,6 @@ Use the same auth-timeout scenario from the baseline evaluation. Verify that com
 - [ ] **Step 6: Commit the implementation**
 
 ```bash
-git add tests/me/handoff-skill.bats plugins/me/skills/handoff/SKILL.md docs/superpowers/plans/2026-07-18-handoff-resumable-state.md
+git add tests/me/handoff-skill.bats plugins/me/skills/handoff/SKILL.md docs/plans/2026-07-18-handoff-resumable-state.md
 git commit -m "feat(handoff): clarify resumable task state"
 ```

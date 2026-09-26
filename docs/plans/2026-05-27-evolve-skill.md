@@ -1,6 +1,6 @@
 # /me:evolve Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use me:subagent-driven-development (recommended) or me:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** transcript 기반으로 SKILL.md/AGENTS.md/CLAUDE.md를 반자동 진화시키는 `/me:evolve` 스킬을 만든다. TS 인덱스 빌더 + 서브에이전트 분석 + 메인 적용(개별 commit)의 3-Phase 파이프라인.
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript (Bun 런타임), Bash, BATS (테스트), jq (검증)
 
-**Spec:** `docs/superpowers/specs/2026-05-27-evolve-skill-design.md`
+**Spec:** `docs/specs/2026-05-27-evolve-skill-design.md`
 
 ---
 
@@ -882,7 +882,7 @@ allowed-tools:
 
 서브에이전트(`general-purpose`)를 1개 디스패치한다. 프롬프트에 다음을 모두 포함:
 
-1. spec 경로: `docs/superpowers/specs/2026-05-27-evolve-skill-design.md`
+1. spec 경로: `docs/specs/2026-05-27-evolve-skill-design.md`
 2. Phase 0에서 받은 인덱스 JSON 전체
 3. 후보 파일 매핑 표 (아래 그대로 복사):
 
@@ -919,7 +919,7 @@ allowed-tools:
 
 서브에이전트 반환 JSON 파싱 후:
 
-1. `is_external_cache: true` 인 proposal은 분리해 `docs/superpowers/evolutions/YYYY-MM-DD-upstream-suggestions.md`에 append (없으면 생성). Edit 시도 안 함.
+1. `is_external_cache: true` 인 proposal은 분리해 `docs/evolutions/YYYY-MM-DD-upstream-suggestions.md`에 append (없으면 생성). Edit 시도 안 함.
 2. 나머지 proposal을 1번부터 차례로 사용자에게 제시:
 
    ```

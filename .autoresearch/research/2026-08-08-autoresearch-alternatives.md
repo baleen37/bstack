@@ -3,7 +3,7 @@
 **작성일**: 2026-08-08
 **대상**: `plugins/autoresearch/skills/autoresearch/SKILL.md`
 
-> **디렉토리 규칙 note**: 이 레포는 설계 문서를 `docs/superpowers/plans/YYYY-MM-DD-<topic>.md`에 둡니다. 이 문서는 plan이 아니라 research이므로 형제 디렉토리 `docs/superpowers/research/`를 새로 만들어 같은 date-prefix 규칙을 따랐습니다.
+> **디렉토리 규칙 note**: 이 레포는 설계 문서를 `docs/plans/YYYY-MM-DD-<topic>.md`에 둡니다. 이 문서는 plan이 아니라 research이므로 형제 디렉토리 `docs/research/`를 새로 만들어 같은 date-prefix 규칙을 따랐습니다.
 
 ---
 

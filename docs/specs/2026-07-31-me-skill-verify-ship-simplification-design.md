@@ -50,7 +50,7 @@
 - 스킬이 실제로 하는 일(검증하고 PASS/PARTIAL/FAIL 판정)과 이름이 일치한다.
   `qa`는 업계 통용어라 "릴리스 게이트"로 읽히는데, 이 스킬은 명시적으로
   릴리스 게이트가 아니다.
-- `superpowers:verification-before-completion`과 어휘가 맞는다.
+- `me:verification-before-completion`과 어휘가 맞는다.
 - `ship`(내보낸다)과 대비가 선명하다. `qa` vs `ship`은 둘 다 릴리스 냄새가 난다.
 - 슬래시 호출 로그에 `/verify` 1건이 있고 `/e2e`는 0건이다.
 

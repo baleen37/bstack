@@ -1,10 +1,13 @@
 # Core Plugin Implementation Plan
 
+> Historical migration record: `upstream` names, namespaces, and cache paths below are generic source placeholders.
+> Current workflow skills use `me:`.
+
 > **For Claude:** REQUIRED SUB-SKILL: Use core:executing-plans to implement this plan task-by-task.
 
-**Goal:** Create `plugins/core` by copying superpowers 4.3.1 skills/hooks into this repo and renaming all `superpowers` references to `core` (including `using-superpowers` → `using-core`).
+**Goal:** Create `plugins/core` by copying upstream 4.3.1 skills/hooks into this repo and renaming all `upstream` references to `core` (including `using-upstream` → `using-core`).
 
-**Architecture:** Copy files verbatim from the cached superpowers plugin, then apply targeted string replacements for naming. No new logic is introduced — this is purely a structural migration.
+**Architecture:** Copy files verbatim from the cached upstream plugin, then apply targeted string replacements for naming. No new logic is introduced — this is purely a structural migration.
 
 **Tech Stack:** bash, jq, existing BATS test infrastructure
 
@@ -43,9 +46,9 @@ git commit -m "chore(core): scaffold core plugin directory structure"
 
 ---
 
-### Task 2: Copy skills from superpowers
+### Task 2: Copy skills from upstream
 
-Source: `~/.claude/plugins/cache/superpowers-marketplace/superpowers/4.3.1/skills/`
+Source: `~/.claude/plugins/cache/upstream-marketplace/upstream/4.3.1/skills/`
 
 **Files to copy** (14 skills, some with subdirectories):
 - `brainstorming/SKILL.md`
@@ -58,7 +61,7 @@ Source: `~/.claude/plugins/cache/superpowers-marketplace/superpowers/4.3.1/skill
 - `systematic-debugging/SKILL.md` + supporting files (CREATION-LOG.md, condition-based-waiting-example.ts, condition-based-waiting.md, defense-in-depth.md, find-polluter.sh, root-cause-tracing.md, test-academic.md, test-pressure-1.md, test-pressure-2.md, test-pressure-3.md)
 - `test-driven-development/SKILL.md` + `testing-anti-patterns.md`
 - `using-git-worktrees/SKILL.md`
-- `using-superpowers/SKILL.md` ← will be renamed to `using-core/` in Task 4
+- `using-upstream/SKILL.md` ← will be renamed to `using-core/` in Task 4
 - `verification-before-completion/SKILL.md`
 - `writing-plans/SKILL.md`
 - `writing-skills/SKILL.md` + supporting files (anthropic-best-practices.md, graphviz-conventions.dot, persuasion-principles.md, render-graphs.js, testing-skills-with-subagents.md, examples/CLAUDE_MD_TESTING.md)
@@ -66,8 +69,8 @@ Source: `~/.claude/plugins/cache/superpowers-marketplace/superpowers/4.3.1/skill
 **Step 1: Copy all skills**
 
 ```bash
-SUPERPOWERS=~/.claude/plugins/cache/superpowers-marketplace/superpowers/4.3.1/skills
-cp -r "$SUPERPOWERS/." plugins/core/skills/
+UPSTREAM=~/.claude/plugins/cache/upstream-marketplace/upstream/4.3.1/skills
+cp -r "$UPSTREAM/." plugins/core/skills/
 ```
 
 **Step 2: Verify skill count**
@@ -88,7 +91,7 @@ Expected: frontmatter with `name: brainstorming`
 
 ```bash
 git add plugins/core/skills/
-git commit -m "chore(core): copy superpowers skills verbatim"
+git commit -m "chore(core): copy upstream skills verbatim"
 ```
 
 ---
@@ -98,11 +101,11 @@ git commit -m "chore(core): copy superpowers skills verbatim"
 **Step 1: Copy hooks**
 
 ```bash
-SUPERPOWERS=~/.claude/plugins/cache/superpowers-marketplace/superpowers/4.3.1
-cp "$SUPERPOWERS/hooks/hooks.json" plugins/core/hooks/
-cp "$SUPERPOWERS/hooks/run-hook.cmd" plugins/core/hooks/
-cp "$SUPERPOWERS/hooks/session-start" plugins/core/hooks/
-cp "$SUPERPOWERS/lib/skills-core.js" plugins/core/lib/
+UPSTREAM=~/.claude/plugins/cache/upstream-marketplace/upstream/4.3.1
+cp "$UPSTREAM/hooks/hooks.json" plugins/core/hooks/
+cp "$UPSTREAM/hooks/run-hook.cmd" plugins/core/hooks/
+cp "$UPSTREAM/hooks/session-start" plugins/core/hooks/
+cp "$UPSTREAM/lib/skills-core.js" plugins/core/lib/
 ```
 
 **Step 2: Make session-start executable**
@@ -124,20 +127,20 @@ Expected lib: `skills-core.js`
 
 ```bash
 git add plugins/core/hooks/ plugins/core/lib/
-git commit -m "chore(core): copy superpowers hooks and lib verbatim"
+git commit -m "chore(core): copy upstream hooks and lib verbatim"
 ```
 
 ---
 
-### Task 4: Rename using-superpowers → using-core
+### Task 4: Rename using-upstream → using-core
 
 **Files:**
-- Rename: `plugins/core/skills/using-superpowers/` → `plugins/core/skills/using-core/`
+- Rename: `plugins/core/skills/using-upstream/` → `plugins/core/skills/using-core/`
 
 **Step 1: Rename the directory**
 
 ```bash
-mv plugins/core/skills/using-superpowers plugins/core/skills/using-core
+mv plugins/core/skills/using-upstream plugins/core/skills/using-core
 ```
 
 **Step 2: Verify**
@@ -151,14 +154,14 @@ Expected: `SKILL.md`
 
 ```bash
 git add plugins/core/skills/
-git commit -m "chore(core): rename using-superpowers to using-core"
+git commit -m "chore(core): rename using-upstream to using-core"
 ```
 
 ---
 
 ### Task 5: Update using-core/SKILL.md content
 
-Replace all `superpowers:` skill prefix references with `core:` and update the skill name/description in the frontmatter.
+Replace all `upstream:` skill prefix references with `core:` and update the skill name/description in the frontmatter.
 
 **Files:**
 - Modify: `plugins/core/skills/using-core/SKILL.md`
@@ -179,18 +182,18 @@ description: Use when starting any conversation - establishes how to find and us
 ---
 ```
 
-**Step 3: Replace all `superpowers:` prefixes in the body**
+**Step 3: Replace all `upstream:` prefixes in the body**
 
-Use sed to replace every occurrence of `superpowers:` with `core:`:
+Use sed to replace every occurrence of `upstream:` with `core:`:
 
 ```bash
-sed -i '' 's/superpowers:/core:/g' plugins/core/skills/using-core/SKILL.md
+sed -i '' 's/upstream:/core:/g' plugins/core/skills/using-core/SKILL.md
 ```
 
-**Step 4: Verify no `superpowers:` references remain**
+**Step 4: Verify no `upstream:` references remain**
 
 ```bash
-grep "superpowers:" plugins/core/skills/using-core/SKILL.md
+grep "upstream:" plugins/core/skills/using-core/SKILL.md
 ```
 Expected: no output
 
@@ -212,9 +215,9 @@ git commit -m "feat(core): update using-core skill with core: prefix"
 
 ### Task 6: Update session-start hook
 
-The hook reads `skills/using-superpowers/SKILL.md` and injects it as context. Update it to:
+The hook reads `skills/using-upstream/SKILL.md` and injects it as context. Update it to:
 1. Read `skills/using-core/SKILL.md` instead
-2. Remove "You have superpowers." branding → "You have core skills."
+2. Remove "You have upstream." branding → "You have core skills."
 3. Update the `<EXTREMELY_IMPORTANT>` label to reference `core:using-core`
 
 **Files:**
@@ -230,22 +233,22 @@ cat plugins/core/hooks/session-start
 
 ```bash
 sed -i '' \
-  's|skills/using-superpowers/SKILL.md|skills/using-core/SKILL.md|g' \
+  's|skills/using-upstream/SKILL.md|skills/using-core/SKILL.md|g' \
   plugins/core/hooks/session-start
 
 sed -i '' \
-  "s|'superpowers:using-superpowers' skill|'core:using-core' skill|g" \
+  "s|'upstream:using-upstream' skill|'core:using-core' skill|g" \
   plugins/core/hooks/session-start
 
 sed -i '' \
-  's|You have superpowers\.|You have core skills.|g' \
+  's|You have upstream\.|You have core skills.|g' \
   plugins/core/hooks/session-start
 ```
 
-**Step 3: Verify no `superpowers` references remain**
+**Step 3: Verify no `upstream` references remain**
 
 ```bash
-grep -i "superpowers" plugins/core/hooks/session-start
+grep -i "upstream" plugins/core/hooks/session-start
 ```
 Expected: no output
 
@@ -345,12 +348,12 @@ git commit -m "feat(core): register core plugin in marketplace.json"
 
 ---
 
-### Task 9: Verify no remaining superpowers references in plugins/core
+### Task 9: Verify no remaining upstream references in plugins/core
 
-**Step 1: Search for any remaining superpowers references**
+**Step 1: Search for any remaining upstream references**
 
 ```bash
-grep -r "superpowers" plugins/core/ --include="*.md" --include="*.json" --include="*.sh" --include="*.js" -l
+grep -r "upstream" plugins/core/ --include="*.md" --include="*.json" --include="*.sh" --include="*.js" -l
 ```
 Expected: no output (or only acceptable references in skill body text about the history/migration)
 
@@ -371,7 +374,7 @@ Expected: all tests pass
 
 ```bash
 git add -p
-git commit -m "fix(core): remove remaining superpowers references"
+git commit -m "fix(core): remove remaining upstream references"
 ```
 
 ---
@@ -398,7 +401,7 @@ import json, sys
 data = json.load(sys.stdin)
 ctx = data['hookSpecificOutput']['additionalContext']
 assert 'core:using-core' in ctx, 'Missing core:using-core reference'
-assert 'superpowers' not in ctx, 'Found superpowers reference in output'
+assert 'upstream' not in ctx, 'Found upstream reference in output'
 print('All assertions passed')
 "
 ```
@@ -410,7 +413,7 @@ Expected: `All assertions passed`
 
 ### Task 11: Update writing-plans SKILL.md header template
 
-The `writing-plans` skill contains a plan header template that references `superpowers:executing-plans`. Update it to reference `core:executing-plans`.
+The `writing-plans` skill contains a plan header template that references `upstream:executing-plans`. Update it to reference `core:executing-plans`.
 
 **Files:**
 - Modify: `plugins/core/skills/writing-plans/SKILL.md`
@@ -418,19 +421,19 @@ The `writing-plans` skill contains a plan header template that references `super
 **Step 1: Check current content**
 
 ```bash
-grep "superpowers:" plugins/core/skills/writing-plans/SKILL.md
+grep "upstream:" plugins/core/skills/writing-plans/SKILL.md
 ```
 
 **Step 2: Replace**
 
 ```bash
-sed -i '' 's/superpowers:/core:/g' plugins/core/skills/writing-plans/SKILL.md
+sed -i '' 's/upstream:/core:/g' plugins/core/skills/writing-plans/SKILL.md
 ```
 
 **Step 3: Verify**
 
 ```bash
-grep "superpowers:" plugins/core/skills/writing-plans/SKILL.md
+grep "upstream:" plugins/core/skills/writing-plans/SKILL.md
 ```
 Expected: no output
 
@@ -443,26 +446,26 @@ git commit -m "fix(core): update writing-plans skill to use core: prefix"
 
 ---
 
-### Task 12: Check all other skills for superpowers: references
+### Task 12: Check all other skills for upstream: references
 
-Some skills (brainstorming, subagent-driven-development, etc.) may reference other `superpowers:` skills internally.
+Some skills (brainstorming, subagent-driven-development, etc.) may reference other `upstream:` skills internally.
 
 **Step 1: Find all occurrences**
 
 ```bash
-grep -r "superpowers:" plugins/core/skills/ --include="*.md" -n
+grep -r "upstream:" plugins/core/skills/ --include="*.md" -n
 ```
 
-**Step 2: For each occurrence, replace `superpowers:` with `core:`**
+**Step 2: For each occurrence, replace `upstream:` with `core:`**
 
 ```bash
-find plugins/core/skills/ -name "*.md" -exec sed -i '' 's/superpowers:/core:/g' {} +
+find plugins/core/skills/ -name "*.md" -exec sed -i '' 's/upstream:/core:/g' {} +
 ```
 
 **Step 3: Verify clean**
 
 ```bash
-grep -r "superpowers:" plugins/core/skills/ --include="*.md"
+grep -r "upstream:" plugins/core/skills/ --include="*.md"
 ```
 Expected: no output
 
@@ -477,5 +480,5 @@ Expected: all tests pass
 
 ```bash
 git add plugins/core/skills/
-git commit -m "fix(core): replace all superpowers: skill references with core:"
+git commit -m "fix(core): replace all upstream: skill references with core:"
 ```

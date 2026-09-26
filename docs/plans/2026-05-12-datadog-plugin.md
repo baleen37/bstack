@@ -1,6 +1,6 @@
 # Datadog Plugin Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use me:subagent-driven-development (recommended) or me:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a `datadog` plugin to the bstack repo that mirrors 5 curated skills from `DataDog/pup`'s `skills/` directory, aligned to bstack's frontmatter convention.
 

@@ -1,6 +1,6 @@
 # eval-harness Skill Implementation Plan
 
-> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED: Use me:subagent-driven-development (if subagents available) or me:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add `me:eval-harness` skill that evaluates code changes in isolated git worktrees using capability/regression evals and model graders.
 

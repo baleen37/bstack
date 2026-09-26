@@ -1,6 +1,6 @@
 # Adopt Matt Pocock Engineering Skills Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use me:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add the requested Matt Pocock engineering skills to the `me` plugin as an exact upstream snapshot.
 
@@ -21,8 +21,8 @@
 ### Task 1: Establish the source manifest and baseline
 
 **Files:**
-- Create: `docs/superpowers/specs/2026-08-07-adopt-matt-pocock-engineering-skills-design.md` (approved)
-- Create: `docs/superpowers/plans/2026-08-07-adopt-matt-pocock-engineering-skills.md`
+- Create: `docs/specs/2026-08-07-adopt-matt-pocock-engineering-skills-design.md` (approved)
+- Create: `docs/plans/2026-08-07-adopt-matt-pocock-engineering-skills.md`
 - Test: repository status, source commit, and baseline structural suite
 
 **Interfaces:**

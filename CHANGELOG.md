@@ -68,7 +68,7 @@
 
 * **conversation-memory:** Fallback retry on thinking budget errors is removed. Set appropriate model via CONVERSATION_MEMORY_API_MODEL instead.
 * **context-restore:** Plugin renamed from memory-persistence to context-restore
-* **create-pr:** Complete rewrite using superpowers:writing-skills TDD process
+* **create-pr:** Complete rewrite using me:write-skill TDD process
 * **auto-updater:** Auto-update check interval changed from 24 hours to 6 hours
 
 ### Features
@@ -589,7 +589,7 @@
 
 * **conversation-memory:** Fallback retry on thinking budget errors is removed. Set appropriate model via CONVERSATION_MEMORY_API_MODEL instead.
 * **context-restore:** Plugin renamed from memory-persistence to context-restore
-* **create-pr:** Complete rewrite using superpowers:writing-skills TDD process
+* **create-pr:** Complete rewrite using me:write-skill TDD process
 * **auto-updater:** Auto-update check interval changed from 24 hours to 6 hours
 
 ### Features

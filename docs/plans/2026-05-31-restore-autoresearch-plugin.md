@@ -1,6 +1,6 @@
 # autoresearch 독립 plugin 복원 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use me:subagent-driven-development (recommended) or me:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** `/goal` 의존으로 깨진 me-통합 autoresearch를, `/goal`을 안 쓰는 옛 독립 `plugins/autoresearch/` plugin으로 복원한다.
 

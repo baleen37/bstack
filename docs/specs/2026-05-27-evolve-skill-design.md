@@ -227,7 +227,7 @@ interface AnalysisResult {
 
 서브에이전트 결과를 받고:
 
-1. `is_external_cache: true` 인 proposal은 별도 분리 → `docs/superpowers/evolutions/YYYY-MM-DD-upstream-suggestions.md`에 누적 추가만, Edit 시도 안 함. plan에 안 들어감.
+1. `is_external_cache: true` 인 proposal은 별도 분리 → `docs/evolutions/YYYY-MM-DD-upstream-suggestions.md`에 누적 추가만, Edit 시도 안 함. plan에 안 들어감.
 2. **전체 plan을 한 번에 제시**하고 단일 확인을 받음 (건별 프롬프트 금지). 각 항목은 full diff를 보여줌. 다중 세션은 `### <target_file>`로 그룹핑.
    ```
    Plan (N patches, one commit each):
