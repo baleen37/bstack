@@ -18,7 +18,7 @@ avoid, whatever wording the claim arrives in.
 - `verification-before-completion` — the gate you pass before *claiming* anything is done. Applies
   to every completion claim, in any wording.
 - `/verify` — the task of checking whether one change behaves as intended, producing a
-  PASS/PARTIAL/FAIL report. That report is itself a claim, so this gate applies to it.
+  PASS/FAIL/BLOCKED/SKIP report. That report is itself a claim, so this gate applies to it.
 - `/e2e-scenario-testing` — drive a running app through its real interface, one scenario.
 
 ## The rule
