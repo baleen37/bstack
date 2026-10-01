@@ -164,6 +164,10 @@ brainstorming.
   accounts, history, or open tabs.
 - **`me:write-skill`** — write or fix a `SKILL.md`, prove it against a
   no-skill baseline, tune it with SkillOpt.
+- **`me:learn`** — learn a concept over several sessions, in a
+  stateful workspace under `~/.bstack/learn/`.
+- **`me:capture`** — save something worth keeping from this session as a
+  note in `~/wiki/Inbox/`. Runs only when you call it.
 
 ## Phase boundaries
 
@@ -225,8 +229,6 @@ Wayfinder does not automatically chain into `to-tickets` or `implement-spec`.
   a questionnaire to fill in.
 - **`wait-what`** — fire it the moment a message doesn't land; the agent
   re-pitches in plainer language.
-- **`teach`** — learn a concept over several sessions, using the current
-  directory as a stateful workspace.
 - **`writing-for-agents`** — the reference for writing documents agents consume.
   Deeper on information design than `me:write-skill`, which is stronger on
   proving a skill against a baseline. Read both when writing a skill.

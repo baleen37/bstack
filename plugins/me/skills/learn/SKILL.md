@@ -1,6 +1,6 @@
 ---
-name: teach
-description: Teach the user a new skill or concept, within this workspace.
+name: learn
+description: Teach the user a new skill or concept over several sessions, in a workspace under `~/.bstack/learn/`.
 disable-model-invocation: true
 argument-hint: "What would you like to learn about?"
 ---
@@ -9,7 +9,7 @@ The user has asked you to teach them something. This is a stateful request - the
 
 ## Teaching Workspace
 
-Treat the current directory as a teaching workspace. The state of their learning is captured in this directory in several files:
+The teaching workspace is `~/.bstack/learn/<topic>/`, where `<topic>` is a short dash-case name for what the user is learning. Never use the current directory: the user may be inside an unrelated repo. If a workspace for the topic already exists, resume it; otherwise create it. All paths below are relative to the workspace. The state of their learning is captured in this directory in several files:
 
 - `MISSION.md`: A document capturing the _reason_ the user is interested in the topic. This should be used to ground all teaching. Use the format in [MISSION-FORMAT.md](./MISSION-FORMAT.md).
 - `./reference/*.html`: A directory of reference materials. These are the compressed learnings from the lessons - cheat sheets, reference algorithms, syntax, yoga poses, glossaries. They are the raw units of learning. They should be beautiful documents which print out well, and are designed for quick reference.

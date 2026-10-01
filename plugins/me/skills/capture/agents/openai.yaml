@@ -1,0 +1,5 @@
+interface:
+  display_name: "Capture"
+  short_description: "Save a note to the wiki inbox"
+policy:
+  allow_implicit_invocation: false
