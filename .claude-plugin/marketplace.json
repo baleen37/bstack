@@ -22,7 +22,7 @@
         "memory",
         "context"
       ],
-      "version": "17.62.0"
+      "version": "17.63.0"
     },
     {
       "name": "wiki",
@@ -36,7 +36,7 @@
         "daily",
         "todo"
       ],
-      "version": "17.62.0"
+      "version": "17.63.0"
     },
     {
       "name": "mattpocock-skills",
@@ -52,7 +52,7 @@
         "domain-modeling",
         "productivity"
       ],
-      "version": "17.62.0"
+      "version": "17.63.0"
     },
     {
       "name": "datadog",
@@ -67,7 +67,7 @@
         "apm",
         "pup"
       ],
-      "version": "17.62.0"
+      "version": "17.63.0"
     },
     {
       "name": "autoresearch",
@@ -80,7 +80,7 @@
         "autonomous",
         "research"
       ],
-      "version": "17.62.0"
+      "version": "17.63.0"
     },
     {
       "name": "atlassian",
@@ -93,7 +93,7 @@
         "twg",
         "cli"
       ],
-      "version": "17.62.0"
+      "version": "17.63.0"
     }
   ]
 }
