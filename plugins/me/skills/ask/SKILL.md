@@ -95,9 +95,8 @@ Two scopes, and the scope picks the skill:
 
 - **`me:code-review`** reviews the current diff, a branch, or a PR for
   correctness bugs plus reuse/simplification/efficiency/altitude/conventions
-  cleanups. Finder angles run in parallel subagents, then each candidate is
-  verified; the level (`low` to `max`) trades precision for recall. `--fix`
-  applies the findings, `--comment` posts them to the PR.
+  cleanups in one careful pass, with no subagents and no effort levels.
+  `--fix` applies the findings, `--comment` posts them to the PR.
 - **`me:simplify`** is the cleanup-only half: four angles (reuse,
   simplification, efficiency, altitude) over the diff, then it applies the
   fixes. It does not hunt for bugs.
