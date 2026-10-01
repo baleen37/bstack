@@ -166,9 +166,6 @@ brainstorming.
   no-skill baseline, tune it with SkillOpt.
 - **`me:learn`** — learn a concept over several sessions, in a
   stateful workspace under `~/.bstack/learn/`.
-- **`me:capture`** — save something worth keeping from this session as a
-  note in `~/wiki/Inbox/`. Runs only when you call it.
-
 ## Phase boundaries
 
 Between two phases of a session — the interview, the implementation, the
