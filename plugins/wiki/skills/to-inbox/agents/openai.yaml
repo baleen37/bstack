@@ -1,0 +1,5 @@
+interface:
+  display_name: "Inbox에 기록"
+  short_description: "Obsidian Inbox에 노트를 저장합니다"
+policy:
+  allow_implicit_invocation: false

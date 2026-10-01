@@ -1,0 +1,31 @@
+{
+  "name": "wiki",
+  "version": "17.62.0",
+  "description": "Obsidian 위키의 Inbox와 Daily TODO 기록 스킬",
+  "author": {
+    "name": "baleen37",
+    "email": "git@baleen.me"
+  },
+  "license": "MIT",
+  "keywords": [
+    "obsidian",
+    "wiki",
+    "inbox",
+    "daily",
+    "todo"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Wiki",
+    "shortDescription": "Obsidian 위키의 Inbox와 Daily TODO 기록 스킬",
+    "longDescription": "Obsidian 위키의 Inbox와 Daily TODO 기록 스킬",
+    "developerName": "baleen37",
+    "category": "Productivity",
+    "capabilities": [
+      "Skills"
+    ],
+    "defaultPrompt": [
+      "Use Wiki for this task."
+    ]
+  }
+}

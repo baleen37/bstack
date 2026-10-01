@@ -25,6 +25,20 @@
       "version": "17.62.0"
     },
     {
+      "name": "wiki",
+      "description": "Obsidian 위키의 Inbox와 Daily TODO 기록 스킬",
+      "source": "./plugins/wiki",
+      "category": "development",
+      "tags": [
+        "obsidian",
+        "wiki",
+        "inbox",
+        "daily",
+        "todo"
+      ],
+      "version": "17.62.0"
+    },
+    {
       "name": "mattpocock-skills",
       "description": "Matt Pocock's agent skills for real engineering: grilling, spec/ticket flows, TDD, code review, domain modelling and more. Plug-and-play, not vibe coding.",
       "source": "./plugins/mattpocock-skills",

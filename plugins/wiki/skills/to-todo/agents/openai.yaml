@@ -1,0 +1,5 @@
+interface:
+  display_name: "오늘 TODO에 기록"
+  short_description: "오늘 Daily 노트에 할 일을 추가합니다"
+policy:
+  allow_implicit_invocation: false
