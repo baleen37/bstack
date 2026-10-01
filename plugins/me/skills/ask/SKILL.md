@@ -65,7 +65,6 @@ A starting situation that generates work, then joins the main flow.
   For the hard ones: the bug that survives a first read, the flake, the
   regression between two known-good states. It refuses to theorise until it has
   one command that goes red on *this* bug, then fixes with a regression test.
-  `me:verify` hands off here when a FAIL has no obvious cause.
 
 - **An agent session went wrong** → **`me:diagnosing-agent-sessions`**. It
   reconstructs what happened from transcript evidence: repeated work, ignored
@@ -79,9 +78,10 @@ A starting situation that generates work, then joins the main flow.
 
 ## Verification
 
-- **`me:verify`** answers "does this actually work?" and reports `PASS`,
-  `PARTIAL`, or `FAIL` with evidence. Model-invoked, so it fires on "verify
-  this" or "qa".
+- **`me:verify`** answers "does this actually work?" by running the app and
+  driving the changed flow at its real surface — not tests or typecheck — and
+  reports `PASS`, `FAIL`, `BLOCKED`, or `SKIP` with captured evidence.
+  Model-invoked, so it fires on "verify this" or "qa".
 - **`me:e2e-scenario-testing`** drives a running app through its real
   interface — web UI, CLI, or TUI — with scenario cards carrying falsifiable
   assertions. For what unit tests cannot reach.
@@ -93,11 +93,14 @@ A starting situation that generates work, then joins the main flow.
 
 Two scopes, and the scope picks the skill:
 
-- **`me:code-review`** reviews a **range** — a branch, a PR, everything since a
-  tag — on two axes in parallel subagents: **Standards** (does it follow the
-  repo's documented rules, plus a Fowler smell baseline) and **Spec** (does it
-  do what the spec asked). Reported side by side and never merged, because a
-  change can pass one axis and fail the other.
+- **`me:code-review`** reviews the current diff, a branch, or a PR for
+  correctness bugs plus reuse/simplification/efficiency/altitude/conventions
+  cleanups. Finder angles run in parallel subagents, then each candidate is
+  verified; the level (`low` to `max`) trades precision for recall. `--fix`
+  applies the findings, `--comment` posts them to the PR.
+- **`me:simplify`** is the cleanup-only half: four angles (reuse,
+  simplification, efficiency, altitude) over the diff, then it applies the
+  fixes. It does not hunt for bugs.
 - **`me:requesting-code-review`** dispatches a single reviewer against two SHAs
   with purpose-built context rather than your session history. The per-task
   case, and what `me:subagent-driven-development` calls after each task.

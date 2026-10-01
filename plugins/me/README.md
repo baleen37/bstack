@@ -12,7 +12,7 @@ each stage commits an artifact the next stage reads.
 | Plan / Design | `docs/specs/*.md` | Small: `brainstorming` → `writing-spec`; large: `wayfinder` → `writing-spec` |
 | Build | `docs/plans/*.md` + code | `writing-plans` → `executing-plans` or `subagent-driven-development`, `tdd` |
 | Test | test results | `verify`, `e2e-scenario-testing`, `diagnosing-bugs` |
-| Deploy | PR, release | `code-review`, `requesting-code-review`, `create-pr`, `ship` |
+| Deploy | PR, release | `code-review`, `simplify`, `requesting-code-review`, `create-pr`, `ship` |
 | Maintain | — | not yet implemented |
 
 Each link is a hard gate on its input artifact: `writing-plans` needs a
@@ -54,14 +54,15 @@ work stays in the main flow without a Wayfinder map.
 
 ### Verify
 
-- `verify` — Verify implementation scope and report `PASS`, `PARTIAL`, or `FAIL` with evidence.
+- `verify` — Run the change end-to-end at its real surface and report `PASS`, `FAIL`, `BLOCKED`, or `SKIP` with evidence.
 - `e2e-scenario-testing` — Verify a running web UI, CLI, or TUI with reusable scenario cards and falsifiable assertions.
 - `verification-before-completion` — Require fresh evidence before completion claims.
 - `diagnosing-bugs` — Diagnose hard bugs by building a feedback loop that goes red before theorising.
 
 ### Review and completion
 
-- `code-review` — Review a range on two axes: Standards and Spec, in parallel subagents.
+- `code-review` — Review a diff or PR for bugs and cleanups at an effort level, with optional `--fix` / `--comment`.
+- `simplify` — Clean up the changed code for reuse, simplification, efficiency, and altitude, then apply the fixes.
 - `requesting-code-review` / `receiving-code-review` — Request and rigorously process code review.
 - `finishing-a-development-branch` — Verify tests and choose how to integrate completed work.
 
@@ -87,7 +88,7 @@ work stays in the main flow without a Wayfinder map.
 
 ## References
 
-Most detailed references live next to the skill that uses them, such as `skills/verify/references/`.
+Most detailed references live next to the skill that uses them, such as `skills/verify/examples/`.
 
 Selected workflow changes are adapted from an upstream workflow release (v6.4.1).
 They are adapted to `me` routing, `.bstack` workspaces, and Claude Code/Codex;

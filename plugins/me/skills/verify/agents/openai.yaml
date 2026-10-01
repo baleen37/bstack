@@ -1,0 +1,3 @@
+interface:
+  display_name: "Verify"
+  short_description: "Run the change end-to-end and observe it"
