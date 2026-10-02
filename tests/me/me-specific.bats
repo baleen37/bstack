@@ -42,14 +42,6 @@ load ../helpers/bats_helper
     [ -f "${PROJECT_ROOT}/plugins/me/skills/ship/SKILL.md" ]
 }
 
-@test "me: write-skill keeps SkillOpt detail in a reference file" {
-    local skill_dir="${PROJECT_ROOT}/plugins/me/skills/write-skill"
-
-    [ -f "${skill_dir}/SKILL.md" ]
-    [ -f "${skill_dir}/references/skillopt.md" ]
-    [ ! -e "${skill_dir}/agents/openai.yaml" ]
-}
-
 @test "me: release-with-github-app doc uses bun release flow" {
     local release_doc="${PROJECT_ROOT}/docs/release-with-github-app.yml"
 

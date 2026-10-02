@@ -14,9 +14,9 @@ Wayfinder is **planning** by default: each ticket resolves a decision, and the m
 
 ## Spec destinations
 
-When the destination is an engineering spec, Wayfinder resolves the decisions that inform it; the map is not the spec document. Once the map's decisions are settled, hand them to `me:writing-spec`. Follow that skill's repository document path, commit, and user-review gate (`docs/specs/YYYY-MM-DD-<topic>-design.md` by default).
+When the destination is an engineering spec, Wayfinder resolves the decisions that inform it; the map is not the spec document. Once the map's decisions are settled, hand them to `superpower:brainstorming` to write the spec. Follow that skill's document path, commit, and user-review gate (`docs/specs/YYYY-MM-DD-<topic>-design.md` by default).
 
-Do not pass a spec to `me:writing-plans` until the user approves it. If review is held because a decision remains open, return to the map, add or reopen that decision ticket, resolve it under the one-ticket-per-session rule, update the spec, and request approval again. If approval is simply pending, remain at the `me:writing-spec` review gate. In either case, do not advance to planning without approval. After approval, `me:writing-spec` hands off to `me:writing-plans`, which creates a plan for the user to review and approve before they choose an execution method.
+Do not pass a spec to `superpower:writing-plans` until the user approves it. If review is held because a decision remains open, return to the map, add or reopen that decision ticket, resolve it under the one-ticket-per-session rule, update the spec, and request approval again. If approval is simply pending, remain at the spec review gate. In either case, do not advance to planning without approval. After approval, hand off to `superpower:writing-plans`, which creates a plan for the user to review and approve before they choose an execution method.
 
 This is the `me` file-based flow. Do not automatically chain Matt Pocock's `to-tickets` or `implement-spec` into it; those are separate tracker-based workflows.
 
@@ -84,7 +84,7 @@ Every ticket is either **HITL** (human in the loop, worked _with_ a human who sp
 
 - **Research** (AFK): Reading documentation, third-party APIs, or local resources like knowledge bases to surface a fact a decision waits on. Resolved by a subagent that calls the Skill tool with "me:research". Use when knowledge outside the current working directory is required.
 - **Prototype** (HITL): Raise the fidelity of the discussion by making a cheap, rough, concrete artifact to react to (an outline, a rough take, a stub, or UI/logic code) by calling the Skill tool with "me:prototype". Links the prototype as an asset. Use when "how should it look" or "how should it behave" is the key question.
-- **Grilling** (HITL): Conversation. The default case. Always call the Skill tool twice, for "me:brainstorming" and "me:domain-modeling".
+- **Grilling** (HITL): Conversation. The default case. Always call the Skill tool twice, for "me:grill-me" and "me:domain-modeling".
 - **Task** (HITL or AFK): Manual work that must happen before a _decision_ can be made: nothing to decide, prototype, or research, but the discussion is blocked until it's done. Signing up for a service so its API can be judged, provisioning access, moving data so its shape can be seen. This is the one type that _does_ rather than decides, and it earns its place by unblocking a decision, not by delivering the destination. The agent drives it alone where it can (AFK); otherwise it hands the human a precise checklist (HITL). Resolved when the work is done; the answer records what was done and any resulting facts (credentials location, new URLs, row counts) later tickets depend on.
 
 ## Fog of war
@@ -116,7 +116,7 @@ Two modes. Either way, **never resolve more than one ticket per session**, with 
 
 User invokes with a loose idea.
 
-1. **Name the destination.** Call the Skill tool twice, for "me:brainstorming" and "me:domain-modeling", to pin down what this map is finding its way to: the spec, decision, or change. The destination fixes the scope, so it's settled first.
+1. **Name the destination.** Call the Skill tool twice, for "me:grill-me" and "me:domain-modeling", to pin down what this map is finding its way to: the spec, decision, or change. The destination fixes the scope, so it's settled first.
 2. **Map the frontier.** Grill again, **breadth-first** this time: fan out across the whole space rather than deep on any one thread, surfacing the open decisions and the first steps takeable now. **If this surfaces no fog** (the way to the destination is already clear, the whole journey small enough for one session), you don't need a map. Stop and ask the user how they'd like to proceed.
 3. **Create the map** (label `wayfinder:map`): Destination and Notes filled in, Decisions-so-far empty, the fog sketched into **Not yet specified**.
 4. **Create the tickets you can specify now** as child issues of the map, then wire blocking edges in a **second pass** (issues need ids before they can reference each other). Wiring sorts them into the frontier and the blocked; everything you can't yet specify stays in the fog: the **Not yet specified** section.
@@ -129,7 +129,7 @@ User invokes with a map (URL or number). A ticket is **optional**: without one, 
 
 1. Load the **map**: the low-res view, not every ticket body.
 2. Choose the ticket. If the user named one, use it. Otherwise take the first frontier ticket in order. **Claim it**: assign it to yourself before any work.
-3. Resolve it. **Zoom as needed**: fetch the full body of any related or closed ticket on demand; call the Skill tool for whichever skills the `## Notes` block names. If in doubt, call the Skill tool twice, for "me:brainstorming" and "me:domain-modeling".
+3. Resolve it. **Zoom as needed**: fetch the full body of any related or closed ticket on demand; call the Skill tool for whichever skills the `## Notes` block names. If in doubt, call the Skill tool twice, for "me:grill-me" and "me:domain-modeling".
 4. Record the resolution: post the answer as a **resolution comment**, **close** the issue, and **append a context pointer** to the map's Decisions-so-far.
 5. Add newly-surfaced tickets (create-then-wire); graduate any fog the answer has made specifiable, clearing each graduated patch from **Not yet specified** so it lives only as its new ticket. If the answer reveals that a ticket (this one or another) sits beyond the destination, **rule it out of scope** rather than resolving it on the route. If the decision invalidates other parts of the map, update or delete those tickets.
 

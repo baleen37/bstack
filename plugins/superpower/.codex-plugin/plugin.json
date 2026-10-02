@@ -1,0 +1,30 @@
+{
+  "name": "superpower",
+  "version": "17.63.0",
+  "description": "Core development workflow skills: brainstorming, spec and plan writing, code review, and subagent-driven execution (uses me for TDD and debugging)",
+  "author": {
+    "name": "Jesse Vincent"
+  },
+  "homepage": "https://github.com/obra/superpowers",
+  "repository": "https://github.com/obra/superpowers",
+  "license": "MIT",
+  "keywords": [
+    "skills",
+    "collaboration",
+    "workflows"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Superpower",
+    "shortDescription": "Core development workflow skills: brainstorming, spec and plan writing, code review, and subagent-driven execution (uses me for TDD and debugging)",
+    "longDescription": "Core development workflow skills: brainstorming, spec and plan writing, code review, and subagent-driven execution (uses me for TDD and debugging)",
+    "developerName": "Jesse Vincent",
+    "category": "Productivity",
+    "capabilities": [
+      "Skills"
+    ],
+    "defaultPrompt": [
+      "Use Superpower for this task."
+    ]
+  }
+}
