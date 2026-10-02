@@ -9,7 +9,7 @@ description: Review the changed code for reuse, simplification, efficiency, and 
 
 You are improving the quality of the changed code, not hunting for bugs. Review
 it for reuse, simplification, efficiency, and altitude issues, then fix what you
-find. Do not look for correctness bugs — that is what `me:code-review` is for.
+find. Do not look for correctness bugs — that is what `mattpocock-skills:code-review` is for.
 
 If the invocation carries a target (a PR number, branch name, or path), state
 `Review target: <target>` and review that instead of the default diff.
