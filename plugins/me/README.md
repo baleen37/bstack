@@ -14,7 +14,7 @@ skills live in `mattpocock-skills`.
 | Plan / Design | `docs/specs/*.md` | `superpower:brainstorming`; large work: `mattpocock-skills:wayfinder` first |
 | Build | `docs/plans/*.md` + code | `superpower:writing-plans` → `superpower:executing-plans` or `superpower:subagent-driven-development`, `mattpocock-skills:tdd` |
 | Test | test results | `verify`, `e2e-scenario-testing`, `mattpocock-skills:diagnosing-bugs` |
-| Deploy | PR, release | `mattpocock-skills:code-review`, `simplify`, `create-pr`, `ship` |
+| Deploy | PR, release | `code-review`, `simplify`, `create-pr`, `ship` |
 | Maintain | — | not yet implemented |
 
 ## Lifecycle
@@ -32,6 +32,7 @@ skills live in `mattpocock-skills`.
 
 ### Review
 
+- `code-review` — Review a diff or PR for bugs and cleanups in one careful pass, with optional `--fix` / `--comment`.
 - `simplify` — Clean up the changed code for reuse, simplification, efficiency, and altitude, then apply the fixes.
 
 ### Ship
