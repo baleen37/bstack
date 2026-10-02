@@ -17,6 +17,6 @@ This plugin packages obra's Superpowers skills under the `superpower` name.
   - `brainstorming/scripts/server.cjs` never loads the remote brand logo.
   - `subagent-driven-development/scripts/sdd-workspace` uses `CDPATH=''` (ShellCheck).
 
-`me` is the base plugin. Where a skill overlaps with `me`, the `me` version wins:
-`test-driven-development` and `systematic-debugging` are not packaged, and
-references to them point to `me:tdd` and `me:diagnosing-bugs`.
+`test-driven-development` and `systematic-debugging` are not packaged because
+they overlap with `mattpocock-skills`; references to them point to
+`mattpocock-skills:tdd` and `mattpocock-skills:diagnosing-bugs`.

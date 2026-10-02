@@ -1,6 +1,7 @@
 # bstack
 
-An AI coding assistant toolkit. It is designed for both Claude Code and Codex, and bundles personal workflow automation, safer Git operations, session handoff, LSP installation, and external tool integrations.
+An AI coding assistant toolkit. It is designed for both Claude Code and Codex,
+and bundles personal workflow automation, safer Git operations, session handoff, LSP installation, and external tool integrations.
 
 ## Highlights
 
@@ -37,7 +38,9 @@ bun run sync:codex
 
 | Plugin | Purpose |
 | --- | --- |
-| `me` | Personal workflow, handoff, commits, PRs, research, E2E, review |
+| `me` | Personal workflow, commits, PRs, E2E verification, shipping |
+| `superpower` | Design, plan, and execution workflow (obra/superpowers mirror) |
+| `mattpocock-skills` | Matt Pocock's engineering skills (upstream mirror) |
 | `slack` | Slack message, thread, channel, and user search |
 | `atlassian` | Jira work guidance through `twg` |
 | `datadog` | Logs, monitors, APM, and metric investigation |
