@@ -14,48 +14,36 @@ that fires on its own.
 
 ## The main flow: idea → shipped
 
-1. **`me:brainstorming`** classifies the work first — **spike** (a question to
-   answer), **bounded** (one existing flow to change), or **architectural**
-   (everything else) — then interviews you in rounds over a design tree until
-   the frontier is empty. The classification decides how much of the rest of
-   this flow you need: a spike ends at a reported recommendation, a bounded
-   task goes straight to implementation with no plan document, and only
-   architectural work continues down this list.
+The main flow lives in the `superpower` plugin.
+
+1. **`superpower:brainstorming`** classifies the work first — **spike** (a
+   question to answer), **bounded** (one existing flow to change), or
+   **architectural** (everything else). A spike ends at a reported
+   recommendation, a bounded task goes straight to implementation after a
+   short in-chat design, and architectural work writes and commits a spec to
+   `docs/specs/YYYY-MM-DD-<topic>-design.md`, then waits for your review.
 
    If architectural work is too large for one session, use `me:wayfinder`
-   first to settle its decision map. When the map is clear, continue at Step 2.
+   first to settle its decision map, then brainstorm the spec.
 
-2. **`me:writing-spec`** writes the approved design to
-   `docs/specs/YYYY-MM-DD-<topic>-design.md` and commits it. It owns the spec:
-   the template, the `Discovery:` line recording how the interview actually
-   went, the `## Open questions` rows, and the review gate. This is the
-   repository's spec-document step after Wayfinder decisions are settled; the
-   map itself is not the spec. It will not invent a design — with no approved
-   one, it sends you back to brainstorming. Only a user-approved spec proceeds
-   to Step 3.
+2. **`superpower:writing-plans`** turns the approved spec into
+   `docs/plans/YYYY-MM-DD-<feature>.md`: bite-sized tasks with exact file
+   paths and a red-green step list.
 
-3. **`me:writing-plans`** turns the spec into
-   `docs/plans/YYYY-MM-DD-<feature>.md`: tasks sized to one test cycle, each
-   with exact file paths and a red-green step list. It is gated on the spec
-   existing, because a plan with nothing to be checked against is unreviewable.
+3. **Review the plan, then pick an executor:**
+   - **`superpower:subagent-driven-development`** dispatches one implementer
+     and reviewer per task. Recommend it when tasks are independent and
+     per-task review is worth the added context cost.
+   - **`superpower:executing-plans`** implements tasks inline. Recommend it
+     when tasks are sequential and cost or speed matters more than per-task
+     isolation.
 
-4. **Review the plan, then pick an executor.** `me:writing-plans` waits for
-   approval before implementation. Both executors run in this session and
-   share a plan workspace and ledger:
-   - **`me:subagent-driven-development`** dispatches one implementer and
-     reviewer per task, then runs a whole-branch review. Recommend it when
-     tasks are independent and per-task review is worth the added context cost.
-   - **`me:executing-plans`** implements tasks inline and runs one fresh
-     whole-branch review. Recommend it when tasks are sequential and cost or
-     speed matters more than per-task isolation.
+4. **`superpower:finishing-a-development-branch`** verifies tests, then
+   offers to merge locally, push and open a PR, or leave the branch. Shipping
+   is a separate decision you make by hand.
 
-5. **`me:finishing-a-development-branch`** verifies tests, then offers exactly
-   three choices: merge locally, push and open a PR, or leave the branch. It
-   stops there — shipping is a separate decision you make by hand.
-
-`me:tdd` runs underneath steps 4 and 5: it is the reference behind the
-red-green loop those tasks are written as. Reach for it directly when you want
-a behaviour built test-first without a plan.
+`me:tdd` runs underneath steps 3 and 4. Reach for
+it directly when you want a behaviour built test-first without a plan.
 
 ## On-ramps
 
@@ -85,7 +73,7 @@ A starting situation that generates work, then joins the main flow.
 - **`me:e2e-scenario-testing`** drives a running app through its real
   interface — web UI, CLI, or TUI — with scenario cards carrying falsifiable
   assertions. For what unit tests cannot reach.
-- **`me:verification-before-completion`** is the gate, not a task: it fires
+- **`superpower:verification-before-completion`** is the gate, not a task: it fires
   when you are about to call something done, and demands fresh command output
   before the claim. Evidence before assertions.
 
@@ -101,10 +89,10 @@ Two scopes, and the scope picks the skill:
 - **`me:simplify`** is the cleanup-only half: four angles (reuse,
   simplification, efficiency, altitude) over the diff, then it applies the
   fixes. It does not hunt for bugs.
-- **`me:requesting-code-review`** dispatches a single reviewer against two SHAs
+- **`superpower:requesting-code-review`** dispatches a single reviewer against two SHAs
   with purpose-built context rather than your session history. The per-task
-  case, and what `me:subagent-driven-development` calls after each task.
-- **`me:receiving-code-review`** is for the other side: processing feedback
+  case, and what `superpower:subagent-driven-development` calls after each task.
+- **`superpower:receiving-code-review`** is for the other side: processing feedback
   with technical rigour instead of performative agreement. Verify each claim
   before implementing it, and push back with reasoning when a reviewer is
   wrong.
@@ -131,11 +119,11 @@ brainstorming.
 
 ## Parallel work
 
-- **`me:dispatching-parallel-agents`** — two or more independent tasks with no
+- **`superpower:dispatching-parallel-agents`** — two or more independent tasks with no
   shared state and no ordering between them.
 - **`me:competitive-agents`** — one problem, several valid approaches, no
   obvious winner. Run them against each other and compare.
-- **`me:using-git-worktrees`** — isolate a workspace before either of the
+- **`superpower:using-git-worktrees`** — isolate a workspace before either of the
   above, or before executing a plan.
 
 ## Too big for one session
@@ -144,9 +132,11 @@ brainstorming.
   session. Charts a map of decision tickets on the repo's configured issue
   tracker and resolves them one at a time, producing **decisions, not
   deliverables**. If its destination is a spec, hand the settled decisions to
-  Step 2 for the repository's spec-document and review process. Small work stays
+  `superpower:brainstorming` (Step 1) to write and review the spec. Small work stays
   in the main flow without a map. Needs `me:setup` run once per repo to choose
   the tracker.
+- **`me:grill-me`** — interview in rounds until every decision is settled, with
+  no document at the end. `me:wayfinder` and `triage` call it for grilling.
 - **`me:prototype`** — throwaway code answering one design question: does this
   state model feel right, what should this UI look like. `me:wayfinder` calls
   it for prototype tickets.
@@ -162,8 +152,12 @@ brainstorming.
 
 - **`me:browser`** — browser automation, and anything needing your logged-in
   accounts, history, or open tabs.
-- **`me:write-skill`** — write or fix a `SKILL.md`, prove it against a
-  no-skill baseline, tune it with SkillOpt.
+- **`superpower:writing-skills`** — write or fix a `SKILL.md` test-first, proving
+  it against a no-skill baseline.
+- **`superpower:using-superpower`** — how the `superpower` skills expect to be
+  found and invoked. Its session-start hook is not installed here.
+- **`superpower:diagnosing-superpower`** — a `superpower` skill misbehaved;
+  investigates the session and drafts an upstream report.
 - **`me:learn`** — learn a concept over several sessions, in a
   stateful workspace under `~/.bstack/learn/`.
 ## Phase boundaries
@@ -214,7 +208,7 @@ Wayfinder does not automatically chain into `to-tickets` or `implement-spec`.
   *not* create.
 - **`improve-codebase-architecture`** — spare-time upkeep. Surveys the codebase
   for deepening opportunities and reports them as HTML; picking one generates an
-  idea to take into `me:brainstorming`.
+  idea to take into `me:grill-me`.
 
 **Standalone:**
 
@@ -227,7 +221,7 @@ Wayfinder does not automatically chain into `to-tickets` or `implement-spec`.
 - **`wait-what`** — fire it the moment a message doesn't land; the agent
   re-pitches in plainer language.
 - **`writing-for-agents`** — the reference for writing documents agents consume.
-  Deeper on information design than `me:write-skill`, which is stronger on
+  Deeper on information design than `superpower:writing-skills`, which is stronger on
   proving a skill against a baseline. Read both when writing a skill.
 
 ## When nothing here fits

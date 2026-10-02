@@ -191,7 +191,7 @@ Required before claiming done:
 - The hypothesis that proved correct is stated in the commit or PR body, so
   the next person debugging this area learns from it
 
-Claiming a fix works is a completion claim: `me:verification-before-completion`
+Claiming a fix works is a completion claim: `superpower:verification-before-completion`
 applies, and the Phase 1 loop is the evidence.
 
 ## Red Flags

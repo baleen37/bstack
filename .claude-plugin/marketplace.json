@@ -55,6 +55,18 @@
       "version": "17.63.0"
     },
     {
+      "name": "superpower",
+      "description": "Core development workflow skills: brainstorming, spec and plan writing, code review, and subagent-driven execution (uses me for TDD and debugging)",
+      "source": "./plugins/superpower",
+      "category": "development",
+      "tags": [
+        "skills",
+        "collaboration",
+        "workflows"
+      ],
+      "version": "17.63.0"
+    },
+    {
       "name": "datadog",
       "description": "Datadog observability guidance via the pup CLI",
       "source": "./plugins/datadog",

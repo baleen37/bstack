@@ -82,9 +82,9 @@ costs more than it saves.
 
 The chain in [SKILL.md](SKILL.md) has natural boundaries:
 
-- **brainstorming → writing-spec**: Continue. The spec is written from the
+- **brainstorming → spec**: Continue. brainstorming writes the spec from the
   interview, and it wants the reasoning verbatim.
-- **writing-spec → writing-plans**: usually Continue, since the plan argues
+- **spec → writing-plans**: usually Continue, since the plan argues
   from a spec you just discussed. If the interview ran long, `/compact` here —
   the spec file is now the primary source, so less is lost than usual.
 - **writing-plans → executor**: the real boundary. The plan document carries
