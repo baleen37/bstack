@@ -1,6 +1,6 @@
 {
   "name": "superpower",
-  "version": "17.64.0",
+  "version": "17.65.0",
   "description": "Core development workflow skills: brainstorming, spec and plan writing, code review, and subagent-driven execution (uses me for TDD and debugging)",
   "author": {
     "name": "Jesse Vincent"
