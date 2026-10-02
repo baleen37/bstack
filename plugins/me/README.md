@@ -21,7 +21,6 @@ skills live in `mattpocock-skills`.
 
 ### Plan
 
-- `writing-prds` — Write product requirements documents for feature planning.
 - `writing-rfcs` — Write technical RFCs for engineering decisions.
 - `competitive-agents` — Compare parallel approaches for architecture, API, or system decisions.
 
@@ -42,7 +41,6 @@ skills live in `mattpocock-skills`.
 
 ### Session
 
-- `diagnosing-agent-sessions` — Explain a past or current agent session with transcript evidence and privacy gates.
 - `learn` — Learn a concept over several sessions in a stateful workspace.
 
 ### Other
