@@ -22,11 +22,11 @@
         "memory",
         "context"
       ],
-      "version": "17.65.2"
+      "version": "17.66.0"
     },
     {
       "name": "wiki",
-      "description": "Obsidian \uc704\ud0a4\uc758 Inbox\uc640 Daily TODO \uae30\ub85d \uc2a4\ud0ac",
+      "description": "Obsidian 위키의 Inbox와 Daily TODO 기록 스킬",
       "source": "./plugins/wiki",
       "category": "development",
       "tags": [
@@ -36,7 +36,7 @@
         "daily",
         "todo"
       ],
-      "version": "17.65.2"
+      "version": "17.66.0"
     },
     {
       "name": "datadog",
@@ -51,11 +51,11 @@
         "apm",
         "pup"
       ],
-      "version": "17.65.2"
+      "version": "17.66.0"
     },
     {
       "name": "autoresearch",
-      "description": "Autonomous experiment loop \u2014 iteratively optimize any metric with git-tracked experiments",
+      "description": "Autonomous experiment loop — iteratively optimize any metric with git-tracked experiments",
       "source": "./plugins/autoresearch",
       "category": "development",
       "tags": [
@@ -64,7 +64,7 @@
         "autonomous",
         "research"
       ],
-      "version": "17.65.2"
+      "version": "17.66.0"
     },
     {
       "name": "atlassian",
@@ -77,7 +77,7 @@
         "twg",
         "cli"
       ],
-      "version": "17.65.2"
+      "version": "17.66.0"
     }
   ]
 }
