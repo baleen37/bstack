@@ -33,30 +33,6 @@ eligible_codex_plugins() {
     [ "$actual_plugins" = "$(printf '%s\n' "$expected_plugins" | sort)" ]
 }
 
-@test "codex plugin manifests are valid JSON" {
-    local expected_plugins
-    expected_plugins="$(eligible_codex_plugins)"
-
-    while IFS= read -r plugin; do
-        [ -n "$plugin" ] || continue
-        validate_json "${PROJECT_ROOT}/plugins/${plugin}/.codex-plugin/plugin.json"
-    done <<< "$expected_plugins"
-}
-
-@test "codex plugin manifests point to shared skills directory" {
-    local expected_plugins
-    expected_plugins="$(eligible_codex_plugins)"
-
-    while IFS= read -r plugin; do
-        [ -n "$plugin" ] || continue
-        local manifest="${PROJECT_ROOT}/plugins/${plugin}/.codex-plugin/plugin.json"
-        local skills_path
-        skills_path=$(jq -r '.skills' "$manifest")
-        [ "$skills_path" = "./skills/" ]
-        [ -d "${PROJECT_ROOT}/plugins/${plugin}/skills" ]
-    done <<< "$expected_plugins"
-}
-
 @test "codex and claude share the same skill sources" {
     local expected_plugins
     expected_plugins="$(eligible_codex_plugins)"

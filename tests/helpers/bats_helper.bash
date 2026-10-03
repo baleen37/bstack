@@ -99,74 +99,11 @@ is_valid_plugin_name() {
     [[ "$name" =~ ^[a-z0-9-]+$ ]]
 }
 
-# Helper: Check if file has valid frontmatter delimiter
-has_frontmatter_delimiter() {
-    local file="$1"
-    local content
-    content=$(head -1 "$file")
-    [[ "$content" == "---" ]]
-}
-
-# Helper: Check if file has frontmatter field
-has_frontmatter_field() {
-    local file="$1"
-    local field="$2"
-    grep -q "^${field}:" "$file"
-}
-
 # Helper: Count files matching pattern
 count_files() {
     local pattern="$1"
     local base_dir="${2:-.}"
     find "$base_dir" -name "$pattern" -type f 2>/dev/null | wc -l | tr -d ' '
-}
-
-# Helper: Check if JSON field is allowed in plugin.json
-# Claude Code supports metadata plus optional skills/MCP/LSP pointers.
-# shellcheck disable=SC2076
-json_field_is_allowed() {
-    local field="$1"
-    local allowed_fields="name description author version license homepage repository keywords skills mcpServers lspServers"
-    [[ " $allowed_fields " =~ " $field " ]]
-}
-
-# Helper: Check if author field is allowed (author.name, author.email)
-# shellcheck disable=SC2076
-json_author_field_is_allowed() {
-    local field="$1"
-    local allowed_author_fields="name email"
-    [[ " $allowed_author_fields " =~ " $field " ]]
-}
-
-# Helper: Validate plugin.json has only allowed fields
-validate_plugin_manifest_fields() {
-    local file="$1"
-    local all_fields
-    all_fields=$($JQ_BIN -r 'keys_unsorted[]' "$file" 2>/dev/null)
-
-    while IFS= read -r field; do
-        if ! json_field_is_allowed "$field"; then
-            echo "Error: Invalid field '$field' in $file"
-            echo "Allowed fields: name, description, author, version, license, homepage, repository, keywords, skills, mcpServers, lspServers"
-            return 1
-        fi
-    done <<< "$all_fields"
-
-    # Check nested author fields
-    if $JQ_BIN -e '.author' "$file" &>/dev/null; then
-        local author_fields
-        author_fields=$($JQ_BIN -r '.author | keys_unsorted[]' "$file" 2>/dev/null)
-
-        while IFS= read -r field; do
-            if ! json_author_field_is_allowed "$field"; then
-                echo "Error: Invalid author field 'author.$field' in $file"
-                echo "Allowed author fields: name, email"
-                return 1
-            fi
-        done <<< "$author_fields"
-    fi
-
-    return 0
 }
 
 # Helper: Iterate over all plugin manifest files
@@ -188,12 +125,6 @@ json_field_has_type() {
     local actual_type
     actual_type=$($JQ_BIN -r ".$field | type" "$file" 2>/dev/null)
     [ "$actual_type" = "$expected_type" ]
-}
-
-# Helper: Validate semver format (major.minor.patch)
-is_valid_semver() {
-    local version="$1"
-    [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
 }
 
 # Helper: Assert with custom error message

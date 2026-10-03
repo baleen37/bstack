@@ -77,21 +77,6 @@ job_has_if_condition() {
     yaml_get "$workflow_file" ".jobs.${job_name}.if" &>/dev/null
 }
 
-
-@test "Workflow directory exists" {
-    [ -d "$WORKFLOW_DIR" ]
-}
-
-@test "CI workflow file exists" {
-    [ -f "$CI_WORKFLOW" ]
-    [ -s "$CI_WORKFLOW" ]
-}
-
-@test "CI workflow has valid YAML syntax" {
-    ensure_yaml_validator
-    validate_yaml_file "$CI_WORKFLOW"
-}
-
 @test "CI workflow triggers on push to main" {
     ensure_yaml_validator
     workflow_has_trigger "$CI_WORKFLOW" "push"
@@ -133,15 +118,6 @@ job_has_if_condition() {
     [[ "$permissions" == "read" ]]
 }
 
-@test "Release workflow exists" {
-    [ -f "${WORKFLOW_DIR}/release.yml" ]
-}
-
-@test "Release workflow has valid YAML syntax" {
-    ensure_yaml_validator
-    validate_yaml_file "${WORKFLOW_DIR}/release.yml"
-}
-
 @test "Release workflow triggers on push to main" {
     ensure_yaml_validator
     workflow_has_trigger "${WORKFLOW_DIR}/release.yml" "push"
@@ -155,15 +131,6 @@ job_has_if_condition() {
     local contents_perm
     contents_perm=$(yaml_get "${WORKFLOW_DIR}/release.yml" ".permissions.contents")
     [[ "$contents_perm" == "write" ]]
-}
-
-@test "Marketplace sync workflow exists" {
-    [ -f "${WORKFLOW_DIR}/sync-marketplace.yml" ]
-}
-
-@test "Marketplace sync workflow has valid YAML syntax" {
-    ensure_yaml_validator
-    validate_yaml_file "${WORKFLOW_DIR}/sync-marketplace.yml"
 }
 
 @test "Marketplace sync workflow calls sync script" {

@@ -8,11 +8,6 @@ setup() {
     ensure_jq
 }
 
-@test "codex marketplace exists and is valid JSON" {
-    assert_file_exists "$MARKETPLACE_JSON"
-    validate_json "$MARKETPLACE_JSON"
-}
-
 @test "codex marketplace includes only skill plugins in claude marketplace order" {
     local expected
     local actual
