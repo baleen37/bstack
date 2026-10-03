@@ -20,3 +20,5 @@ This plugin packages obra's Superpowers skills under the `superpower` name.
 `test-driven-development` and `systematic-debugging` are not packaged because
 they overlap with `mattpocock-skills`; references to them point to
 `mattpocock-skills:tdd` and `mattpocock-skills:diagnosing-bugs`.
+
+`writing-skills` is not packaged: it was unused in this setup.
