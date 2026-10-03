@@ -14,7 +14,7 @@ setup() {
     [ "$(jq -r '.mcpServers // empty' "${PROJECT_ROOT}/plugins/datadog/.codex-plugin/plugin.json")" = "" ]
 }
 
-@test "marketplace contains the supported bstack plugins" {
+@test "marketplace contains the supported skills plugins" {
     local manifest="${PROJECT_ROOT}/.claude-plugin/marketplace.json"
     [ "$(jq -c '[.plugins[].name] | sort' "$manifest")" = '["atlassian","autoresearch","datadog","me","wiki"]' ]
 }

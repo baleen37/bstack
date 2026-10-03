@@ -104,7 +104,7 @@ const CONTENT_DIR = path.join(SESSION_DIR, 'content');
 const STATE_DIR = path.join(SESSION_DIR, 'state');
 const SUPERPOWER_VERSION = readSuperpowerVersion();
 const SUPERPOWER_BRAND_IMAGE_URL = 'https://primeradiant.com/brand/superpowers-visual-brainstorming-logo.png';
-// bstack: never load the remote brand logo.
+// skills: never load the remote brand logo.
 const SUPERPOWER_TELEMETRY_DISABLED = true;
 let ownerPid = process.env.BRAINSTORM_OWNER_PID ? Number(process.env.BRAINSTORM_OWNER_PID) : null;
 

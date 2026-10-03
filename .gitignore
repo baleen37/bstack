@@ -74,3 +74,4 @@ htmlcov/
 
 # SDD / brainstorm runtime workspaces
 .bstack/
+.skills/

@@ -45,7 +45,7 @@ remains the execution authority.
 | --- | --- |
 | Codebase vocabulary and upkeep | `codebase-design`, `improve-codebase-architecture`, `writing-for-agents` |
 | Communication and incoming work | `triage`, `to-questionnaire`, `wait-what` |
-| Learning and interfaces | `learn` (workspace: `~/.bstack/learn/<topic>/`), `browser`, `wizard` |
+| Learning and interfaces | `learn` (workspace: `~/.skills/learn/<topic>/`), `browser`, `wizard` |
 | Execution support | `using-me`, `using-git-worktrees`, `dispatching-parallel-agents` |
 
 ## Agents and hooks

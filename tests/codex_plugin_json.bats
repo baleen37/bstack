@@ -155,11 +155,11 @@ eligible_codex_plugins() {
     [ "$status" -eq 1 ]
 }
 
-@test "marketplace notification uses notify@v1 dispatch action" {
+@test "marketplace notification uses skills source through notify@v1" {
     local workflow="${PROJECT_ROOT}/.github/workflows/notify-marketplace.yml"
 
     grep -q "baleen37/baleen-marketplace/.github/actions/notify@v1" "$workflow"
-    grep -q "source: bstack" "$workflow"
+    grep -q "source: skills" "$workflow"
     grep -q "github.event.release.tag_name" "$workflow"
     grep -qF 'token: ${{ steps.app-token.outputs.token }}' "$workflow"
     grep -q "uses: actions/create-github-app-token@v1" "$workflow"

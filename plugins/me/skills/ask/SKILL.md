@@ -35,7 +35,7 @@ TDD comes from `me:tdd`; failures go through `me:diagnosing-bugs`. General desig
 - **Codebase:** `me:improve-codebase-architecture` finds candidates; `me:codebase-design` supplies module vocabulary. Take a selected change into brainstorming.
 - **Communication:** `me:to-questionnaire` gathers someone else's input; `me:wait-what` re-explains a message; `me:writing-rfcs` writes technical decisions; `me:writing-for-agents` guides agent documents.
 - **Session:** `me:handoff` carries context across a harness, directory, colleague, or side task; `me:retro` improves the environment after a build; `me:diagnosing-workflow` investigates a failed session.
-- **Learning and operations:** `me:learn` resumes a topic under `~/.bstack/learn/`; `me:wizard` guides human-only steps; `me:browser` operates the real interface.
+- **Learning and operations:** `me:learn` resumes a topic under `~/.skills/learn/`; `me:wizard` guides human-only steps; `me:browser` operates the real interface.
 - **Execution support:** `me:using-git-worktrees`, `me:dispatching-parallel-agents`, `me:competitive-agents`, `me:e2e-scenario-testing`, `me:simplify`, `me:verification-before-completion`, and `me:finishing-a-development-branch` support the selected flow.
 
 ## Configuration and context
