@@ -8,9 +8,9 @@
   },
   "plugins": [
     {
-      "name": "me",
+      "name": "core",
       "description": "Unified development workflow - design, planning, TDD, debugging, git protection, verification, review, and shipping",
-      "source": "./plugins/me",
+      "source": "./plugins/core",
       "category": "development",
       "tags": [
         "git",

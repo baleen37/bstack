@@ -5,7 +5,7 @@
 load ../helpers/bats_helper
 
 @test "no hardcoded absolute paths in plugin manifest" {
-    local plugin_json="${PROJECT_ROOT}/plugins/me/.claude-plugin/plugin.json"
+    local plugin_json="${PROJECT_ROOT}/plugins/core/.claude-plugin/plugin.json"
 
     if [ -f "$plugin_json" ]; then
         # Check for absolute paths (not starting with ${ or /Users that's not ${CLAUDE_PLUGIN_ROOT})
