@@ -57,7 +57,8 @@ prompt, permission, stop, and end events. They use the shared `hooks/` assets.
 
 ## Migration and provenance
 
-See the root [installation migration](../../README.md#설치-전환) to remove the
-two old packages and update `core`. Historical plans and designs keep their
+See the root [installation migration](../../README.md#migrating-an-existing-installation)
+to remove the old `superpower`, `mattpocock-skills`, and `me` packages and install
+`core`. Historical plans and designs keep their
 original names. [Upstream snapshots and MIT notices](upstream/README.md) are
 preserved separately from the live workflow.

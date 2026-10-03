@@ -1,6 +1,6 @@
 ---
 name: ask
-description: Ask which me skill or flow fits your situation.
+description: Ask which core skill or flow fits your situation.
 disable-model-invocation: true
 ---
 

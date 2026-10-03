@@ -15,7 +15,7 @@ Build the per-human-turn record of skill and plugin use, then look for gaps.
    and hook meanings recorded in the case file; identify values associated
    with something other than `core`.
 4. For each human turn, compare the request text against the trigger
-   descriptions of the me skills installed (read
+   descriptions of the core skills installed (read
    `<install root>/skills/*/SKILL.md` frontmatter `description` lines; the
    install root is in the case file). Report as findings:
    - a skill invoked, with the request that preceded it (one finding per

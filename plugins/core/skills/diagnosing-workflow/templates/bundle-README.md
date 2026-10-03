@@ -12,11 +12,11 @@ location.
 
 ## What this is
 
-A scrubbed record of a coding-agent session that had me installed
+A scrubbed record of a coding-agent session that had core installed
 and went wrong. It lets an agent or person who was not present decide
-whether me contributed and, if so, what to change. The report
+whether core contributed and, if so, what to change. The report
 inside states what happened with `path:line` evidence. By design it
-contains no diagnosis of me and no proposed fix; that is the
+contains no diagnosis of core and no proposed fix; that is the
 reader's job.
 
 ## Files

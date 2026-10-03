@@ -1,16 +1,16 @@
 ---
 name: diagnosing-workflow
-description: Use when a me session went wrong and your human partner wants to know why — repeated work, ignored plans, stumbles, poor results, a skill that didn't fire, "it took too long", "why is it so expensive", "what is it doing" — or wants to build a bug report for the me maintainers, for the current session or a past one identified by id or path, on any harness.
+description: Use when a core session went wrong and your human partner wants to know why — repeated work, ignored plans, stumbles, poor results, a skill that didn't fire, "it took too long", "why is it so expensive", "what is it doing" — or wants to build a bug report for the core maintainers, for the current session or a past one identified by id or path, on any harness.
 ---
 
-# Diagnosing me
+# Diagnosing core
 
 ## Overview
 
 Pin down with your human partner what went wrong in a session, read the
 transcripts on disk, and report what happened with evidence. You report;
-you do not diagnose me. Whoever triages the bundle or the issue
-decides whether me changes.
+you do not diagnose core. Whoever triages the bundle or the issue
+decides whether core changes.
 
 **Core principle:** Every finding cites `path:line`. No citation, no
 finding. Every number comes from the transcript or from a command you ran,
@@ -25,7 +25,7 @@ Create a todo per step. Steps 5–7 run only on their stated condition.
    partner expected, what happened, and the observable they care about
    (wall-clock, tokens, repeated actions, one specific action). "It took
    too long" is a complaint, not a problem statement. Note whether the
-   goal is a me bug report.
+   goal is a core bug report.
 2. **Locate.** Resolve each session to verified absolute filesystem paths using
    `references/session-discovery.md`. Confirm a past session by quoting its
    first prompt and timestamp, and list every candidate you rejected with the
@@ -93,7 +93,7 @@ yourself in step 3 and which findings to lead with in the verdict.
 - **Human prompts only.** Hook output, system reminders, and tool results
   are not your partner's words. In a subagent transcript, "user" is the
   parent agent.
-- **No me diagnosis.** Report §7 states involvement and stops.
+- **No core diagnosis.** Report §7 states involvement and stops.
   Never name a defect in a skill or propose a change. Your partner
   pressing for a fix does not waive this; point at the issue step and
   mention that a bundle is available on request. No advice to your

@@ -6,18 +6,18 @@ Title: <skill or symptom>: <one-line observable> (<harness>)
 
 | Field | Value | Provenance / supporting evidence |
 |-------|-------|-------------------------------|
-| me version | <version> (<sha or "not a checkout">) | <historical evidence / unverified snapshot / current observation / unknown>; <location> |
+| core version | <version> (<sha or "not a checkout">) | <historical evidence / unverified snapshot / current observation / unknown>; <location> |
 | Harness (Claude Code, Cursor, etc.) | <harness> | <label>; <location> |
 | Harness version | <version> | <label>; <location> |
 | Your model + version | <model ids seen> | <label>; <location> |
 | All plugins installed | <list> | <label>; <location> |
 | OS + shell | <os version>, <shell> | <label>; <location> |
 
-## Is this a me issue or a platform issue?
+## Is this a core issue or a platform issue?
 
-- [ ] I confirmed this issue does not occur without me installed
+- [ ] I confirmed this issue does not occur without core installed
 
-The reporter has not tried reproducing without me. Evidence for
+The reporter has not tried reproducing without core. Evidence for
 involvement is below; it does not establish cause.
 
 ## What happened?
@@ -43,7 +43,7 @@ rewritten as `transcript line <n>`.>
 
 Session id(s): <ids>. Delivered local archive: <path, redaction level <level>
 | none built>. Attached bundle: <no claim; attach only after approval>.
-me involvement per the diagnosis report: <possible | likely>, with
+core involvement per the diagnosis report: <possible | likely>, with
 evidence at <transcript lines>. This report does not propose a fix.
 
 ---

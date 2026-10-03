@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 # Consolidated plugin structure tests
-# Tests for components that were previously in the core plugin
+# Tests for components that were previously in the me plugin
 
 bats_require_minimum_version 1.5.0
 

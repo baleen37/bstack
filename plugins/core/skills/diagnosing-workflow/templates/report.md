@@ -11,14 +11,14 @@ Written: <ISO timestamp>
 
 <What the evidence shows happened around the reported problem. Prose, with
 `path:line` after every claim. State confidence: high / medium / low, and
-what would raise it. No statement about what me should do.>
+what would raise it. No statement about what core should do.>
 
 ## 3. Environment (REQUIRED)
 
 - OS:
 - Harness and version:
 - Models seen:
-- me install root / version / git sha:
+- core install root / version / git sha:
 - Skill files read or injected (sha1 table from the case file):
 - Other plugins, extensions, MCP servers:
 - Instruction files present (paths only):
@@ -62,7 +62,7 @@ A dimension with nothing to report says `none found — checked: <what was check
 ### 6.7 Cost and time
 ### 6.8 Other plugins and skills used
 
-## 7. me involvement (REQUIRED)
+## 7. core involvement (REQUIRED)
 
 not indicated | possible | likely
 

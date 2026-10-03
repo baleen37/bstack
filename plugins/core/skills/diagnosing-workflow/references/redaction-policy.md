@@ -14,7 +14,7 @@ lists.
 | Repositories | `<REPO-n>` | repository names, slugs, and remote URLs, unless the name or URL is in `PUBLIC_REPOS` |
 | Proprietary terms | `<PROPRIETARY-n>` | each term in `PROPRIETARY`, case-insensitive, whole-word |
 
-Session ids, tool names, skill names, me file paths relative to the
+Session ids, tool names, skill names, core file paths relative to the
 install root, model ids, harness versions, and line numbers are kept: the
 bundle is useless without them.
 

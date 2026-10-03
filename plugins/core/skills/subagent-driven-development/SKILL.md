@@ -516,7 +516,7 @@ Task 1: Hook installation script
 
 Implementer: "Before I begin - should the hook be installed at user or system level?"
 
-You: "User level (~/.config/me/hooks/)"
+You: "User level (~/.config/core/hooks/)"
 
 Implementer: [Later]
   - Implemented install-hook command
