@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "me",
-      "description": "AI coding assistant toolkit - git workflow protection, verification, shipping, research, and development automation",
+      "description": "Unified development workflow - design, planning, TDD, debugging, git protection, verification, review, and shipping",
       "source": "./plugins/me",
       "category": "development",
       "tags": [
@@ -26,7 +26,7 @@
     },
     {
       "name": "wiki",
-      "description": "Obsidian 위키의 Inbox와 Daily TODO 기록 스킬",
+      "description": "Obsidian \uc704\ud0a4\uc758 Inbox\uc640 Daily TODO \uae30\ub85d \uc2a4\ud0ac",
       "source": "./plugins/wiki",
       "category": "development",
       "tags": [
@@ -35,34 +35,6 @@
         "inbox",
         "daily",
         "todo"
-      ],
-      "version": "17.65.2"
-    },
-    {
-      "name": "mattpocock-skills",
-      "description": "Matt Pocock's agent skills for real engineering: grilling, spec/ticket flows, TDD, code review, domain modelling and more. Plug-and-play, not vibe coding.",
-      "source": "./plugins/mattpocock-skills",
-      "category": "development",
-      "tags": [
-        "engineering",
-        "skills",
-        "tdd",
-        "code-review",
-        "grilling",
-        "domain-modeling",
-        "productivity"
-      ],
-      "version": "17.65.2"
-    },
-    {
-      "name": "superpower",
-      "description": "Core development workflow skills: brainstorming, spec and plan writing, code review, and subagent-driven execution (uses me for TDD and debugging)",
-      "source": "./plugins/superpower",
-      "category": "development",
-      "tags": [
-        "skills",
-        "collaboration",
-        "workflows"
       ],
       "version": "17.65.2"
     },
@@ -83,7 +55,7 @@
     },
     {
       "name": "autoresearch",
-      "description": "Autonomous experiment loop — iteratively optimize any metric with git-tracked experiments",
+      "description": "Autonomous experiment loop \u2014 iteratively optimize any metric with git-tracked experiments",
       "source": "./plugins/autoresearch",
       "category": "development",
       "tags": [

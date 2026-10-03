@@ -29,4 +29,4 @@ line streams as a notification; the terminal event has one of these prefixes —
   Stop if unclear or still failing.
 - `CLOSED:` → stop.
 
-PR body: fill PR template if exists, else summary+changes+tests.
+For PR bodies, read [PR writing](references/pr-writing.md) (credits: [CREDITS.md](references/CREDITS.md)). Honor a repository PR template when present; otherwise use that reference to show the change, evidence, and merge risk. Scale detail to the change.

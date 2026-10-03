@@ -8,9 +8,5 @@ docs/plans/
 # (see plugins/datadog/SYNC.md for provenance and rationale)
 plugins/datadog/skills/
 
-# Mirrored upstream skill bodies — kept verbatim from mattpocock/skills
+# Adapted upstream skill bodies (see plugins/me/upstream/README.md)
 plugins/me/skills/
-plugins/mattpocock-skills/skills/
-
-# Mirrored upstream skill bodies — kept verbatim from obra/superpowers
-plugins/superpower/skills/
