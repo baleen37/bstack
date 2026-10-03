@@ -31,6 +31,10 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      # Same pinned versions as ci.yml so the validator tests run here instead of skipping.
+      - name: Install Claude Code and Codex CLIs
+        run: npm install -g @anthropic-ai/claude-code@2.1.288 @openai/codex@0.160.0
+
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
