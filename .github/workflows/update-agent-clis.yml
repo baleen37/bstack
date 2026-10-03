@@ -1,0 +1,86 @@
+name: Update agent CLIs
+
+# Bumps the pinned Claude Code / Codex CLIs in ci.yml and release.yml, then
+# merges the PR only after the required `test` check passes. Uses the release
+# GitHub App token: PRs and merges made with GITHUB_TOKEN would not trigger CI
+# or Release.
+
+on:
+  schedule:
+    - cron: '0 21 * * 0' # Monday 06:00 KST
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: update-agent-clis
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.BALEEN_RELEASE_APP_ID }}
+          private-key: ${{ secrets.BALEEN_RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-workflows: write
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Update pins
+        id: pins
+        run: |
+          changes=$(bash scripts/update-agent-cli-pins.sh)
+          echo "$changes"
+          {
+            echo "changes<<EOF"
+            echo "$changes"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Open PR, wait for CI, merge
+        if: steps.pins.outputs.changes != ''
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          CHANGES: ${{ steps.pins.outputs.changes }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: |
+          branch=auto/agent-clis
+          bot="${APP_SLUG}[bot]"
+          bot_id=$(gh api "/users/${bot}" --jq .id)
+          git config user.name "$bot"
+          git config user.email "${bot_id}+${bot}@users.noreply.github.com"
+
+          title="fix(deps): update agent CLIs"
+          git switch -c "$branch"
+          git commit -am "$title" -m "$CHANGES"
+          git push --force origin "$branch"
+
+          pr=$(gh pr list --head "$branch" --state open --json number --jq '.[0].number')
+          if [ -z "$pr" ]; then
+            gh pr create --head "$branch" --title "$title" \
+              --body "Automated by update-agent-clis.yml. Merges after the required test check passes.
+
+          ${CHANGES}"
+          fi
+
+          # The app can bypass the main ruleset, so enforce the required check here.
+          # Wait until the check is reported (exit 0 = passed, 8 = pending).
+          for _ in $(seq 1 30); do
+            rc=0
+            gh pr checks "$branch" --required >/dev/null 2>&1 || rc=$?
+            if [ "$rc" -eq 0 ] || [ "$rc" -eq 8 ]; then break; fi
+            sleep 10
+          done
+          gh pr checks "$branch" --required --watch --fail-fast
+          gh pr merge "$branch" --squash --delete-branch
