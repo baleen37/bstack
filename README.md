@@ -12,7 +12,7 @@ and bundles personal workflow automation, safer Git operations, session handoff,
 - Personal skills: commit, review, research, PR creation, E2E verification
 - External integrations: Slack, Atlassian, Datadog
 
-## 설치
+## Installation
 
 Install directly from the GitHub marketplace.
 
@@ -21,7 +21,7 @@ claude plugin marketplace add https://github.com/baleen37/skills
 claude plugin install me@skills
 ```
 
-## Codex 호환성
+## Codex Compatibility
 
 This repository treats Claude Code metadata as the source of truth and generates Codex artifacts from it.
 
@@ -44,29 +44,30 @@ bun run sync:codex
 | `datadog` | Logs, monitors, APM, and metric investigation |
 | `autoresearch` | Automated experiment loop driven by metrics |
 
-## 기본 개발 흐름
+## Default Development Flow
 
-`me:brainstorming` → `me:writing-plans` → `me:executing-plans` 또는
+`me:brainstorming` → `me:writing-plans` → `me:executing-plans` or
 `me:subagent-driven-development` → `me:verify` → `me:code-review` → `me:create-pr`.
 
-작은 변경은 brainstorming에서 짧은 설계를 승인받고 바로 구현합니다.
-여러 단계의 작업은 작성한 스펙과 계획을 검토하고 실행 방법을 선택합니다.
-실제 리뷰는 `me:code-review`, 리뷰 요청과 피드백 처리는 각각
-`me:requesting-code-review`, `me:receiving-code-review`가 담당합니다.
+For small changes, get a short design approved in brainstorming and implement it right away.
+For multi-step work, review the written spec and plan, then choose how to execute it.
+`me:code-review` performs the actual review; `me:requesting-code-review` and
+`me:receiving-code-review` handle requesting reviews and processing feedback.
 
-큰 불확실성이 있을 때만 `me:wayfinder` → `me:writing-spec` → 스펙 검토 →
-`me:writing-plans`로 진입합니다. 스펙 기본 위치는 `docs/specs/`입니다.
-tracker 게시와 `me:to-tickets`는 선택 기능이며, 구현 계획과 별개의 실행
-그래프를 자동 생성하지 않습니다. 일반 설계·구현에는 tracker 설정이 필요 없습니다.
+Only when there is significant uncertainty, start with `me:wayfinder` → `me:writing-spec` →
+spec review → `me:writing-plans`. Specs live in `docs/specs/` by default.
+Tracker publishing and `me:to-tickets` are optional; they do not automatically generate
+an execution graph separate from the implementation plan. Ordinary design and
+implementation work needs no tracker setup.
 
-전체 기능과 선택 경로는 [me README](plugins/me/README.md)를 참고하세요.
+See the [me README](plugins/me/README.md) for all features and optional paths.
 
-## 설치 전환
+## Migrating an Existing Installation
 
-이 통합 버전이 배포된 뒤 기존 `superpower`, `mattpocock-skills`를 제거하고
-`me`를 갱신하세요. 기존 namespace 별칭은 제공하지 않습니다.
-아래 예시는 기존에 marketplace 이름을 `bstack`으로 등록했고, 설치 scope가 `user`인 경우입니다.
-`baleen-marketplace`로 설치했다면 이름을 바꾸고, 다른 scope라면 맞춰 실행하세요.
+Once this unified version is released, remove the old `superpower` and `mattpocock-skills`
+plugins and update `me`. The old namespaces have no aliases.
+The examples below assume the marketplace was registered as `bstack` with the `user` scope.
+If you installed it as `baleen-marketplace`, change the name; if you used another scope, adjust accordingly.
 
 Claude Code:
 
@@ -86,9 +87,10 @@ codex plugin marketplace upgrade bstack
 codex plugin add me@bstack
 ```
 
-설치하지 않은 기존 플러그인의 제거 명령은 생략하세요. 갱신 후 새 세션을 열어
-`me:ask`와 `me:using-me`가 발견되는지 확인하세요. 과거 설계·계획 문서는
-당시 기록으로 유지하며, 진행 중인 과거 계획은 실행 전에 현재 `me:` 호출로 맞추세요.
+Skip the removal command for any old plugin you never installed. After updating, open a
+new session and confirm that `me:ask` and `me:using-me` are discovered. Past design and
+plan documents are kept as historical records; update any in-progress plan to the current
+`me:` invocations before executing it.
 
 ## Project Structure
 
@@ -114,7 +116,7 @@ bun run test
 pre-commit run --all-files
 ```
 
-### Codex 아티팩트 확인
+### Checking Codex Artifacts
 
 ```bash
 bun run check:codex
@@ -144,7 +146,8 @@ Releases are automated.
 Pre-commit hooks validate:
 
 - YAML syntax
-- JSON schema
+- JSON syntax
+- GitHub Actions workflows (actionlint)
 - ShellCheck
 - markdownlint
 - commitlint
