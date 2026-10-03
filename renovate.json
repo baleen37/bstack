@@ -1,0 +1,31 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Keep the pinned Claude Code and Codex CLIs in CI/Release workflows current.",
+  "enabledManagers": ["custom.regex"],
+  "dependencyDashboard": true,
+  "timezone": "Asia/Seoul",
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "npm install -g <cli>@<version> in workflow run steps",
+      "managerFilePatterns": ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
+      "matchStrings": ["(?<depName>@anthropic-ai/claude-code|@openai/codex)@(?<currentValue>\\d+\\.\\d+\\.\\d+)"],
+      "datasourceTemplate": "npm"
+    }
+  ],
+  "packageRules": [
+    {
+      "matchPackageNames": ["@anthropic-ai/claude-code", "@openai/codex"],
+      "groupName": "agent CLIs",
+      "schedule": ["before 6am on monday"],
+      "minimumReleaseAge": "3 days",
+      "internalChecksFilter": "strict",
+      "semanticCommitType": "fix",
+      "semanticCommitScope": "deps",
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true,
+      "automergeStrategy": "squash"
+    }
+  ]
+}
