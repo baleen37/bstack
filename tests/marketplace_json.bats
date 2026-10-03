@@ -31,10 +31,10 @@ setup() {
     grep -Fq 'claude plugin install me@skills' "${PROJECT_ROOT}/README.md"
 }
 
-@test "runtime workspaces use the .skills directory" {
+@test "runtime workspaces use .skills and legacy state remains ignored" {
     grep -Fq '.skills/' "${PROJECT_ROOT}/.gitignore"
+    grep -Fq '.bstack/' "${PROJECT_ROOT}/.gitignore"
     grep -Fq 'base="$root/.skills/sdd"' "${PROJECT_ROOT}/plugins/me/skills/subagent-driven-development/scripts/sdd-workspace"
-    grep -Fq '.skills/learn/' "${PROJECT_ROOT}/plugins/me/skills/learn/SKILL.md"
 }
 
 @test "marketplace.json owner.name is not empty" {

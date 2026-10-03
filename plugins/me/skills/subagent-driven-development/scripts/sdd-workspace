@@ -44,6 +44,7 @@ slug=$(basename "$plan" .md)
 
 root=$(git rev-parse --show-toplevel)
 base="$root/.skills/sdd"
+legacy_base="$root/.bstack/sdd"
 
 # Normalize the plan path (physical directory, so relative/absolute/../
 # spellings of one plan compare equal) and express it as the marker value:
@@ -54,6 +55,64 @@ case "$plan_abs" in
   "$root"/*) plan_id=${plan_abs#"$root"/} ;;
   *)         plan_id=$plan_abs ;;
 esac
+
+# Move this plan's workspace forward once. Keep a colliding new workspace
+# untouched and stop so the caller can reconcile the two records explicitly.
+legacy_workspace=""
+legacy_matches=()
+if [ -d "$legacy_base" ]; then
+  while IFS= read -r marker; do
+    if [ "$(cat "$marker")" = "$plan_id" ]; then
+      legacy_matches+=("$(dirname "$marker")")
+    fi
+  done < <(find "$legacy_base" -mindepth 2 -maxdepth 2 -type f -name plan-path -print)
+
+  if [ "${#legacy_matches[@]}" -gt 1 ]; then
+    echo "multiple .bstack SDD workspaces match $plan_id" >&2
+    exit 2
+  elif [ "${#legacy_matches[@]}" -eq 1 ]; then
+    legacy_workspace=${legacy_matches[0]}
+  elif [ -d "$legacy_base/$slug" ] && [ ! -e "$legacy_base/$slug/plan-path" ]; then
+    legacy_workspace="$legacy_base/$slug"
+  fi
+fi
+
+if [ -n "$legacy_workspace" ]; then
+  target="$base/$slug"
+  if [ -e "$target" ]; then
+    owner=""
+    [ -e "$target/plan-path" ] && owner=$(cat "$target/plan-path")
+    if [ "$owner" = "$plan_id" ] || [ -z "$owner" ]; then
+      echo "both .bstack and .skills SDD workspaces exist for $plan_id" >&2
+      exit 2
+    fi
+
+    parent=$(basename "$plan_dir")
+    target="$base/$slug-$parent"
+    if [ -e "$target" ]; then
+      owner=""
+      [ -e "$target/plan-path" ] && owner=$(cat "$target/plan-path")
+      if [ "$owner" = "$plan_id" ] || [ -z "$owner" ]; then
+        echo "both .bstack and .skills SDD workspaces exist for $plan_id" >&2
+        exit 2
+      fi
+      n=2
+      while [ -e "$base/$slug-$parent-$n" ]; do
+        owner=""
+        [ -e "$base/$slug-$parent-$n/plan-path" ] && owner=$(cat "$base/$slug-$parent-$n/plan-path")
+        if [ "$owner" = "$plan_id" ] || [ -z "$owner" ]; then
+          echo "both .bstack and .skills SDD workspaces exist for $plan_id" >&2
+          exit 2
+        fi
+        n=$((n + 1))
+      done
+      target="$base/$slug-$parent-$n"
+    fi
+  fi
+
+  mkdir -p "$base"
+  mv "$legacy_workspace" "$target"
+fi
 
 # True when the workspace at $1 is (or becomes) this plan's: an existing
 # marker must name this plan; a missing marker means a new workspace or a
