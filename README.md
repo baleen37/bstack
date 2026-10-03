@@ -102,7 +102,6 @@ skills/
 │   └── autoresearch/     # Automated experiment loop
 ├── scripts/              # Sync and utility scripts
 ├── tests/                # BATS tests
-├── schemas/              # JSON schemas
 └── CLAUDE.md             # Project guidance for AI agents
 ```
 

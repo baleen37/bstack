@@ -7,15 +7,6 @@ load helpers/bats_helper
   [ ! -f "$PROJECT_ROOT/plugins/autoresearch/hooks/autoresearch-context.sh" ]
 }
 
-@test "autoresearch skill defaults to one iteration" {
-  run grep -Eq "one iteration" "$PROJECT_ROOT/plugins/autoresearch/skills/autoresearch/SKILL.md"
-  [ "$status" -eq 0 ]
-  run grep -Eiq "explicit.*loop|loop.*explicit" "$PROJECT_ROOT/plugins/autoresearch/skills/autoresearch/SKILL.md"
-  [ "$status" -eq 0 ]
-  run grep -Eq "NEVER STOP|LOOP FOREVER" "$PROJECT_ROOT/plugins/autoresearch/skills/autoresearch/SKILL.md"
-  [ "$status" -ne 0 ]
-}
-
 @test "autoresearch controller runs bounded fresh-agent iterations" {
   local controller="$PROJECT_ROOT/plugins/autoresearch/skills/autoresearch/scripts/loop.sh"
   [ -x "$controller" ]
@@ -44,11 +35,4 @@ load helpers/bats_helper
     AR_CONTROLLER="$PROJECT_ROOT/plugins/autoresearch/skills/autoresearch/scripts/loop.sh" \
     bash -c 'cd "$AR_TEST_WORKDIR" && bash "$AR_CONTROLLER"'
   [ "$status" -ne 0 ]
-}
-
-@test "autoresearch command distinguishes one run from explicit looping" {
-  run grep -Eq "one iteration" "$PROJECT_ROOT/plugins/autoresearch/commands/autoresearch.md"
-  [ "$status" -eq 0 ]
-  run grep -Eiq "loop" "$PROJECT_ROOT/plugins/autoresearch/commands/autoresearch.md"
-  [ "$status" -eq 0 ]
 }

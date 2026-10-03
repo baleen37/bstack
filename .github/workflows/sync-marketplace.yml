@@ -42,9 +42,9 @@ jobs:
             .agents/plugins/marketplace.json \
             'plugins/*/.codex-plugin/plugin.json' && \
             [ -z "${untracked_artifacts}" ]; then
-            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "changed=false" >> "$GITHUB_OUTPUT"
           else
-            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Commit changes

@@ -29,7 +29,6 @@ AI 보조 개발을 위한 도구들을 제공하며, 반복적 자기 참조 AI
 | `.claude-plugin/` | Marketplace configuration (`marketplace.json`) listing all plugins |
 | `.github/` | GitHub Actions workflows and custom actions (see `.github/AGENTS.md`) |
 | `tests/` | BATS test suites (see `tests/AGENTS.md`) |
-| `schemas/` | JSON schemas for validation (see `schemas/AGENTS.md`) |
 | `docs/` | Development and testing documentation (see `docs/AGENTS.md`) |
 | `.claude/` | Claude Code session data |
 
