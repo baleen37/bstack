@@ -18,8 +18,8 @@ when the unit tests pass.
 
 ## Which skill to use
 
-- `/verify` — does one change behave as intended (default path)
-- `/e2e-scenario-testing` — drive a running app through its real interface, one scenario
+- `me:verify` — does one change behave as intended (default path)
+- `me:e2e-scenario-testing` — drive a running app through its real interface, one scenario
 
 ## When to use this
 
