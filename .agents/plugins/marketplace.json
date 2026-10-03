@@ -5,10 +5,10 @@
   },
   "plugins": [
     {
-      "name": "me",
+      "name": "core",
       "source": {
         "source": "local",
-        "path": "./plugins/me"
+        "path": "./plugins/core"
       },
       "policy": {
         "installation": "AVAILABLE",

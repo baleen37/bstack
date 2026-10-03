@@ -1,0 +1,35 @@
+{
+  "name": "core",
+  "version": "17.66.4",
+  "description": "Unified development workflow - design, planning, TDD, debugging, git protection, verification, review, and shipping",
+  "author": {
+    "name": "baleen37",
+    "email": "git@baleen.me"
+  },
+  "license": "MIT",
+  "keywords": [
+    "git",
+    "workflow",
+    "automation",
+    "verification",
+    "shipping",
+    "research",
+    "memory",
+    "context",
+    "compacting"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Core",
+    "shortDescription": "Unified development workflow - design, planning, TDD, debugging, git protection, verification, review, and shipping",
+    "longDescription": "Unified development workflow - design, planning, TDD, debugging, git protection, verification, review, and shipping",
+    "developerName": "baleen37",
+    "category": "Productivity",
+    "capabilities": [
+      "Skills"
+    ],
+    "defaultPrompt": [
+      "Use Core for this task."
+    ]
+  }
+}

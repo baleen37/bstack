@@ -112,7 +112,7 @@ eligible_codex_plugins() {
     grep -q "git ls-files --others --exclude-standard" "$check_script"
     run grep -q "plugins/jira/.codex-plugin/plugin.json" "$check_script"
     [ "$status" -eq 1 ]
-    run grep -q "plugins/me/.codex-plugin/plugin.json" "$check_script"
+    run grep -q "plugins/core/.codex-plugin/plugin.json" "$check_script"
     [ "$status" -eq 1 ]
     run grep -q "plugins/ralph/.codex-plugin/plugin.json" "$check_script"
     [ "$status" -eq 1 ]
@@ -125,7 +125,7 @@ eligible_codex_plugins() {
     grep -q "git ls-files --others --exclude-standard" "$workflow"
     run grep -q "plugins/jira/.codex-plugin/plugin.json" "$workflow"
     [ "$status" -eq 1 ]
-    run grep -q "plugins/me/.codex-plugin/plugin.json" "$workflow"
+    run grep -q "plugins/core/.codex-plugin/plugin.json" "$workflow"
     [ "$status" -eq 1 ]
     run grep -q "plugins/ralph/.codex-plugin/plugin.json" "$workflow"
     [ "$status" -eq 1 ]

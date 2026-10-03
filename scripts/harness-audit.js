@@ -181,9 +181,9 @@ function detectTargetMode(rootDir) {
 
   if (
     fileExists(rootDir, 'scripts/harness-audit.js') &&
-    fileExists(rootDir, 'plugins/me/.claude-plugin/plugin.json') &&
-    fileExists(rootDir, 'plugins/me/hooks') &&
-    fileExists(rootDir, 'plugins/me/skills')
+    fileExists(rootDir, 'plugins/core/.claude-plugin/plugin.json') &&
+    fileExists(rootDir, 'plugins/core/hooks') &&
+    fileExists(rootDir, 'plugins/core/skills')
   ) {
     return 'repo';
   }
@@ -224,20 +224,20 @@ function getRepoChecks(rootDir) {
       category: 'Tool Coverage',
       points: 2,
       scopes: ['repo', 'hooks'],
-      path: 'plugins/me/hooks/',
-      description: 'plugins/me/hooks/ directory exists',
-      pass: fileExists(rootDir, 'plugins/me/hooks'),
-      fix: 'Create plugins/me/hooks/ and add hook scripts.',
+      path: 'plugins/core/hooks/',
+      description: 'plugins/core/hooks/ directory exists',
+      pass: fileExists(rootDir, 'plugins/core/hooks'),
+      fix: 'Create plugins/core/hooks/ and add hook scripts.',
     },
     {
       id: 'tool-plugin-json',
       category: 'Tool Coverage',
       points: 2,
       scopes: ['repo'],
-      path: 'plugins/me/.claude-plugin/plugin.json',
-      description: 'plugins/me/.claude-plugin/plugin.json exists',
-      pass: fileExists(rootDir, 'plugins/me/.claude-plugin/plugin.json'),
-      fix: 'Add plugin manifest at plugins/me/.claude-plugin/plugin.json.',
+      path: 'plugins/core/.claude-plugin/plugin.json',
+      description: 'plugins/core/.claude-plugin/plugin.json exists',
+      pass: fileExists(rootDir, 'plugins/core/.claude-plugin/plugin.json'),
+      fix: 'Add plugin manifest at plugins/core/.claude-plugin/plugin.json.',
     },
     {
       id: 'tool-skill-count',
@@ -362,10 +362,10 @@ function getRepoChecks(rootDir) {
       category: 'Eval Coverage',
       points: 5,
       scopes: ['repo', 'skills'],
-      path: 'plugins/me/skills/eval-harness/SKILL.md',
-      description: 'plugins/me/skills/eval-harness/SKILL.md exists',
-      pass: fileExists(rootDir, 'plugins/me/skills/eval-harness/SKILL.md'),
-      fix: 'Add plugins/me/skills/eval-harness/SKILL.md for pass/fail regression evaluation.',
+      path: 'plugins/core/skills/eval-harness/SKILL.md',
+      description: 'plugins/core/skills/eval-harness/SKILL.md exists',
+      pass: fileExists(rootDir, 'plugins/core/skills/eval-harness/SKILL.md'),
+      fix: 'Add plugins/core/skills/eval-harness/SKILL.md for pass/fail regression evaluation.',
     },
     // Security Guardrails
     {

@@ -17,7 +17,7 @@ setup() {
     printf 'finished task 1\n' > "$old_workspace/progress.md"
 
     run bash -c 'cd "$1" && bash "$2" "$3"' _ "$repo" \
-        "${PROJECT_ROOT}/plugins/me/skills/subagent-driven-development/scripts/sdd-workspace" "$plan"
+        "${PROJECT_ROOT}/plugins/core/skills/subagent-driven-development/scripts/sdd-workspace" "$plan"
 
     [ "$status" -eq 0 ]
     [ "$output" = "$(cd "$repo" && pwd -P)/.skills/sdd/current" ]
@@ -40,7 +40,7 @@ setup() {
     printf 'new progress\n' > "$new_workspace/progress.md"
 
     run bash -c 'cd "$1" && bash "$2" "$3"' _ "$repo" \
-        "${PROJECT_ROOT}/plugins/me/skills/subagent-driven-development/scripts/sdd-workspace" "$plan"
+        "${PROJECT_ROOT}/plugins/core/skills/subagent-driven-development/scripts/sdd-workspace" "$plan"
 
     [ "$status" -ne 0 ]
     [[ "$output" == *"both .bstack and .skills"* ]]
@@ -62,7 +62,7 @@ setup() {
     printf 'new progress\n' > "$new_workspace/progress.md"
 
     run bash -c 'cd "$1" && bash "$2" "$3"' _ "$repo" \
-        "${PROJECT_ROOT}/plugins/me/skills/subagent-driven-development/scripts/sdd-workspace" "$plan"
+        "${PROJECT_ROOT}/plugins/core/skills/subagent-driven-development/scripts/sdd-workspace" "$plan"
 
     [ "$status" -ne 0 ]
     [[ "$output" == *"both .bstack and .skills"* ]]
@@ -76,7 +76,7 @@ setup() {
     mkdir -p "$old_workspace"
     printf 'lesson 3\n' > "$old_workspace/NOTES.md"
 
-    run env HOME="$home" bun "${PROJECT_ROOT}/plugins/me/skills/learn/scripts/resolve-workspace.ts" git-basics
+    run env HOME="$home" bun "${PROJECT_ROOT}/plugins/core/skills/learn/scripts/resolve-workspace.ts" git-basics
 
     [ "$status" -eq 0 ]
     [ "$output" = "$home/.skills/learn/git-basics" ]
@@ -92,7 +92,7 @@ setup() {
     printf 'old notes\n' > "$old_workspace/NOTES.md"
     printf 'new notes\n' > "$new_workspace/NOTES.md"
 
-    run env HOME="$home" bun "${PROJECT_ROOT}/plugins/me/skills/learn/scripts/resolve-workspace.ts" git-basics
+    run env HOME="$home" bun "${PROJECT_ROOT}/plugins/core/skills/learn/scripts/resolve-workspace.ts" git-basics
 
     [ "$status" -ne 0 ]
     [[ "$output" == *"both .bstack and .skills"* ]]

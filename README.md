@@ -18,7 +18,7 @@ Install directly from the GitHub marketplace.
 
 ```bash
 claude plugin marketplace add https://github.com/baleen37/skills
-claude plugin install me@skills
+claude plugin install core@skills
 ```
 
 ## Codex Compatibility
@@ -38,7 +38,7 @@ bun run sync:codex
 
 | Plugin | Purpose |
 | --- | --- |
-| `me` | Unified design, plan, execution, TDD, debugging, review, verification, PRs, and shipping (41 skills) |
+| `core` | Unified design, plan, execution, TDD, debugging, review, verification, PRs, and shipping (41 skills) |
 | `slack` | Slack message, thread, channel, and user search |
 | `atlassian` | Jira work guidance through `twg` |
 | `datadog` | Logs, monitors, APM, and metric investigation |
@@ -46,26 +46,26 @@ bun run sync:codex
 
 ## Default Development Flow
 
-`me:brainstorming` → `me:writing-plans` → `me:executing-plans` or
-`me:subagent-driven-development` → `me:verify` → `me:code-review` → `me:create-pr`.
+`core:brainstorming` → `core:writing-plans` → `core:executing-plans` or
+`core:subagent-driven-development` → `core:verify` → `core:code-review` → `core:create-pr`.
 
 For small changes, get a short design approved in brainstorming and implement it right away.
 For multi-step work, review the written spec and plan, then choose how to execute it.
-`me:code-review` performs the actual review; `me:requesting-code-review` and
-`me:receiving-code-review` handle requesting reviews and processing feedback.
+`core:code-review` performs the actual review; `core:requesting-code-review` and
+`core:receiving-code-review` handle requesting reviews and processing feedback.
 
-Only when there is significant uncertainty, start with `me:wayfinder` → `me:writing-spec` →
-spec review → `me:writing-plans`. Specs live in `docs/specs/` by default.
-Tracker publishing and `me:to-tickets` are optional; they do not automatically generate
+Only when there is significant uncertainty, start with `core:wayfinder` → `core:writing-spec` →
+spec review → `core:writing-plans`. Specs live in `docs/specs/` by default.
+Tracker publishing and `core:to-tickets` are optional; they do not automatically generate
 an execution graph separate from the implementation plan. Ordinary design and
 implementation work needs no tracker setup.
 
-See the [me README](plugins/me/README.md) for all features and optional paths.
+See the [core README](plugins/core/README.md) for all features and optional paths.
 
 ## Migrating an Existing Installation
 
-Once this unified version is released, remove the old `superpower` and `mattpocock-skills`
-plugins and update `me`. The old namespaces have no aliases.
+Once this unified version is released, remove the old `superpower`, `mattpocock-skills`, and `me`
+plugins and install `core`. The old namespaces have no aliases.
 The examples below assume the marketplace was registered as `bstack` with the `user` scope.
 If you installed it as `baleen-marketplace`, change the name; if you used another scope, adjust accordingly.
 
@@ -74,8 +74,9 @@ Claude Code:
 ```bash
 claude plugin uninstall superpower@bstack --scope user --keep-data
 claude plugin uninstall mattpocock-skills@bstack --scope user --keep-data
+claude plugin uninstall me@bstack --scope user --keep-data
 claude plugin marketplace update bstack
-claude plugin update me@bstack --scope user
+claude plugin install core@bstack --scope user
 ```
 
 Codex:
@@ -83,21 +84,22 @@ Codex:
 ```bash
 codex plugin remove superpower@bstack
 codex plugin remove mattpocock-skills@bstack
+codex plugin remove me@bstack
 codex plugin marketplace upgrade bstack
-codex plugin add me@bstack
+codex plugin add core@bstack
 ```
 
 Skip the removal command for any old plugin you never installed. After updating, open a
-new session and confirm that `me:ask` and `me:using-me` are discovered. Past design and
+new session and confirm that `core:ask` and `core:using-core` are discovered. Past design and
 plan documents are kept as historical records; update any in-progress plan to the current
-`me:` invocations before executing it.
+`core:` invocations before executing it.
 
 ## Project Structure
 
 ```text
 skills/
 ├── plugins/              # Plugin sources
-│   ├── me/               # Personal workflow plugin
+│   ├── core/             # Personal workflow plugin
 │   ├── slack/            # Slack integration
 │   ├── atlassian/        # Jira guidance through twg
 │   ├── datadog/          # Datadog integration

@@ -8,5 +8,5 @@ docs/plans/
 # (see plugins/datadog/SYNC.md for provenance and rationale)
 plugins/datadog/skills/
 
-# Adapted upstream skill bodies (see plugins/me/upstream/README.md)
-plugins/me/skills/
+# Adapted upstream skill bodies (see plugins/core/upstream/README.md)
+plugins/core/skills/

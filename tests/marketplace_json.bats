@@ -14,13 +14,13 @@ setup() {
     [ "$(json_get "$MARKETPLACE_JSON" "name")" = "skills" ]
     [ "$(jq -r '.name' "${PROJECT_ROOT}/package.json")" = "skills" ]
     grep -Fq 'claude plugin marketplace add https://github.com/baleen37/skills' "${PROJECT_ROOT}/README.md"
-    grep -Fq 'claude plugin install me@skills' "${PROJECT_ROOT}/README.md"
+    grep -Fq 'claude plugin install core@skills' "${PROJECT_ROOT}/README.md"
 }
 
 @test "runtime workspaces use .skills and legacy state remains ignored" {
     grep -Fq '.skills/' "${PROJECT_ROOT}/.gitignore"
     grep -Fq '.bstack/' "${PROJECT_ROOT}/.gitignore"
-    grep -Fq 'base="$root/.skills/sdd"' "${PROJECT_ROOT}/plugins/me/skills/subagent-driven-development/scripts/sdd-workspace"
+    grep -Fq 'base="$root/.skills/sdd"' "${PROJECT_ROOT}/plugins/core/skills/subagent-driven-development/scripts/sdd-workspace"
 }
 
 @test "marketplace.json includes all plugins in plugins/ directory" {

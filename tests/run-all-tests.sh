@@ -47,7 +47,7 @@ run_consolidated_tests() {
     echo "========================================"
 
     # Run tests for each subdirectory in tests/
-    local test_dirs=("integration" "skills" "performance" "me" "git-guard")
+    local test_dirs=("integration" "skills" "performance" "core" "git-guard")
     
     for dir in "${test_dirs[@]}"; do
         if [ -d "${SCRIPT_DIR}/${dir}" ]; then
