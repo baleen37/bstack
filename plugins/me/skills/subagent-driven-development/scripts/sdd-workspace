@@ -78,6 +78,15 @@ if [ -d "$legacy_base" ]; then
 fi
 
 if [ -n "$legacy_workspace" ]; then
+  if [ -d "$base" ]; then
+    while IFS= read -r marker; do
+      if [ "$(cat "$marker")" = "$plan_id" ]; then
+        echo "both .bstack and .skills SDD workspaces exist for $plan_id" >&2
+        exit 2
+      fi
+    done < <(find "$base" -mindepth 2 -maxdepth 2 -type f -name plan-path -print)
+  fi
+
   target="$base/$slug"
   if [ -e "$target" ]; then
     owner=""

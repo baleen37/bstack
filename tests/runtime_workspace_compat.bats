@@ -48,6 +48,28 @@ setup() {
     [ "$(cat "$new_workspace/progress.md")" = 'new progress' ]
 }
 
+@test "sdd-workspace finds matching new ledger under a disambiguated name" {
+    local repo="$BATS_TEST_TMPDIR/repo"
+    local plan="docs/alpha/plan.md"
+    local old_workspace="$repo/.bstack/sdd/plan"
+    local new_workspace="$repo/.skills/sdd/plan-alpha"
+    mkdir -p "$repo/docs/alpha" "$old_workspace" "$new_workspace"
+    git -C "$repo" init -q
+    printf 'plan\n' > "$repo/$plan"
+    printf '%s\n' "$plan" > "$old_workspace/plan-path"
+    printf 'old progress\n' > "$old_workspace/progress.md"
+    printf '%s\n' "$plan" > "$new_workspace/plan-path"
+    printf 'new progress\n' > "$new_workspace/progress.md"
+
+    run bash -c 'cd "$1" && bash "$2" "$3"' _ "$repo" \
+        "${PROJECT_ROOT}/plugins/me/skills/subagent-driven-development/scripts/sdd-workspace" "$plan"
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"both .bstack and .skills"* ]]
+    [ "$(cat "$old_workspace/progress.md")" = 'old progress' ]
+    [ "$(cat "$new_workspace/progress.md")" = 'new progress' ]
+}
+
 @test "learn workspace moves a legacy topic when the new path is absent" {
     local home="$BATS_TEST_TMPDIR/home"
     local old_workspace="$home/.bstack/learn/git-basics"
