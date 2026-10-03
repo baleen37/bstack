@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+  # Manual fallback for when GitHub does not deliver the main push event.
+  workflow_dispatch:
 
 permissions:
   contents: write
