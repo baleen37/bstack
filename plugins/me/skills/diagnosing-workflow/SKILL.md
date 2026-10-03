@@ -30,7 +30,7 @@ Create a todo per step. Steps 5–7 run only on their stated condition.
    `references/session-discovery.md`. Confirm a past session by quoting its
    first prompt and timestamp, and list every candidate you rejected with the
    reason, or "none". Enumerate subagent transcripts. Create
-   `~/.bstack/diagnosing-workflow/<session-id>/`, tell your
+   `~/.skills/diagnosing-workflow/<session-id>/`, tell your
    partner the path, and fill `templates/case.md` there, following its
    provenance rules for environment and skill observations.
 3. **Triage.** Read the region around the reported problem yourself. Then

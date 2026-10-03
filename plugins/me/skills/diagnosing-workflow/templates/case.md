@@ -1,6 +1,6 @@
 # Case: <session-id>
 
-Workspace: ~/.bstack/diagnosing-workflow/<session-id>/
+Workspace: ~/.skills/diagnosing-workflow/<session-id>/
 Created: <ISO timestamp>
 
 ## Problem statement (agreed with your human partner)

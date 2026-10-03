@@ -175,7 +175,7 @@ function hasFileWithExtension(rootDir, relativeDir, extensions) {
 
 function detectTargetMode(rootDir) {
   const packageJson = safeParseJson(safeRead(rootDir, 'package.json'));
-  if (packageJson?.name === 'everything-claude-code' || packageJson?.name === 'me') {
+  if (packageJson?.name === 'everything-claude-code' || packageJson?.name === 'skills') {
     return 'repo';
   }
 
@@ -662,7 +662,7 @@ Usage: node scripts/harness-audit.js [scope] [--scope <repo|hooks|skills|command
        [--root <path>]
 
 Deterministic harness audit based on explicit file/rule checks.
-Audits the current working directory by default and auto-detects bstack repo mode vs consumer-project mode.
+Audits the current working directory by default and auto-detects skills repo mode vs consumer-project mode.
 `);
   process.exit(exitCode);
 }

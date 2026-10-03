@@ -125,7 +125,7 @@ and the new one resumes from the same ledger.
 - Each plan owns a workspace: at skill start, run
   `bash ../subagent-driven-development/scripts/sdd-workspace PLAN_FILE` — it
   prints the plan's git-ignored directory
-  (`<repo-root>/.bstack/sdd/<plan-basename>/`), home to every
+  (`<repo-root>/.skills/sdd/<plan-basename>/`), home to every
   artifact for THIS plan: ledger, briefs, review packages. Another plan's
   directory is never yours to read or write.
 - Check for this plan's ledger at `<workspace>/progress.md`. If its first

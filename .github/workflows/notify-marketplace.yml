@@ -28,6 +28,6 @@ jobs:
       - name: Notify marketplace
         uses: baleen37/baleen-marketplace/.github/actions/notify@v1
         with:
-          source: bstack
+          source: skills
           version: ${{ github.event.release.tag_name || inputs.version }}
           token: ${{ steps.app-token.outputs.token }}

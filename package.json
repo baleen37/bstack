@@ -1,7 +1,7 @@
 {
-  "name": "me",
+  "name": "skills",
   "version": "5.5.0",
-  "description": "bstack - AI coding assistant toolkit (Claude Code, OpenCode, and more)",
+  "description": "skills - AI coding assistant toolkit (Claude Code, OpenCode, and more)",
   "private": true,
   "type": "module",
   "scripts": {

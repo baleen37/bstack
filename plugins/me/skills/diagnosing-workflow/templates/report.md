@@ -1,6 +1,6 @@
 # Session diagnosis: <session-id>
 
-Report path: ~/.bstack/diagnosing-workflow/<session-id>/report.md
+Report path: ~/.skills/diagnosing-workflow/<session-id>/report.md
 Written: <ISO timestamp>
 
 ## 1. Problem statement (REQUIRED)

@@ -1,4 +1,4 @@
-# bstack
+# skills
 
 An AI coding assistant toolkit. It is designed for both Claude Code and Codex,
 and bundles personal workflow automation, safer Git operations, session handoff, LSP installation, and external tool integrations.
@@ -17,8 +17,8 @@ and bundles personal workflow automation, safer Git operations, session handoff,
 Install directly from the GitHub marketplace.
 
 ```bash
-claude plugin marketplace add https://github.com/baleen37/bstack
-claude plugin install me@bstack
+claude plugin marketplace add https://github.com/baleen37/skills
+claude plugin install me@skills
 ```
 
 ## Codex 호환성
@@ -65,7 +65,7 @@ tracker 게시와 `me:to-tickets`는 선택 기능이며, 구현 계획과 별�
 
 이 통합 버전이 배포된 뒤 기존 `superpower`, `mattpocock-skills`를 제거하고
 `me`를 갱신하세요. 기존 namespace 별칭은 제공하지 않습니다.
-아래 예시는 marketplace 이름이 `bstack`, 설치 scope가 `user`인 경우입니다.
+아래 예시는 기존에 marketplace 이름을 `bstack`으로 등록했고, 설치 scope가 `user`인 경우입니다.
 `baleen-marketplace`로 설치했다면 이름을 바꾸고, 다른 scope라면 맞춰 실행하세요.
 
 Claude Code:
@@ -93,7 +93,7 @@ codex plugin add me@bstack
 ## Project Structure
 
 ```text
-bstack/
+skills/
 ├── plugins/              # Plugin sources
 │   ├── me/               # Personal workflow plugin
 │   ├── slack/            # Slack integration
