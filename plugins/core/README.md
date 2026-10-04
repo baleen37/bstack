@@ -1,24 +1,22 @@
 # core plugin
 
 Install `core` for the complete Claude Code and Codex development workflow.
-It contains 41 skills: design and planning, TDD and debugging, verification,
+It contains 38 skills: planning, TDD and debugging, verification,
 review, PR creation, deployment, and independent engineering tools.
 
 ## Default workflow
 
-`core:brainstorming` → `core:writing-plans` → `core:executing-plans` or
+`core:writing-plans` → `core:executing-plans` or
 `core:subagent-driven-development` → `core:verify` → `core:code-review` → `core:create-pr`.
 
-Brainstorming uses [grilling questions](skills/brainstorming/references/grilling.md)
-and `core:domain-modeling` to establish intent and precise domain terms. Small
-bounded changes use a short approved design and direct implementation; multi-step
-work uses a written spec and plan. Direct and subagent execution depend on the
-work, available tools, and the user's choice. General development requires no
-tracker configuration.
+Small changes can be implemented directly. Multi-step work starts with a reviewed
+plan; use `writing-spec` when a durable design artifact is useful. Direct and
+subagent execution depend on the work, available tools, and the user's choice.
+General development requires no tracker configuration.
 
 | Stage | Artifact | Skills |
 | --- | --- | --- |
-| Design | approved design; `docs/specs/*.md` for architectural work | `brainstorming`, `domain-modeling` |
+| Design | `docs/specs/*.md` when a durable design artifact is useful | `domain-modeling`, `writing-spec` |
 | Plan and build | `docs/plans/*.md`, code, execution ledger | `writing-plans`, `executing-plans` or `subagent-driven-development`, `tdd` |
 | Verify | real behavior and test evidence | `verify`, `e2e-scenario-testing`, `diagnosing-bugs`, `verification-before-completion` |
 | Review | findings and feedback | `code-review` does the review; `requesting-code-review` arranges it; `receiving-code-review` handles feedback; `simplify` applies quality cleanups |
@@ -28,16 +26,15 @@ tracker configuration.
 
 | Need | Route |
 | --- | --- |
-| Large unresolved uncertainty | `wayfinder` → `writing-spec` → written-spec review → `writing-plans` → selected executor |
+| Open design questions | `research` or `prototype` → `writing-spec` → written-spec review → `writing-plans` → selected executor |
 | Tracker tickets | Explicitly invoke `to-tickets`; publish the plan's slices and dependencies without a separate execution graph |
 | Tracker configuration | `setup` configures tracker-backed features and domain-doc conventions; local specs need no setup |
-| Session continuity | `ask` routes to a flow; `handoff` carries context; `retro` improves the environment; `diagnosing-workflow` investigates failed sessions |
+| Session continuity | `handoff` carries context; `retro` improves the environment; `diagnosing-workflow` investigates failed sessions |
 | Evidence before a decision | `research`, `prototype`, `competitive-agents`, `writing-rfcs` |
 
-`writing-spec` synthesizes the conversation or resolved map to
+`writing-spec` captures design decisions in
 `docs/specs/YYYY-MM-DD-<topic>-design.md`. Publishing to a tracker is an explicit
-choice. Wayfinder decision tickets resolve uncertainty; the implementation plan
-remains the execution authority.
+choice; the implementation plan remains the execution authority.
 
 ## Independent and supporting skills
 

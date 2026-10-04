@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Setup
 
-Configure optional per-repo tracker and domain conventions. General brainstorming, local spec writing, planning, and implementation work without this setup.
+Configure optional per-repo tracker and domain conventions. General design discussion, local spec writing, planning, and implementation work without this setup.
 
 For tracker-backed features, configure:
 

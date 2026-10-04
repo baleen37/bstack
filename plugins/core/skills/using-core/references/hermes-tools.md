@@ -28,12 +28,11 @@ Hermes Agent has a `skills` toolset with `skill_view` and `skills_list` tools.
 To invoke a core skill, use:
 
 ```
-skill_view("brainstorming")
-skill_view("test-driven-development")
+skill_view("writing-plans")
+skill_view("tdd")
 ```
 
-If `skill_view` cannot find a core skill (it may not appear in the catalog
-until the plugin fully registers it), fall back to reading the SKILL.md directly:
+If `skill_view` cannot find a core skill, fall back to reading the SKILL.md directly:
 
 ```
 read_file(path="~/.hermes/plugins/core/skills/<skill-name>/SKILL.md")
