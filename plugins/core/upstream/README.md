@@ -1,29 +1,24 @@
 # Upstream provenance
 
-`core` adapts the following MIT-licensed skill snapshots. Their original package
-READMEs and metadata are kept here as historical records, not installation
+`core` adapts the following MIT-licensed skill snapshot. Its original package
+README and metadata are kept here as historical records, not installation
 instructions. Upstream URLs and license notices remain unchanged.
 
 | Source | Snapshot | Preserved notices |
 | --- | --- | --- |
-| [obra/superpowers](https://github.com/obra/superpowers/tree/8ca22db) | `8ca22db` (v6.4.2) | [README](superpower/README.md), [metadata](superpower/metadata.json), [MIT license](superpower/LICENSE) |
 | [mattpocock/skills](https://github.com/mattpocock/skills/tree/d81f3a1) | `d81f3a1` (2026-09-29) | [README](mattpocock-skills/README.md), [metadata](mattpocock-skills/metadata.json), [MIT license](mattpocock-skills/LICENSE) |
 
 ## Local adaptations
 
 All distributed skills live in `../skills/` and use the `core:` namespace.
-The former design/execution and Matt engineering packages are no longer
-marketplace entries. Their names are not compatibility aliases.
+Upstream `/skill` invocations are rewritten to `core:skill`. Renamed skills:
 
-Grilling, grill-with-docs, wayfinder, and ask are preserved in the upstream
-snapshot but are not distributed as `core` skills. Brainstorming is also omitted;
-PR writing is a create-pr reference
-(with [Humanlayer credits](../skills/create-pr/references/CREDITS.md)); teaching
-uses learn's topic workspace. The router, setup, bootstrap, workflow diagnosis,
-and spec writer have local names and one shared development flow. Specs save
-under `docs/specs/` by default; tracker publication is optional.
+- `ask-matt` → `ask`
+- `setup-matt-pocock-skills` → `setup`
+- `teach` → `learn` (workspace under `~/.skills/learn/<topic>/`)
+- `pr` → a `create-pr` reference
+  (with [Humanlayer credits](../skills/create-pr/references/CREDITS.md))
+- upstream `code-review` is not packaged; references resolve to the local `core:code-review`
 
-Previously maintained fixes remain: task-done validates commit ranges and
-handles silent successful tests; helpers are invoked through bash;
-sdd-workspace neutralizes CDPATH. Visual design questions go to `core:prototype`. Script
-bodies and runtime environment variables are preserved during this integration.
+obra/superpowers skills are not part of `core`; they ship as the separate
+[`superpower`](../../superpower/README.md) plugin.

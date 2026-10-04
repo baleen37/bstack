@@ -10,15 +10,6 @@ Break a plan, spec, or conversation into a set of **tickets**: tracer-bullet ver
 
 The issue tracker and triage label vocabulary should have been provided to you. If not, tell the user to run `core:setup`.
 
-## Execution authority
-
-This is optional tracker publication, invoked only when the user wants tickets.
-When an implementation plan exists, publish its slices and dependencies with
-links back to the plan; retain its task order and scope rather than designing
-a separate execution graph. If only a spec or conversation exists, tickets are
-planning input: review the spec and use `core:writing-plans` before execution.
-Execution uses `core:executing-plans` or `core:subagent-driven-development`.
-
 ## Process
 
 ### 1. Gather context
@@ -33,7 +24,7 @@ Look for opportunities to prefactor the code to make the implementation easier. 
 
 ### 3. Draft vertical slices
 
-For an existing plan, map its tasks to **tracer bullet** tickets without changing their dependencies. Otherwise, propose slices from the spec or conversation.
+Break the work into **tracer bullet** tickets.
 
 <vertical-slice-rules>
 

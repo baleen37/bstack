@@ -38,7 +38,8 @@ bun run sync:codex
 
 | Plugin | Purpose |
 | --- | --- |
-| `core` | Unified planning, execution, TDD, debugging, review, verification, PRs, and shipping (38 skills) |
+| `core` | Matt Pocock's engineering flow plus verification, review, PRs, and shipping (34 skills) |
+| `superpower` | obra/superpowers workflow: brainstorming, plans, subagent-driven execution, code review (12 skills) |
 | `slack` | Slack message, thread, channel, and user search |
 | `atlassian` | Jira work guidance through `twg` |
 | `datadog` | Logs, monitors, APM, and metric investigation |
@@ -46,31 +47,24 @@ bun run sync:codex
 
 ## Default Development Flow
 
-`core:writing-plans` → `core:executing-plans` or
-`core:subagent-driven-development` → `core:verify` → `core:code-review` → `core:create-pr`.
+`core:grill-with-docs` → `core:to-spec` → `core:to-tickets` → `core:implement` or
+`core:implement-spec` → `core:verify` → `core:code-review` → `core:create-pr`.
 
-Small changes can be implemented directly. For multi-step work, review the plan before choosing how to execute it.
-`core:code-review` performs the actual review; `core:requesting-code-review` and
-`core:receiving-code-review` handle requesting reviews and processing feedback.
-
-Use `core:writing-spec` when the work needs a durable design artifact; specs live in `docs/specs/` by default.
-Tracker publishing and `core:to-tickets` are optional; they do not automatically generate
-an execution graph separate from the implementation plan. Ordinary design and
-implementation work needs no tracker setup.
+Small changes go straight to `core:implement`. `core:ask` routes to the right flow
+when you are unsure. Run `core:setup` once per repo to configure the issue tracker.
 
 See the [core README](plugins/core/README.md) for all features and optional paths.
 
 ## Migrating an Existing Installation
 
-Once this unified version is released, remove the old `superpower`, `mattpocock-skills`, and `me`
-plugins and install `core`. The old namespaces have no aliases.
+Once this unified version is released, remove the old `mattpocock-skills` and `me`
+plugins and install `core`. `superpower` remains a separate, optional plugin. The old namespaces have no aliases.
 The examples below assume the marketplace was registered as `bstack` with the `user` scope.
 If you installed it as `baleen-marketplace`, change the name; if you used another scope, adjust accordingly.
 
 Claude Code:
 
 ```bash
-claude plugin uninstall superpower@bstack --scope user --keep-data
 claude plugin uninstall mattpocock-skills@bstack --scope user --keep-data
 claude plugin uninstall me@bstack --scope user --keep-data
 claude plugin marketplace update bstack
@@ -80,7 +74,6 @@ claude plugin install core@bstack --scope user
 Codex:
 
 ```bash
-codex plugin remove superpower@bstack
 codex plugin remove mattpocock-skills@bstack
 codex plugin remove me@bstack
 codex plugin marketplace upgrade bstack
@@ -88,7 +81,7 @@ codex plugin add core@bstack
 ```
 
 Skip the removal command for any old plugin you never installed. After updating, open a
-new session and confirm that `core:using-core` and `core:writing-plans` are discovered. Past design and
+new session and confirm that `core:ask` and `core:implement` are discovered. Past design and
 plan documents are kept as historical records; update any in-progress plan to the current
 `core:` invocations before executing it.
 
