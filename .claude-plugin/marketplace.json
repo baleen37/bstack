@@ -22,7 +22,7 @@
         "memory",
         "context"
       ],
-      "version": "17.66.6"
+      "version": "17.66.7"
     },
     {
       "name": "wiki",
@@ -36,7 +36,7 @@
         "daily",
         "todo"
       ],
-      "version": "17.66.6"
+      "version": "17.66.7"
     },
     {
       "name": "datadog",
@@ -51,7 +51,7 @@
         "apm",
         "pup"
       ],
-      "version": "17.66.6"
+      "version": "17.66.7"
     },
     {
       "name": "autoresearch",
@@ -64,7 +64,7 @@
         "autonomous",
         "research"
       ],
-      "version": "17.66.6"
+      "version": "17.66.7"
     },
     {
       "name": "atlassian",
@@ -77,7 +77,7 @@
         "twg",
         "cli"
       ],
-      "version": "17.66.6"
+      "version": "17.66.7"
     }
   ]
 }
