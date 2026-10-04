@@ -20,7 +20,6 @@ setup() {
 @test "runtime workspaces use .skills and legacy state remains ignored" {
     grep -Fq '.skills/' "${PROJECT_ROOT}/.gitignore"
     grep -Fq '.bstack/' "${PROJECT_ROOT}/.gitignore"
-    grep -Fq 'base="$root/.skills/sdd"' "${PROJECT_ROOT}/plugins/core/skills/subagent-driven-development/scripts/sdd-workspace"
 }
 
 @test "marketplace.json includes all plugins in plugins/ directory" {

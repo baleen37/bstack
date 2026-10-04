@@ -1,5 +1,0 @@
-interface:
-  display_name: "Writing Spec"
-  short_description: "Turn a conversation into a spec"
-policy:
-  allow_implicit_invocation: true

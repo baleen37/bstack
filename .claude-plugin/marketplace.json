@@ -25,6 +25,18 @@
       "version": "17.66.7"
     },
     {
+      "name": "superpower",
+      "description": "Core development workflow skills: brainstorming, spec and plan writing, code review, and subagent-driven execution (uses core for TDD and debugging)",
+      "source": "./plugins/superpower",
+      "category": "development",
+      "tags": [
+        "skills",
+        "collaboration",
+        "workflows"
+      ],
+      "version": "17.66.7"
+    },
+    {
       "name": "wiki",
       "description": "Obsidian 위키의 Inbox와 Daily TODO 기록 스킬",
       "source": "./plugins/wiki",

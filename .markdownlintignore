@@ -10,3 +10,6 @@ plugins/datadog/skills/
 
 # Adapted upstream skill bodies (see plugins/core/upstream/README.md)
 plugins/core/skills/
+
+# Mirrored upstream skill bodies — kept verbatim from obra/superpowers
+plugins/superpower/skills/
