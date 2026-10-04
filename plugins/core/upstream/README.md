@@ -11,10 +11,12 @@ instructions. Upstream URLs and license notices remain unchanged.
 ## Local adaptations
 
 All distributed skills live in `../skills/` and use the `core:` namespace.
-Upstream `/skill` invocations are rewritten to `core:skill`. Renamed skills:
+Upstream `/skill` invocations are rewritten to `core:skill`.
 
-- `ask-matt` → `ask`
-- `setup-matt-pocock-skills` → `setup`
+Matt's flow skills are not packaged: `ask-matt`, `grilling`, `grill-me`,
+`grill-with-docs`, `to-spec`, `to-tickets`, `implement`, `implement-spec`,
+`wayfinder`, `setup-matt-pocock-skills`, and `triage`. Renamed skills:
+
 - `teach` → `learn` (workspace under `~/.skills/learn/<topic>/`)
 - `pr` → a `create-pr` reference
   (with [Humanlayer credits](../skills/create-pr/references/CREDITS.md))
