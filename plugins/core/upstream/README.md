@@ -15,13 +15,15 @@ All distributed skills live in `../skills/` and use the `core:` namespace.
 The former design/execution and Matt engineering packages are no longer
 marketplace entries. Their names are not compatibility aliases.
 
-Grilling is a brainstorming reference; PR writing is a create-pr reference
+Grilling, grill-with-docs, wayfinder, and ask are preserved in the upstream
+snapshot but are not distributed as `core` skills. Brainstorming is also omitted;
+PR writing is a create-pr reference
 (with [Humanlayer credits](../skills/create-pr/references/CREDITS.md)); teaching
 uses learn's topic workspace. The router, setup, bootstrap, workflow diagnosis,
 and spec writer have local names and one shared development flow. Specs save
 under `docs/specs/` by default; tracker publication is optional.
 
 Previously maintained fixes remain: task-done validates commit ranges and
-handles silent successful tests; helpers are invoked through bash; the visual
-server does not load the remote logo; sdd-workspace neutralizes CDPATH. Script
+handles silent successful tests; helpers are invoked through bash;
+sdd-workspace neutralizes CDPATH. Visual design questions go to `core:prototype`. Script
 bodies and runtime environment variables are preserved during this integration.

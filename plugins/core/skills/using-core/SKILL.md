@@ -19,21 +19,19 @@ This is not negotiable. You cannot rationalize your way out of this.
 
 **Invoke relevant or requested skills BEFORE any response or action** — including clarifying questions, exploring the codebase, or checking files. If it turns out wrong for the situation, you don't have to use it.
 
-**Before entering plan mode:** if you haven't already brainstormed, invoke the brainstorming skill first.
-
 Then announce "Using [skill] to [purpose]" and follow the skill exactly. If it has a checklist, create a todo per item.
 
 ## Skill Priority
 
-When multiple skills apply, process skills come first — they set the approach, then implementation skills (frontend-design, etc.) carry it out. Brainstorming and core:diagnosing-bugs are core's most common process skills, but the rule holds for any of them.
+When multiple skills apply, process skills come first — they set the approach, then implementation skills (frontend-design, etc.) carry it out. `core:writing-plans` and `core:diagnosing-bugs` are core's common process skills.
 
-- "Let's build X" → core:brainstorming first, then implementation skills.
+- "Let's build X" → use `core:writing-plans` for multi-step work; use `core:writing-spec` when decisions need a durable design record.
 - "Fix this bug" → core:diagnosing-bugs first, then domain skills.
 
-The default multi-step flow is `core:brainstorming` → `core:writing-plans` →
+The default multi-step flow is `core:writing-plans` →
 `core:executing-plans` or `core:subagent-driven-development`. For large unresolved
-uncertainty, `core:wayfinder` → `core:writing-spec` → written-spec review joins
-at planning. General development needs no tracker setup. Invoke `core:code-review`
+uncertainty, use `core:research` or `core:prototype` before writing a durable spec.
+General development needs no tracker setup. Invoke `core:code-review`
 for actual review; `core:requesting-code-review` arranges it and
 `core:receiving-code-review` handles feedback. `core:create-pr` includes PR writing.
 

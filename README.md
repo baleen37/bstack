@@ -38,7 +38,7 @@ bun run sync:codex
 
 | Plugin | Purpose |
 | --- | --- |
-| `core` | Unified design, plan, execution, TDD, debugging, review, verification, PRs, and shipping (41 skills) |
+| `core` | Unified planning, execution, TDD, debugging, review, verification, PRs, and shipping (38 skills) |
 | `slack` | Slack message, thread, channel, and user search |
 | `atlassian` | Jira work guidance through `twg` |
 | `datadog` | Logs, monitors, APM, and metric investigation |
@@ -46,16 +46,14 @@ bun run sync:codex
 
 ## Default Development Flow
 
-`core:brainstorming` → `core:writing-plans` → `core:executing-plans` or
+`core:writing-plans` → `core:executing-plans` or
 `core:subagent-driven-development` → `core:verify` → `core:code-review` → `core:create-pr`.
 
-For small changes, get a short design approved in brainstorming and implement it right away.
-For multi-step work, review the written spec and plan, then choose how to execute it.
+Small changes can be implemented directly. For multi-step work, review the plan before choosing how to execute it.
 `core:code-review` performs the actual review; `core:requesting-code-review` and
 `core:receiving-code-review` handle requesting reviews and processing feedback.
 
-Only when there is significant uncertainty, start with `core:wayfinder` → `core:writing-spec` →
-spec review → `core:writing-plans`. Specs live in `docs/specs/` by default.
+Use `core:writing-spec` when the work needs a durable design artifact; specs live in `docs/specs/` by default.
 Tracker publishing and `core:to-tickets` are optional; they do not automatically generate
 an execution graph separate from the implementation plan. Ordinary design and
 implementation work needs no tracker setup.
@@ -90,7 +88,7 @@ codex plugin add core@bstack
 ```
 
 Skip the removal command for any old plugin you never installed. After updating, open a
-new session and confirm that `core:ask` and `core:using-core` are discovered. Past design and
+new session and confirm that `core:using-core` and `core:writing-plans` are discovered. Past design and
 plan documents are kept as historical records; update any in-progress plan to the current
 `core:` invocations before executing it.
 

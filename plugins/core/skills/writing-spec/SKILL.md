@@ -7,8 +7,6 @@ This skill takes the current conversation context and codebase understanding and
 
 Save to `docs/specs/YYYY-MM-DD-<topic>-design.md` by default, unless the user names another location. Tracker configuration is unnecessary for a local spec. When tracker publication is explicitly requested, read `docs/agents/issue-tracker.md` and the triage label mapping; ask the user to invoke `core:setup` only if that configuration is missing.
 
-When entering from `core:wayfinder`, read the map and relevant linked resolutions, preserving the decisions and remaining constraints in the spec.
-
 ## Process
 
 1. Explore the repo to understand the current state of the codebase, if you haven't already. Use the project's domain glossary vocabulary throughout the spec, and respect any ADRs in the area you're touching.
